@@ -8,6 +8,14 @@ export const pinnedComponents = pgTable("pinned_components", {
   title: text("title"),
   configuration: jsonb("configuration").notNull().$type<Record<string, unknown>>(),
   gridPosition: jsonb("grid_position").$type<{ x: number; y: number; w: number; h: number }>(),
+  canvasData: jsonb("canvas_data").$type<{
+    x: number;
+    y: number;
+    width?: number;
+    height?: number;
+    rotation?: number;
+    zIndex?: number;
+  }>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

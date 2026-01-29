@@ -54,21 +54,21 @@ function MetricCard({
   }, [trend])
 
   return (
-    <Card className={cn("py-4 min-w-0", className)}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground truncate">
+    <Card className={cn("py-3 min-w-0 @container", className)}>
+      <CardHeader className="pb-1 px-3">
+        <CardTitle className="text-xs @xs:text-sm font-medium text-muted-foreground line-clamp-2">
           {label}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-xl sm:text-2xl font-bold truncate">
+      <CardContent className="px-3">
+        <div className="flex flex-col gap-1">
+          <span className="text-lg @xs:text-xl @sm:text-2xl font-bold truncate">
             {typeof value === "number" ? value.toLocaleString() : value}
           </span>
           {change !== undefined && (
             <div className={cn("flex items-center gap-1 shrink-0", trendColor)}>
               {trendIcon}
-              <span className="text-sm font-medium">
+              <span className="text-xs @xs:text-sm font-medium">
                 {change > 0 ? "+" : ""}
                 {change.toFixed(1)}%
               </span>

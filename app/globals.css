@@ -6,8 +6,12 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  /* Typography system - Display, Body, and Mono fonts */
+  --font-display: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
+  --font-body: var(--font-body), var(--font-geist-sans), system-ui, sans-serif;
+  --font-sans: var(--font-body), var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-mono), var(--font-geist-mono), ui-monospace, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -37,6 +41,13 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* Command Center theme colors */
+  --color-cyan: var(--cyan);
+  --color-magenta: var(--magenta);
+  --color-purple: var(--purple);
+  --color-cyan-foreground: var(--cyan-foreground);
+  --color-magenta-foreground: var(--magenta-foreground);
+  --color-purple-foreground: var(--purple-foreground);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -47,72 +58,138 @@
 }
 
 :root {
+  /* ═══════════════════════════════════════════════════════════════════════════
+     COMMAND CENTER - Light Theme (Alternative)
+     Light mode variant preserving TikTok-inspired accent colors
+     ═══════════════════════════════════════════════════════════════════════════ */
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
+
+  /* Core backgrounds - Clean light surfaces */
+  --background: oklch(0.99 0 0);
+  --surface: oklch(0.97 0 0);
   --foreground: oklch(0.145 0 0);
+
+  /* Cards and popovers */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+
+  /* Primary: Darker cyan for light mode readability */
+  --primary: #00B8A0;
+  --primary-foreground: #FFFFFF;
+
+  /* Secondary: Darker magenta for light mode */
+  --secondary: #D4005C;
+  --secondary-foreground: #FFFFFF;
+
+  /* Accent: Darker purple for light mode */
+  --accent: #6B2DC0;
+  --accent-foreground: #FFFFFF;
+
+  /* TikTok-inspired accent colors (adjusted for light mode) */
+  --cyan: #00B8A0;
+  --cyan-foreground: #FFFFFF;
+  --magenta: #D4005C;
+  --magenta-foreground: #FFFFFF;
+  --purple: #6B2DC0;
+  --purple-foreground: #FFFFFF;
+
+  /* Muted colors */
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+
+  /* Destructive */
   --destructive: oklch(0.577 0.245 27.325);
+
+  /* Borders and inputs */
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --ring: #00B8A0;
+
+  /* Chart colors - Light mode variants */
+  --chart-1: #00B8A0;
+  --chart-2: #D4005C;
+  --chart-3: #6B2DC0;
+  --chart-4: #E5A700;
+  --chart-5: #00A08A;
+
+  /* Sidebar */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: #00B8A0;
+  --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: #00B8A0;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* ═══════════════════════════════════════════════════════════════════════════
+     COMMAND CENTER - Dark Theme (Primary)
+     TikTok Analytics Dashboard - Data-Dense Control Room Aesthetic
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* Core backgrounds - Deep space for data visualization */
+  --background: #0A0A0F;
+  --surface: #12121A;
+  --foreground: oklch(0.95 0 0);
+
+  /* Cards and popovers - Elevated surface panels */
+  --card: #12121A;
+  --card-foreground: oklch(0.95 0 0);
+  --popover: #12121A;
+  --popover-foreground: oklch(0.95 0 0);
+
+  /* Primary: Electric Cyan - Main actions, highlights, success states */
+  --primary: #00F5D4;
+  --primary-foreground: #0A0A0F;
+
+  /* Secondary: Hot Magenta - Engagement metrics, notifications, CTAs */
+  --secondary: #FF006E;
+  --secondary-foreground: #FFFFFF;
+
+  /* Accent: Deep Purple - Tertiary highlights, creative elements */
+  --accent: #8338EC;
+  --accent-foreground: #FFFFFF;
+
+  /* TikTok-inspired accent colors for direct use */
+  --cyan: #00F5D4;
+  --cyan-foreground: #0A0A0F;
+  --magenta: #FF006E;
+  --magenta-foreground: #FFFFFF;
+  --purple: #8338EC;
+  --purple-foreground: #FFFFFF;
+
+  /* Muted colors - Subtle backgrounds, disabled states */
+  --muted: #1A1A24;
+  --muted-foreground: oklch(0.65 0 0);
+
+  /* Destructive - Error states, deletions */
+  --destructive: #FF3B5C;
+
+  /* Borders and inputs - Subtle with cyan undertone */
+  --border: oklch(1 0.02 180 / 12%);
+  --input: oklch(1 0.02 180 / 18%);
+  --ring: #00F5D4;
+
+  /* Chart colors - Vibrant analytics palette for data visualization */
+  --chart-1: #00F5D4; /* Electric Cyan - Primary metric */
+  --chart-2: #FF006E; /* Hot Magenta - Secondary metric */
+  --chart-3: #8338EC; /* Deep Purple - Tertiary metric */
+  --chart-4: #FFD60A; /* Warning Yellow - Alerts/attention */
+  --chart-5: #00D4AA; /* Teal variant - Alternative primary */
+
+  /* Sidebar - Control panel navigation */
+  --sidebar: #0D0D14;
+  --sidebar-foreground: oklch(0.9 0 0);
+  --sidebar-primary: #00F5D4;
+  --sidebar-primary-foreground: #0A0A0F;
+  --sidebar-accent: #1A1A24;
+  --sidebar-accent-foreground: oklch(0.95 0 0);
+  --sidebar-border: oklch(1 0.02 180 / 10%);
+  --sidebar-ring: #00F5D4;
 }
 
 @layer base {
@@ -121,5 +198,385 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-body), var(--font-geist-sans), system-ui, sans-serif;
   }
+}
+
+/* Typography utility classes */
+.font-display {
+  font-family: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.font-body {
+  font-family: var(--font-body), var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.font-mono {
+  font-family: var(--font-mono), var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MICRO-INTERACTIONS & ANIMATIONS
+   Smooth transitions for canvas nodes, toolbar buttons, and UI elements
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Node Animations
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Base transition for all React Flow nodes */
+.react-flow__node {
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+/* Node selection glow effect */
+.react-flow__node.selected {
+  box-shadow: 0 0 0 2px var(--primary), 0 4px 20px rgba(0, 245, 212, 0.2);
+}
+
+/* Analytics card node hover effect */
+.analytics-card-node {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.analytics-card-node:hover {
+  box-shadow: 0 4px 20px rgba(0, 245, 212, 0.15);
+}
+
+/* Sticky note hover effect */
+.sticky-note-node {
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.sticky-note-node:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Text note hover effect */
+.text-note-node {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.text-note-node:hover {
+  border-color: var(--primary);
+  box-shadow: 0 2px 12px rgba(0, 245, 212, 0.1);
+}
+
+/* New node appearance animation */
+@keyframes node-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.node-new {
+  animation: node-appear 0.3s ease-out;
+}
+
+/* Pinned node highlight animation */
+@keyframes pulse-highlight {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(0, 245, 212, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(0, 245, 212, 0);
+  }
+}
+
+.node-pinned {
+  animation: pulse-highlight 0.6s ease-out;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Canvas Toolbar Animations
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.canvas-toolbar {
+  animation: toolbar-slide-up 0.3s ease-out;
+}
+
+@keyframes toolbar-slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.canvas-toolbar button {
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.canvas-toolbar button:hover {
+  transform: scale(1.05);
+}
+
+.canvas-toolbar button:active {
+  transform: scale(0.95);
+}
+
+/* Color dot hover effect in toolbar */
+.canvas-toolbar button span[class*="rounded"] {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.canvas-toolbar button:hover span[class*="rounded"] {
+  transform: scale(1.1);
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Pin Button Animations
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.pin-button {
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.2s ease;
+}
+
+.pin-button:hover:not(:disabled) {
+  transform: scale(1.02);
+}
+
+.pin-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Pin success animation */
+@keyframes pin-success {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.pin-button-success {
+  animation: pin-success 0.3s ease-out;
+}
+
+/* Pin icon rotation animation */
+@keyframes pin-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-45deg);
+  }
+}
+
+.pin-button:hover .pin-icon {
+  animation: pin-rotate 0.2s ease-out forwards;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Loading & Skeleton Animations
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Subtle pulse for loading indicators */
+@keyframes subtle-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.loading-pulse {
+  animation: subtle-pulse 1.5s ease-in-out infinite;
+}
+
+/* Skeleton loading shimmer */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--muted) 25%,
+    var(--muted-foreground) 50%,
+    var(--muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Message List Animations
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes message-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-appear {
+  animation: message-slide-in 0.25s ease-out;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Card Header Interactions
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.card-header {
+  transition: background-color 0.2s ease;
+}
+
+.analytics-card-node:hover .card-header {
+  background-color: rgba(0, 245, 212, 0.05);
+}
+
+/* Delete button hover animation */
+.card-header button {
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.card-header button:hover {
+  transform: scale(1.1);
+}
+
+.card-header button:active {
+  transform: scale(0.9);
+}
+
+/* Grab handle cursor feedback */
+.card-header .cursor-grab {
+  transition: color 0.15s ease;
+}
+
+.card-header:hover .cursor-grab {
+  color: var(--primary);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Utility Classes for Animations
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Disable animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus ring animation */
+.focus-ring-animated:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  transition: outline-offset 0.15s ease;
+}
+
+.focus-ring-animated:focus-visible:active {
+  outline-offset: 0px;
+}
+
+/* ==========================================================================
+   Native Canvas Component Styles
+   ========================================================================== */
+
+/* Analytics cards on canvas should feel native, not like overlays */
+.analytics-card-node {
+  /* Subtle glow effect when selected */
+  &:has(.card-header:hover) {
+    .card-header {
+      opacity: 1 !important;
+    }
+  }
+}
+
+/* Make the rendered analytics look native on canvas */
+.analytics-native-render {
+  /* Reset any potential conflicting styles */
+  & > * {
+    /* Ensure components respect their natural sizing */
+    max-width: 100%;
+  }
+
+  /* Cards should have subtle backgrounds on canvas */
+  & .rounded-lg {
+    background: var(--background);
+    border-color: var(--border);
+  }
+
+  /* Charts should have proper contrast */
+  & [class*="chart"] {
+    background: transparent;
+  }
+
+  /* Tables look native */
+  & table {
+    background: var(--background);
+  }
+}
+
+/* Inline pin button styling - consistent backdrop */
+.pin-button {
+  backdrop-filter: blur(8px);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Container Query Support for Responsive Components
+   Components in narrow containers (like chat panel) adapt to their space
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Analytics visualizations should respond to their container, not viewport */
+.analytics-visualization {
+  container-type: inline-size;
+}
+
+/* Ensure canvas cards also use container queries */
+.analytics-native-render {
+  container-type: inline-size;
+}
+
+/* Canvas node content should scroll smoothly */
+.card-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+.card-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.card-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.card-content::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 3px;
+}
+
+.card-content::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
 }

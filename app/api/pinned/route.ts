@@ -23,6 +23,7 @@ export async function GET() {
         title: pinnedComponents.title,
         configuration: pinnedComponents.configuration,
         gridPosition: pinnedComponents.gridPosition,
+        canvasData: pinnedComponents.canvasData,
         createdAt: pinnedComponents.createdAt,
       })
       .from(pinnedComponents)
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { componentType, title, configuration, gridPosition } = body;
+    const { componentType, title, configuration, gridPosition, canvasData } = body;
 
     // Validate required fields
     if (!componentType || typeof componentType !== "string") {
@@ -85,6 +86,45 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validate canvasData if provided
+    if (canvasData) {
+      if (
+        typeof canvasData !== "object" ||
+        typeof canvasData.x !== "number" ||
+        typeof canvasData.y !== "number"
+      ) {
+        return NextResponse.json(
+          { error: "canvasData must have x, y as numbers" },
+          { status: 400 }
+        );
+      }
+      // Validate optional fields if present
+      if (canvasData.width !== undefined && typeof canvasData.width !== "number") {
+        return NextResponse.json(
+          { error: "canvasData.width must be a number" },
+          { status: 400 }
+        );
+      }
+      if (canvasData.height !== undefined && typeof canvasData.height !== "number") {
+        return NextResponse.json(
+          { error: "canvasData.height must be a number" },
+          { status: 400 }
+        );
+      }
+      if (canvasData.rotation !== undefined && typeof canvasData.rotation !== "number") {
+        return NextResponse.json(
+          { error: "canvasData.rotation must be a number" },
+          { status: 400 }
+        );
+      }
+      if (canvasData.zIndex !== undefined && typeof canvasData.zIndex !== "number") {
+        return NextResponse.json(
+          { error: "canvasData.zIndex must be a number" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Create the pinned component
     const [component] = await db
       .insert(pinnedComponents)
@@ -94,6 +134,7 @@ export async function POST(request: NextRequest) {
         title: title || null,
         configuration,
         gridPosition: gridPosition || null,
+        canvasData: canvasData || null,
       })
       .returning();
 
@@ -104,6 +145,7 @@ export async function POST(request: NextRequest) {
         title: component.title,
         configuration: component.configuration,
         gridPosition: component.gridPosition,
+        canvasData: component.canvasData,
         createdAt: component.createdAt,
       },
     });

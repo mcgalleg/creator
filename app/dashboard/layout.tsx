@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { Sidebar } from "@/components/dashboard/sidebar";
-import { Header } from "@/components/dashboard/header";
+import { CompactHeader } from "@/components/dashboard/compact-header";
+import { ResponsiveLayout } from "@/components/dashboard/responsive-layout";
 
 export default async function DashboardLayout({
   children,
@@ -16,13 +16,12 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen">
-      <Sidebar />
-      <div className="md:pl-64 flex flex-col min-h-screen">
-        <Header />
-        <main className="flex-1">
+    <div className="h-screen flex flex-col overflow-hidden">
+      <CompactHeader />
+      <div className="flex-1 overflow-hidden">
+        <ResponsiveLayout>
           <Suspense>{children}</Suspense>
-        </main>
+        </ResponsiveLayout>
       </div>
     </div>
   );

@@ -1,36 +1,194 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Creator Analytics
+
+AI-powered TikTok analytics dashboard that lets content creators understand their performance through natural language queries.
+
+## Features
+
+- **Natural Language Analytics** - Ask questions about your TikTok data in plain English
+- **AI-Generated Visualizations** - Claude AI generates interactive charts and metrics
+- **Multi-Account Support** - Connect and analyze multiple TikTok accounts
+- **Dashboard Customization** - Pin your favorite charts to a personalized dashboard
+- **Real-time Sync** - Pull latest posts, comments, and engagement metrics
+- **Credit System** - Pay-as-you-go pricing for data syncs
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router), React 19, TypeScript
+- **AI**: Anthropic Claude (claude-sonnet-4-20250514) with tool calling
+- **Database**: PostgreSQL (Neon serverless) with Drizzle ORM
+- **Authentication**: Clerk
+- **Data Source**: Apify TikTok Scraper
+- **Styling**: Tailwind CSS v4, Shadcn/ui, Radix UI
+- **Charts**: Recharts
+- **UI Generation**: @json-render for validated component trees
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20+
+- npm or pnpm
+- PostgreSQL database (Neon recommended)
+- Clerk account
+- Anthropic API key
+- Apify API token
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone <repository-url>
+cd creator
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your credentials
+
+# Run database migrations
+npx drizzle-kit push
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+# Authentication (Clerk)
+CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
+CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
 
-## Learn More
+# Database (Neon PostgreSQL)
+DATABASE_URL=postgresql://user:pass@host/dbname
 
-To learn more about Next.js, take a look at the following resources:
+# AI (Anthropic)
+ANTHROPIC_API_KEY=sk-ant-...
+ANTHROPIC_MODEL=claude-sonnet-4-20250514
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Data Scraping (Apify)
+APIFY_API_TOKEN=apify_...
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+```
+creator/
+├── app/                    # Next.js App Router
+│   ├── api/               # API routes
+│   │   ├── accounts/      # TikTok account management
+│   │   ├── chat/          # AI analytics chat
+│   │   ├── credits/       # Credit system
+│   │   ├── pinned/        # Dashboard pinned components
+│   │   └── auth/webhook/  # Clerk webhook
+│   ├── dashboard/         # Protected dashboard pages
+│   └── page.tsx           # Public landing page
+├── components/
+│   ├── analytics/         # Chart and visualization components
+│   ├── chat/              # Chat interface
+│   ├── dashboard/         # Dashboard shell and navigation
+│   ├── settings/          # Settings page components
+│   ├── layout/            # Layout primitives
+│   └── ui/                # Shadcn/ui components
+├── lib/
+│   ├── db/                # Drizzle ORM setup and schemas
+│   ├── services/          # Business logic (sync, credits, users)
+│   └── catalog.ts         # AI component catalog
+└── hooks/                 # Custom React hooks
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Architecture
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Data Flow
+
+1. **Authentication**: Clerk handles user sign-in; webhook creates user record with signup credits
+2. **Account Connection**: User enters TikTok username; Apify validates and scrapes profile
+3. **Data Sync**: Background jobs fetch posts/comments; credits deducted on completion
+4. **Analytics Chat**: User asks questions; Claude AI queries data and generates visualizations
+5. **Dashboard**: Pinned charts persist across sessions; real-time updates via hooks
+
+### Database Schema
+
+- **users** - User profiles synced from Clerk
+- **tiktok_accounts** - Connected TikTok accounts
+- **posts** - Synced TikTok videos with engagement metrics
+- **comments** - Video comments (optional sync)
+- **account_metrics_history** - Time-series engagement snapshots
+- **credit_transactions** - Audit log for credit changes
+- **sync_jobs** - Background sync job tracking
+- **pinned_components** - User dashboard customizations
+
+### Credit System
+
+Pay-per-sync model (1 credit = $0.01):
+
+| Operation | Cost |
+|-----------|------|
+| Profile sync | 25 credits |
+| Posts (per 50) | 25 credits |
+| Comments (per 100) | 15 credits |
+| Signup bonus | 100 credits free |
+
+## Development
+
+```bash
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm run start
+
+# Run linting
+npm run lint
+
+# Database operations
+npx drizzle-kit push     # Push schema to database
+npx drizzle-kit studio   # Open Drizzle Studio
+```
+
+## API Routes
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/api/accounts` | List connected accounts |
+| POST | `/api/accounts` | Connect new TikTok account |
+| DELETE | `/api/accounts/[id]` | Disconnect account |
+| POST | `/api/accounts/[id]/sync` | Trigger data sync |
+| POST | `/api/chat` | AI analytics chat |
+| GET | `/api/credits` | Get credit balance |
+| GET/POST/DELETE | `/api/pinned` | Manage pinned charts |
+
+## Key Components
+
+### Analytics Visualizations
+- `MetricCard` - Single KPI display
+- `BarChart`, `LineChart`, `AreaChart`, `PieChart` - Recharts wrappers
+- `DataTable` - Structured data display
+- `VideoCard`, `TopVideosGrid` - TikTok video previews
+- `EngagementTimeline` - Engagement trends over time
+
+### Chat Interface
+- `ChatContainer` - Main AI chat UI
+- `AnalyticsRenderer` - Renders AI-generated component trees
+
+## Deployment
+
+Deploy on [Vercel](https://vercel.com) for optimal Next.js performance:
+
+1. Connect your repository to Vercel
+2. Configure environment variables
+3. Deploy
+
+Ensure the Clerk webhook endpoint (`/api/auth/webhook`) is configured to receive user creation events.
+
+## License
+
+Private - All rights reserved

@@ -89,7 +89,7 @@ export async function POST(req: Request) {
         : "\n\nThe user has no connected TikTok accounts yet. Suggest they connect an account to see their analytics.";
 
     const result = streamText({
-      model: anthropic(process.env.ANTHROPIC_MODEL || "claude-sonnet-4-20250514"),
+      model: anthropic(process.env.ANTHROPIC_MODEL || "claude-haiku-4-5"),
       system:
         getAnalyticsCatalogPrompt() + additionalInstructions + accountContext,
       messages: await convertToModelMessages(messages),
@@ -228,6 +228,7 @@ export async function POST(req: Request) {
                     saves: posts.saves,
                     duration: posts.duration,
                     thumbnailUrl: posts.thumbnailUrl,
+                    videoUrl: posts.videoUrl,
                     postedAt: posts.postedAt,
                     accountUsername: tiktokAccounts.username,
                   })
@@ -317,6 +318,7 @@ export async function POST(req: Request) {
                     saves: posts.saves,
                     duration: posts.duration,
                     thumbnailUrl: posts.thumbnailUrl,
+                    videoUrl: posts.videoUrl,
                     postedAt: posts.postedAt,
                     accountUsername: tiktokAccounts.username,
                     engagementScore: sql<number>`(${posts.likes} + ${posts.comments} * 2 + ${posts.shares} * 3)`,

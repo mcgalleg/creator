@@ -44,12 +44,20 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json();
-    const { title, gridPosition, configuration } = body;
+    const { title, gridPosition, canvasData, configuration } = body;
 
     // Build update object with only provided fields
     const updates: Partial<{
       title: string | null;
       gridPosition: { x: number; y: number; w: number; h: number } | null;
+      canvasData: {
+        x: number;
+        y: number;
+        width?: number;
+        height?: number;
+        rotation?: number;
+        zIndex?: number;
+      } | null;
       configuration: Record<string, unknown>;
       updatedAt: Date;
     }> = {
@@ -77,6 +85,47 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       updates.gridPosition = gridPosition;
     }
 
+    if (canvasData !== undefined) {
+      if (canvasData !== null) {
+        if (
+          typeof canvasData !== "object" ||
+          typeof canvasData.x !== "number" ||
+          typeof canvasData.y !== "number"
+        ) {
+          return NextResponse.json(
+            { error: "canvasData must have x, y as numbers or be null" },
+            { status: 400 }
+          );
+        }
+        // Validate optional fields if present
+        if (canvasData.width !== undefined && typeof canvasData.width !== "number") {
+          return NextResponse.json(
+            { error: "canvasData.width must be a number" },
+            { status: 400 }
+          );
+        }
+        if (canvasData.height !== undefined && typeof canvasData.height !== "number") {
+          return NextResponse.json(
+            { error: "canvasData.height must be a number" },
+            { status: 400 }
+          );
+        }
+        if (canvasData.rotation !== undefined && typeof canvasData.rotation !== "number") {
+          return NextResponse.json(
+            { error: "canvasData.rotation must be a number" },
+            { status: 400 }
+          );
+        }
+        if (canvasData.zIndex !== undefined && typeof canvasData.zIndex !== "number") {
+          return NextResponse.json(
+            { error: "canvasData.zIndex must be a number" },
+            { status: 400 }
+          );
+        }
+      }
+      updates.canvasData = canvasData;
+    }
+
     if (configuration !== undefined) {
       if (typeof configuration !== "object" || configuration === null) {
         return NextResponse.json(
@@ -101,6 +150,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         title: updated.title,
         configuration: updated.configuration,
         gridPosition: updated.gridPosition,
+        canvasData: updated.canvasData,
         createdAt: updated.createdAt,
         updatedAt: updated.updatedAt,
       },

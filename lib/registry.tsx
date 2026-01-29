@@ -248,6 +248,8 @@ export const registry: ComponentRegistry = {
         shares={props.shares}
         plays={props.plays}
         postedAt={props.postedAt}
+        videoUrl={props.videoUrl}
+        tiktokId={props.tiktokId}
       />
     );
   },

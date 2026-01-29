@@ -160,6 +160,8 @@ const VideoCardSchema = z.object({
   shares: z.number(),
   plays: z.number(),
   postedAt: z.string(),
+  videoUrl: z.string().url().optional(),
+  tiktokId: z.string().optional(),
 });
 
 const TopVideosGridSchema = z.object({
@@ -295,7 +297,7 @@ export const catalog = createCatalog({
     VideoCard: {
       props: asProps(VideoCardSchema),
       description:
-        "TikTok video card showing thumbnail and engagement metrics. Use for displaying individual video performance.",
+        "TikTok video card showing thumbnail and engagement metrics. Clicking opens an embedded video player. Include videoUrl for full embed functionality.",
     },
     TopVideosGrid: {
       props: asProps(TopVideosGridSchema),

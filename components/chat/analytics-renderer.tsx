@@ -64,7 +64,7 @@ export function AnalyticsRenderer({ tree }: AnalyticsRendererProps) {
   }, [tree]);
 
   return (
-    <div className="analytics-visualization w-full">
+    <div className="analytics-visualization w-full @container">
       {rendered}
     </div>
   );
