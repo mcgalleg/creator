@@ -44,19 +44,19 @@ export interface EngagementTimelineProps {
 const chartConfig: ChartConfig = {
   likes: {
     label: "Likes",
-    color: "hsl(var(--chart-1))",
+    color: "var(--chart-1)",
   },
   comments: {
     label: "Comments",
-    color: "hsl(var(--chart-2))",
+    color: "var(--chart-2)",
   },
   shares: {
     label: "Shares",
-    color: "hsl(var(--chart-3))",
+    color: "var(--chart-3)",
   },
   plays: {
     label: "Plays",
-    color: "hsl(var(--chart-4))",
+    color: "var(--chart-4)",
   },
 }
 
@@ -89,28 +89,28 @@ function EngagementTimeline({
             <Line
               type="monotone"
               dataKey="plays"
-              stroke="hsl(var(--chart-4))"
+              stroke="var(--chart-4)"
               strokeWidth={2}
               dot={false}
             />
             <Line
               type="monotone"
               dataKey="likes"
-              stroke="hsl(var(--chart-1))"
+              stroke="var(--chart-1)"
               strokeWidth={2}
               dot={false}
             />
             <Line
               type="monotone"
               dataKey="comments"
-              stroke="hsl(var(--chart-2))"
+              stroke="var(--chart-2)"
               strokeWidth={2}
               dot={false}
             />
             <Line
               type="monotone"
               dataKey="shares"
-              stroke="hsl(var(--chart-3))"
+              stroke="var(--chart-3)"
               strokeWidth={2}
               dot={false}
             />
