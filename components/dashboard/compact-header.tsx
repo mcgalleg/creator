@@ -23,6 +23,7 @@ export function CompactHeader() {
 
   // Prevent hydration mismatch with Clerk UserButton
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional for hydration handling
     setMounted(true);
   }, []);
 

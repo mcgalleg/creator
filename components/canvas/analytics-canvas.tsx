@@ -15,10 +15,15 @@ import '@xyflow/react/dist/style.css';
 import { useCanvasState } from '@/hooks/use-canvas-state';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { usePinToCanvasOptional, type PinToCanvasData } from '@/contexts/pin-to-canvas-context';
+import { CanvasActionsProvider } from '@/contexts/canvas-actions-context';
 import { nodeTypes } from './nodes';
 import { CanvasToolbar } from './canvas-toolbar';
 import { CommandPalette } from '@/components/command-palette';
 import { KeyboardShortcutsHelp } from '@/components/keyboard-shortcuts-help';
+
+interface AnalyticsCanvasProps {
+  canvasId?: number | null;
+}
 
 /**
  * Hook to detect if we're on a mobile/tablet viewport
@@ -40,7 +45,7 @@ function useIsMobile() {
   return isMobile;
 }
 
-function AnalyticsCanvasInner() {
+function AnalyticsCanvasInner({ canvasId }: AnalyticsCanvasProps) {
   const {
     nodes,
     edges,
@@ -50,7 +55,7 @@ function AnalyticsCanvasInner() {
     addNode,
     removeNode,
     clearCanvas,
-  } = useCanvasState();
+  } = useCanvasState({ canvasId });
 
   const { zoomIn, zoomOut, fitView, getViewport } = useReactFlow();
   const pinContext = usePinToCanvasOptional();
@@ -79,11 +84,10 @@ function AnalyticsCanvasInner() {
       position.x += Math.random() * 50 - 25;
       position.y += Math.random() * 50 - 25;
 
-      // Create the node with delete handler and pinned animation
-      const nodeId = addNode('analyticsCard', {
+      // Create the node with pinned animation
+      addNode('analyticsCard', {
         title: data.title,
         uiTree: data.uiTree,
-        onDelete: () => removeNode(nodeId),
       }, position, { className: 'node-new node-pinned' });
 
       // Save to the pinned API with canvas data
@@ -109,7 +113,7 @@ function AnalyticsCanvasInner() {
     };
 
     return pinContext.onPin(handlePin);
-  }, [pinContext, addNode, removeNode, getViewport]);
+  }, [pinContext, addNode, getViewport]);
 
   // Subscribe to render events from the chat (auto-render visualizations)
   useEffect(() => {
@@ -130,18 +134,17 @@ function AnalyticsCanvasInner() {
         y: (-viewport.y + 100 + row * spacing.y) / viewport.zoom,
       };
 
-      // Create the node with delete handler
+      // Create the node
       const nodeId = addNode('analyticsCard', {
         title: data.title,
         uiTree: data.uiTree,
-        onDelete: () => removeNode(nodeId),
       }, position, { className: 'node-new' });
 
       return nodeId;
     };
 
     return pinContext.onRender(handleRender);
-  }, [pinContext, addNode, removeNode, getViewport, nodes.length]);
+  }, [pinContext, addNode, getViewport, nodes.length]);
 
   const isMobile = useIsMobile();
 
@@ -150,72 +153,74 @@ function AnalyticsCanvasInner() {
   }, [addNode]);
 
   return (
-    <div className="w-full h-full touch-pan-x touch-pan-y">
-      <ReactFlow
-        colorMode="dark"
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        fitView
-        panOnScroll
-        selectionOnDrag
-        className="bg-background"
-        // Enable pinch-to-zoom on touch devices
-        zoomOnPinch
-        // Disable zoom on scroll for mobile to prevent accidental zooms
-        zoomOnScroll={!isMobile}
-        // Better touch handling - allow panning with any number of fingers on mobile
-        panOnDrag={isMobile ? [0, 1, 2] : true}
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={20}
-          size={1}
+    <CanvasActionsProvider removeNode={removeNode}>
+      <div className="w-full h-full touch-pan-x touch-pan-y">
+        <ReactFlow
+          colorMode="dark"
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          fitView
+          panOnScroll
+          selectionOnDrag
           className="bg-background"
-        />
-        {/* Controls - hide built-in zoom controls on mobile, we use toolbar instead */}
-        <Controls
-          className="bg-surface border-border"
-          showZoom={!isMobile}
-          showFitView={!isMobile}
-          showInteractive={!isMobile}
-        />
-        {/* MiniMap hidden on mobile/tablet for better UX */}
-        {!isMobile && (
-          <MiniMap
-            className="bg-surface border-border"
-            nodeColor="#F59E0B"
-            maskColor="rgba(0, 0, 0, 0.8)"
+          // Enable pinch-to-zoom on touch devices
+          zoomOnPinch
+          // Disable zoom on scroll for mobile to prevent accidental zooms
+          zoomOnScroll={!isMobile}
+          // Better touch handling - allow panning with any number of fingers on mobile
+          panOnDrag={isMobile ? [0, 1, 2] : true}
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={20}
+            size={1}
+            className="bg-background"
           />
-        )}
-        <CanvasToolbar
+          {/* Controls - hide built-in zoom controls on mobile, we use toolbar instead */}
+          <Controls
+            className="bg-surface border-border"
+            showZoom={!isMobile}
+            showFitView={!isMobile}
+            showInteractive={!isMobile}
+          />
+          {/* MiniMap hidden on mobile/tablet for better UX */}
+          {!isMobile && (
+            <MiniMap
+              className="bg-surface border-border"
+              nodeColor="#F59E0B"
+              maskColor="rgba(0, 0, 0, 0.8)"
+            />
+          )}
+          <CanvasToolbar
+            onAddNode={handleAddNode}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onFitView={fitView}
+            onShowHelp={() => setIsHelpOpen(true)}
+            isMobile={isMobile}
+          />
+        </ReactFlow>
+        <CommandPalette
           onAddNode={handleAddNode}
-          onZoomIn={zoomIn}
-          onZoomOut={zoomOut}
           onFitView={fitView}
-          onShowHelp={() => setIsHelpOpen(true)}
-          isMobile={isMobile}
+          onClearCanvas={clearCanvas}
         />
-      </ReactFlow>
-      <CommandPalette
-        onAddNode={handleAddNode}
-        onFitView={fitView}
-        onClearCanvas={clearCanvas}
-      />
-      <KeyboardShortcutsHelp
-        open={isHelpOpen}
-        onOpenChange={setIsHelpOpen}
-      />
-    </div>
+        <KeyboardShortcutsHelp
+          open={isHelpOpen}
+          onOpenChange={setIsHelpOpen}
+        />
+      </div>
+    </CanvasActionsProvider>
   );
 }
 
-export function AnalyticsCanvas() {
+export function AnalyticsCanvas({ canvasId }: AnalyticsCanvasProps) {
   return (
     <ReactFlowProvider>
-      <AnalyticsCanvasInner />
+      <AnalyticsCanvasInner canvasId={canvasId} />
     </ReactFlowProvider>
   );
 }

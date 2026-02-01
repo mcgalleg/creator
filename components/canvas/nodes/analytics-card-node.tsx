@@ -3,17 +3,18 @@ import { NodeProps, NodeResizer, Handle, Position } from '@xyflow/react';
 import { Trash2, GripVertical, Minimize2, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnalyticsRenderer } from '@/components/chat/analytics-renderer';
+import { useCanvasActions } from '@/contexts/canvas-actions-context';
 import type { UITree } from '@/hooks/use-analytics-chat';
 
 interface AnalyticsCardData {
   title: string;
   uiTree?: UITree;
-  onDelete?: () => void;
 }
 
-function AnalyticsCardNode({ data, selected }: NodeProps) {
+function AnalyticsCardNode({ id, data, selected }: NodeProps) {
   const cardData = data as unknown as AnalyticsCardData;
   const [isCompact, setIsCompact] = useState(false);
+  const { removeNode } = useCanvasActions();
 
   return (
     <>
@@ -74,7 +75,7 @@ function AnalyticsCardNode({ data, selected }: NodeProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={cardData.onDelete}
+              onClick={() => removeNode(id)}
               className="h-5 w-5 p-0 hover:bg-destructive/20 hover:text-destructive"
             >
               <Trash2 className="h-2.5 w-2.5" />

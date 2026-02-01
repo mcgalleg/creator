@@ -8,6 +8,7 @@ export * from "./pinned-components";
 export * from "./credits";
 export * from "./sync-jobs";
 export * from "./canvas-annotations";
+export * from "./canvases";
 
 // Export all relations
 export * from "./relations";

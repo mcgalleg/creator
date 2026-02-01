@@ -18,7 +18,6 @@ interface VisualizationReferenceProps {
  */
 export function VisualizationReference({
   title,
-  nodeId: _nodeId,
   componentType = 'Chart',
   onViewOnCanvas,
 }: VisualizationReferenceProps) {

@@ -6,6 +6,9 @@ import { SyncStatus } from "@/components/dashboard/sync-status";
 import { useAccounts } from "@/hooks/use-accounts";
 
 export default function AccountsPage() {
+  // Capture current time for filtering - intentionally impure to show time-based UI
+  // eslint-disable-next-line react-hooks/purity -- Intentional time-based filtering
+  const now = Date.now();
   const {
     accounts,
     loading,
@@ -48,7 +51,6 @@ export default function AccountsPage() {
       if (job.status === "completed" || job.status === "failed") {
         if (job.completedAt) {
           const completedTime = new Date(job.completedAt).getTime();
-          const now = Date.now();
           return now - completedTime < 10000; // 10 seconds
         }
         return true; // Show if no completedAt timestamp

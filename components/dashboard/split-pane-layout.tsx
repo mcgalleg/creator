@@ -10,9 +10,11 @@ import { Button } from '@/components/ui/button';
 
 interface SplitPaneLayoutProps {
   children: React.ReactNode;
+  onVisualizationAdded?: () => void;
+  onSwitchToCanvas?: () => void;
 }
 
-export function SplitPaneLayout({ children }: SplitPaneLayoutProps) {
+export function SplitPaneLayout({ children, onVisualizationAdded, onSwitchToCanvas }: SplitPaneLayoutProps) {
   const chatPanelRef = usePanelRef();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -25,7 +27,7 @@ export function SplitPaneLayout({ children }: SplitPaneLayoutProps) {
         panel.collapse();
       }
     }
-  }, []);
+  }, [chatPanelRef]);
 
   // Handle keyboard shortcut (Cmd/Ctrl + B)
   useEffect(() => {
@@ -57,7 +59,7 @@ export function SplitPaneLayout({ children }: SplitPaneLayoutProps) {
           onResize={handlePanelResize}
           className="flex flex-col"
         >
-          <ChatPanel />
+          <ChatPanel onVisualizationAdded={onVisualizationAdded} onSwitchToCanvas={onSwitchToCanvas} />
         </Panel>
 
         {/* Resize Handle */}

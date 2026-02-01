@@ -7,6 +7,7 @@ import { ChatInput } from '@/components/chat/chat-input';
 import { MessageList } from '@/components/chat/message-list';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePinToCanvasOptional } from '@/contexts/pin-to-canvas-context';
+import { toast } from 'sonner';
 
 /**
  * Extracts a title from a UI tree for display purposes.
@@ -25,11 +26,16 @@ function extractTitle(tree: UITree): string | null {
   return null;
 }
 
+interface ChatPanelProps {
+  onVisualizationAdded?: () => void;
+  onSwitchToCanvas?: () => void;
+}
+
 /**
  * Chat panel component that integrates with the analytics chat hook.
  * This is the left-side panel in the split-pane layout.
  */
-export function ChatPanel() {
+export function ChatPanel({ onVisualizationAdded, onSwitchToCanvas }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +77,17 @@ export function ChatPanel() {
               return next;
             });
           }
+
+          // Show toast notification and invoke callback
+          toast.success('Visualization added to Canvas', {
+            action: {
+              label: 'View',
+              onClick: () => {
+                onSwitchToCanvas?.();
+              },
+            },
+          });
+          onVisualizationAdded?.();
         } catch (error) {
           console.error('Failed to render visualization to canvas:', error);
         }
@@ -83,11 +100,12 @@ export function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isGenerating]);
 
-  // Handle "View on Canvas" button click - could implement pan-to-node later
+  // Handle "View on Canvas" button click - switches to canvas tab
   const handleViewOnCanvas = useCallback((nodeId: string) => {
-    // For now, just log - could implement canvas panning to the node
     console.log('View on canvas:', nodeId);
-  }, []);
+    // Switch to canvas tab
+    onSwitchToCanvas?.();
+  }, [onSwitchToCanvas]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useCallback, useState, ReactNode } from 'react';
+import { createContext, useContext, useCallback, useState, useRef, ReactNode } from 'react';
 import type { UITree } from '@/hooks/use-analytics-chat';
 
 export interface PinToCanvasData {
@@ -18,6 +18,15 @@ export type PinCallback = (data: PinToCanvasData) => void;
  * Callback type for render events (returns nodeId).
  */
 export type RenderCallback = (data: PinToCanvasData) => Promise<string>;
+
+/**
+ * Queued render request when canvas is not mounted.
+ */
+interface QueuedRender {
+  data: PinToCanvasData;
+  resolve: (nodeId: string) => void;
+  reject: (error: Error) => void;
+}
 
 interface PinToCanvasContextValue {
   /**
@@ -39,6 +48,7 @@ interface PinToCanvasContextValue {
   /**
    * Render a component directly to canvas.
    * Returns a promise that resolves with the nodeId of the created node.
+   * If no canvas is mounted, the request is queued and processed when canvas mounts.
    */
   renderToCanvas: (data: PinToCanvasData) => Promise<string>;
 
@@ -53,6 +63,12 @@ interface PinToCanvasContextValue {
    * The callback should return the nodeId of the created node.
    */
   onRender: (callback: RenderCallback) => () => void;
+
+  /**
+   * Whether there are queued renders waiting for the canvas to mount.
+   * Useful for showing indicators on the Canvas tab.
+   */
+  hasQueuedRenders: boolean;
 }
 
 const PinToCanvasContext = createContext<PinToCanvasContextValue | null>(null);
@@ -65,6 +81,10 @@ export function PinToCanvasProvider({ children }: PinToCanvasProviderProps) {
   const [isPinning, setIsPinning] = useState(false);
   const [pinSubscribers] = useState<Set<PinCallback>>(() => new Set());
   const [renderCallbacks] = useState<Set<RenderCallback>>(() => new Set());
+
+  // Queue for render requests when canvas is not mounted
+  const renderQueueRef = useRef<QueuedRender[]>([]);
+  const [hasQueuedRenders, setHasQueuedRenders] = useState(false);
 
   const pinToCanvas = useCallback(async (data: PinToCanvasData) => {
     setIsPinning(true);
@@ -90,6 +110,22 @@ export function PinToCanvasProvider({ children }: PinToCanvasProviderProps) {
     };
   }, [pinSubscribers]);
 
+  // Process queued renders when a callback becomes available
+  const processQueue = useCallback(async (callback: RenderCallback) => {
+    const queue = [...renderQueueRef.current];
+    renderQueueRef.current = [];
+    setHasQueuedRenders(false);
+
+    for (const item of queue) {
+      try {
+        const nodeId = await callback(item.data);
+        item.resolve(nodeId);
+      } catch (error) {
+        item.reject(error instanceof Error ? error : new Error('Render failed'));
+      }
+    }
+  }, []);
+
   const renderToCanvas = useCallback(async (data: PinToCanvasData): Promise<string> => {
     // Call all registered render callbacks and return the first nodeId
     for (const callback of renderCallbacks) {
@@ -100,7 +136,12 @@ export function PinToCanvasProvider({ children }: PinToCanvasProviderProps) {
         console.error('Error in render callback:', error);
       }
     }
-    throw new Error('No render callback registered or all callbacks failed');
+
+    // No callback registered - queue the request for when canvas mounts
+    return new Promise((resolve, reject) => {
+      renderQueueRef.current.push({ data, resolve, reject });
+      setHasQueuedRenders(true);
+    });
   }, [renderCallbacks]);
 
   const renderMultipleToCanvas = useCallback(async (components: PinToCanvasData[]): Promise<string[]> => {
@@ -114,10 +155,16 @@ export function PinToCanvasProvider({ children }: PinToCanvasProviderProps) {
 
   const onRender = useCallback((callback: RenderCallback) => {
     renderCallbacks.add(callback);
+
+    // Process any queued renders
+    if (renderQueueRef.current.length > 0) {
+      processQueue(callback);
+    }
+
     return () => {
       renderCallbacks.delete(callback);
     };
-  }, [renderCallbacks]);
+  }, [renderCallbacks, processQueue]);
 
   return (
     <PinToCanvasContext.Provider value={{
@@ -127,6 +174,7 @@ export function PinToCanvasProvider({ children }: PinToCanvasProviderProps) {
       renderToCanvas,
       renderMultipleToCanvas,
       onRender,
+      hasQueuedRenders,
     }}>
       {children}
     </PinToCanvasContext.Provider>

@@ -7,6 +7,7 @@ import { accountMetricsHistory } from "./metrics";
 import { pinnedComponents } from "./pinned-components";
 import { creditTransactions } from "./credits";
 import { syncJobs } from "./sync-jobs";
+import { canvases } from "./canvases";
 
 // Users relations
 export const usersRelations = relations(users, ({ many }) => ({
@@ -14,6 +15,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   pinnedComponents: many(pinnedComponents),
   creditTransactions: many(creditTransactions),
   syncJobs: many(syncJobs),
+  canvases: many(canvases),
 }));
 
 // TikTok accounts relations
@@ -76,6 +78,14 @@ export const syncJobsRelations = relations(syncJobs, ({ one }) => ({
   }),
   user: one(users, {
     fields: [syncJobs.userId],
+    references: [users.id],
+  }),
+}));
+
+// Canvases relations
+export const canvasesRelations = relations(canvases, ({ one }) => ({
+  user: one(users, {
+    fields: [canvases.userId],
     references: [users.id],
   }),
 }));

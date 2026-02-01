@@ -7,7 +7,7 @@ import { AnalyticsRenderer } from './analytics-renderer';
 import type { UITree } from '@/hooks/use-analytics-chat';
 import { usePinToCanvasOptional } from '@/contexts/pin-to-canvas-context';
 import { Button } from '@/components/ui/button';
-import { Pin, Check, Loader2, PinOff } from 'lucide-react';
+import { Pin, Check, Loader2 } from 'lucide-react';
 import { MarkdownRenderer } from './markdown-renderer';
 import { VisualizationReference } from './visualization-reference';
 
@@ -159,10 +159,8 @@ function PinButton({ uiTree, label, size = 'sm', variant = 'default' }: PinButto
  */
 function PinnableComponentWrapper({
   tree,
-  index,
 }: {
   tree: UITree;
-  index: number;
 }) {
   return (
     <div className="group/pinnable relative">
@@ -296,7 +294,6 @@ export function MessageList({ messages, uiTrees, getMessageText, canvasNodeIds, 
                             <PinnableComponentWrapper
                               key={`p-${idx}`}
                               tree={child}
-                              index={idx}
                             />
                           ))}
 
