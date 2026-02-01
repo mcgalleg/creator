@@ -12,9 +12,10 @@ import {
   RefreshCw,
   TrendingUp,
   ArrowRight,
-  BarChart3,
+  Bot,
   Zap,
 } from "lucide-react";
+import { PixelBlastBg } from "@/components/backgrounds/pixel-blast-bg";
 
 export default function Home() {
   return (
@@ -23,8 +24,8 @@ export default function Home() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <BarChart3 className="size-6 text-primary" />
-            <span className="text-xl font-bold">TikTok Analytics</span>
+            <Bot className="size-6 text-amber-500" />
+            <span className="text-xl font-bold">Not a Bot</span>
           </div>
           <nav className="flex items-center gap-4">
             <SignedOut>
@@ -48,22 +49,30 @@ export default function Home() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="container mx-auto max-w-6xl px-4 py-24 text-center md:py-32">
-          <Badge variant="secondary" className="mb-4">
+        <section className="relative container mx-auto max-w-6xl px-4 py-24 text-center md:py-32">
+          {/* PixelBlast as absolute background */}
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <PixelBlastBg
+              color="#F59E0B"
+              className="h-full w-full"
+            />
+          </div>
+          {/* Content - above PixelBlast */}
+          <Badge variant="secondary" className="relative z-10 mb-4">
             <Sparkles className="mr-1 size-3" />
             AI-Powered Analytics
           </Badge>
-          <h1 className="mx-auto max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+          <h1 className="relative z-10 mx-auto max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
             Understand Your TikTok Performance with{" "}
-            <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 bg-clip-text text-transparent">
               AI-Powered Insights
             </span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
+          <p className="relative z-10 mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
             Ask questions in plain English and get instant, actionable insights about your TikTok
             analytics. Beautiful visualizations generated on-the-fly, powered by AI.
           </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <div className="relative z-10 mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <SignedOut>
               <SignUpButton mode="modal">
                 <Button size="lg" className="gap-2">
@@ -81,7 +90,7 @@ export default function Home() {
             </Link>
           </div>
           <SignedOut>
-            <p className="mt-4 text-sm text-muted-foreground">
+            <p className="relative z-10 mt-4 text-sm text-muted-foreground">
               No credit card required. 100 free credits to get started.
             </p>
           </SignedOut>
@@ -106,8 +115,8 @@ export default function Home() {
             <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <Card className="relative overflow-hidden">
                 <CardHeader>
-                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-                    <MessageSquareText className="size-6 text-primary" />
+                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-amber-500/10">
+                    <MessageSquareText className="size-6 text-amber-500" />
                   </div>
                   <CardTitle className="text-lg">AI Analytics Copilot</CardTitle>
                   <CardDescription>
@@ -119,8 +128,8 @@ export default function Home() {
 
               <Card className="relative overflow-hidden">
                 <CardHeader>
-                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-                    <Sparkles className="size-6 text-primary" />
+                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-amber-500/10">
+                    <Sparkles className="size-6 text-amber-500" />
                   </div>
                   <CardTitle className="text-lg">Streaming UI</CardTitle>
                   <CardDescription>
@@ -132,8 +141,8 @@ export default function Home() {
 
               <Card className="relative overflow-hidden">
                 <CardHeader>
-                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-                    <Users className="size-6 text-primary" />
+                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-amber-500/10">
+                    <Users className="size-6 text-amber-500" />
                   </div>
                   <CardTitle className="text-lg">Multi-Account Support</CardTitle>
                   <CardDescription>
@@ -145,8 +154,8 @@ export default function Home() {
 
               <Card className="relative overflow-hidden">
                 <CardHeader>
-                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-                    <Coins className="size-6 text-primary" />
+                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-amber-500/10">
+                    <Coins className="size-6 text-amber-500" />
                   </div>
                   <CardTitle className="text-lg">Credit-Based Sync</CardTitle>
                   <CardDescription>
@@ -176,7 +185,7 @@ export default function Home() {
 
             <div className="mt-16 grid gap-8 md:grid-cols-3">
               <div className="relative flex flex-col items-center text-center">
-                <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
+                <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-amber-500 text-2xl font-bold text-white">
                   1
                 </div>
                 <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-muted">
@@ -192,7 +201,7 @@ export default function Home() {
               </div>
 
               <div className="relative flex flex-col items-center text-center">
-                <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
+                <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-amber-500 text-2xl font-bold text-white">
                   2
                 </div>
                 <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-muted">
@@ -209,7 +218,7 @@ export default function Home() {
               </div>
 
               <div className="relative flex flex-col items-center text-center">
-                <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
+                <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-amber-500 text-2xl font-bold text-white">
                   3
                 </div>
                 <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-muted">
@@ -267,7 +276,7 @@ export default function Home() {
         {/* CTA Section */}
         <section className="py-24">
           <div className="container mx-auto max-w-6xl px-4">
-            <Card className="overflow-hidden bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
+            <Card className="overflow-hidden bg-gradient-to-br from-amber-500/5 via-amber-500/10 to-orange-500/5">
               <CardContent className="flex flex-col items-center p-12 text-center">
                 <Badge variant="secondary" className="mb-4">
                   Start Today
@@ -307,8 +316,8 @@ export default function Home() {
         <div className="container mx-auto max-w-6xl px-4">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <div className="flex items-center gap-2">
-              <BarChart3 className="size-5 text-muted-foreground" />
-              <span className="font-semibold">TikTok Analytics</span>
+              <Bot className="size-5 text-amber-500" />
+              <span className="font-semibold">Not a Bot</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Built with AI. Designed for creators.

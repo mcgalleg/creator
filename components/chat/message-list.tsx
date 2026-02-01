@@ -9,11 +9,14 @@ import { usePinToCanvasOptional } from '@/contexts/pin-to-canvas-context';
 import { Button } from '@/components/ui/button';
 import { Pin, Check, Loader2, PinOff } from 'lucide-react';
 import { MarkdownRenderer } from './markdown-renderer';
+import { VisualizationReference } from './visualization-reference';
 
 interface MessageListProps {
   messages: UIMessage[];
   uiTrees: UITree[];
   getMessageText: (message: UIMessage) => string;
+  canvasNodeIds?: Map<string, string>; // messageId -> nodeId mapping
+  onViewOnCanvas?: (nodeId: string) => void;
 }
 
 /**
@@ -175,8 +178,12 @@ function PinnableComponentWrapper({
 /**
  * Displays the list of chat messages with rendered UI trees for analytics.
  * User messages are aligned to the right, assistant messages to the left.
+ *
+ * When canvasNodeIds is provided, visualizations are shown as compact reference
+ * cards instead of full inline renderings. This allows the chat to remain
+ * lightweight while the full visualizations live on the canvas.
  */
-export function MessageList({ messages, uiTrees, getMessageText }: MessageListProps) {
+export function MessageList({ messages, uiTrees, getMessageText, canvasNodeIds, onViewOnCanvas }: MessageListProps) {
   // Track which UI tree we're on (matching them to assistant messages with generateUI)
   let treeIndex = 0;
 
@@ -244,6 +251,32 @@ export function MessageList({ messages, uiTrees, getMessageText }: MessageListPr
               {currentTree && (
                 <div className={cn('w-full', text && 'mt-4')}>
                   {(() => {
+                    // If we have canvas node IDs, show compact reference cards instead of full visualizations
+                    const nodeId = canvasNodeIds?.get(message.id);
+                    if (canvasNodeIds && nodeId) {
+                      return (
+                        <VisualizationReference
+                          title={extractTitle(currentTree)}
+                          nodeId={nodeId}
+                          componentType={currentTree.component}
+                          onViewOnCanvas={() => onViewOnCanvas?.(nodeId)}
+                        />
+                      );
+                    }
+
+                    // If canvasNodeIds is provided but no nodeId for this message yet,
+                    // show a minimal placeholder (visualization is being added to canvas)
+                    if (canvasNodeIds) {
+                      return (
+                        <VisualizationReference
+                          title={extractTitle(currentTree)}
+                          nodeId=""
+                          componentType={currentTree.component}
+                        />
+                      );
+                    }
+
+                    // Fallback: render full visualization inline (legacy behavior)
                     const pinnableChildren = getPinnableChildren(currentTree);
                     const hasMultiplePinnable = pinnableChildren.length > 1;
 

@@ -1,11 +1,29 @@
 'use client';
 
-import { useState, FormEvent, useRef, useEffect } from 'react';
+import { useState, FormEvent, useRef, useEffect, useCallback } from 'react';
 import { MessageSquare, AlertCircle } from 'lucide-react';
-import { useAnalyticsChat } from '@/hooks/use-analytics-chat';
+import { useAnalyticsChat, type UITree } from '@/hooks/use-analytics-chat';
 import { ChatInput } from '@/components/chat/chat-input';
 import { MessageList } from '@/components/chat/message-list';
 import { Skeleton } from '@/components/ui/skeleton';
+import { usePinToCanvasOptional } from '@/contexts/pin-to-canvas-context';
+
+/**
+ * Extracts a title from a UI tree for display purposes.
+ */
+function extractTitle(tree: UITree): string | null {
+  if (tree.props?.title && typeof tree.props.title === 'string') {
+    return tree.props.title;
+  }
+  if (tree.props?.label && typeof tree.props.label === 'string') {
+    return tree.props.label;
+  }
+  // Use component name as fallback (convert PascalCase to Title Case)
+  if (tree.component) {
+    return tree.component.replace(/([A-Z])/g, ' $1').trim();
+  }
+  return null;
+}
 
 /**
  * Chat panel component that integrates with the analytics chat hook.
@@ -15,6 +33,12 @@ export function ChatPanel() {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Track canvas node IDs for each message
+  const [canvasNodeIds, setCanvasNodeIds] = useState<Map<string, string>>(new Map());
+
+  // Get canvas context for rendering visualizations
+  const pinContext = usePinToCanvasOptional();
+
   const {
     messages,
     submitMessage,
@@ -23,12 +47,47 @@ export function ChatPanel() {
     uiTrees,
     error,
     getMessageText,
-  } = useAnalyticsChat();
+  } = useAnalyticsChat({
+    onVisualizationGenerated: async (newTrees) => {
+      if (!pinContext) return;
+
+      // Render each new tree to the canvas
+      for (const tree of newTrees) {
+        try {
+          const nodeId = await pinContext.renderToCanvas({
+            title: extractTitle(tree) || 'Visualization',
+            uiTree: tree,
+          });
+
+          // Find the message that contains this tree and associate the node ID
+          // We look for the most recent assistant message
+          const assistantMessages = messages.filter(m => m.role === 'assistant');
+          const latestMessage = assistantMessages[assistantMessages.length - 1];
+
+          if (latestMessage) {
+            setCanvasNodeIds(prev => {
+              const next = new Map(prev);
+              next.set(latestMessage.id, nodeId);
+              return next;
+            });
+          }
+        } catch (error) {
+          console.error('Failed to render visualization to canvas:', error);
+        }
+      }
+    },
+  });
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isGenerating]);
+
+  // Handle "View on Canvas" button click - could implement pan-to-node later
+  const handleViewOnCanvas = useCallback((nodeId: string) => {
+    // For now, just log - could implement canvas panning to the node
+    console.log('View on canvas:', nodeId);
+  }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -65,6 +124,8 @@ export function ChatPanel() {
             messages={messages}
             uiTrees={uiTrees}
             getMessageText={getMessageText}
+            canvasNodeIds={canvasNodeIds}
+            onViewOnCanvas={handleViewOnCanvas}
           />
         )}
 

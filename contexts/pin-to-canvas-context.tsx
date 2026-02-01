@@ -9,6 +9,16 @@ export interface PinToCanvasData {
   position?: { x: number; y: number };
 }
 
+/**
+ * Callback type for pin events (fire-and-forget).
+ */
+export type PinCallback = (data: PinToCanvasData) => void;
+
+/**
+ * Callback type for render events (returns nodeId).
+ */
+export type RenderCallback = (data: PinToCanvasData) => Promise<string>;
+
 interface PinToCanvasContextValue {
   /**
    * Pin a visualization from chat to the canvas.
@@ -19,12 +29,30 @@ interface PinToCanvasContextValue {
   /**
    * Subscribe to pin events. Returns an unsubscribe function.
    */
-  onPin: (callback: (data: PinToCanvasData) => void) => () => void;
+  onPin: (callback: PinCallback) => () => void;
 
   /**
    * Whether a pin animation is currently in progress.
    */
   isPinning: boolean;
+
+  /**
+   * Render a component directly to canvas.
+   * Returns a promise that resolves with the nodeId of the created node.
+   */
+  renderToCanvas: (data: PinToCanvasData) => Promise<string>;
+
+  /**
+   * Render multiple components as separate nodes on the canvas.
+   * Returns a promise that resolves with an array of nodeIds.
+   */
+  renderMultipleToCanvas: (components: PinToCanvasData[]) => Promise<string[]>;
+
+  /**
+   * Subscribe to render events. Returns an unsubscribe function.
+   * The callback should return the nodeId of the created node.
+   */
+  onRender: (callback: RenderCallback) => () => void;
 }
 
 const PinToCanvasContext = createContext<PinToCanvasContextValue | null>(null);
@@ -35,13 +63,14 @@ interface PinToCanvasProviderProps {
 
 export function PinToCanvasProvider({ children }: PinToCanvasProviderProps) {
   const [isPinning, setIsPinning] = useState(false);
-  const [subscribers] = useState<Set<(data: PinToCanvasData) => void>>(() => new Set());
+  const [pinSubscribers] = useState<Set<PinCallback>>(() => new Set());
+  const [renderCallbacks] = useState<Set<RenderCallback>>(() => new Set());
 
   const pinToCanvas = useCallback(async (data: PinToCanvasData) => {
     setIsPinning(true);
 
     // Notify all subscribers (the canvas)
-    subscribers.forEach((callback) => {
+    pinSubscribers.forEach((callback) => {
       try {
         callback(data);
       } catch (error) {
@@ -52,17 +81,53 @@ export function PinToCanvasProvider({ children }: PinToCanvasProviderProps) {
     // Short delay for animation
     await new Promise((resolve) => setTimeout(resolve, 300));
     setIsPinning(false);
-  }, [subscribers]);
+  }, [pinSubscribers]);
 
-  const onPin = useCallback((callback: (data: PinToCanvasData) => void) => {
-    subscribers.add(callback);
+  const onPin = useCallback((callback: PinCallback) => {
+    pinSubscribers.add(callback);
     return () => {
-      subscribers.delete(callback);
+      pinSubscribers.delete(callback);
     };
-  }, [subscribers]);
+  }, [pinSubscribers]);
+
+  const renderToCanvas = useCallback(async (data: PinToCanvasData): Promise<string> => {
+    // Call all registered render callbacks and return the first nodeId
+    for (const callback of renderCallbacks) {
+      try {
+        const nodeId = await callback(data);
+        if (nodeId) return nodeId;
+      } catch (error) {
+        console.error('Error in render callback:', error);
+      }
+    }
+    throw new Error('No render callback registered or all callbacks failed');
+  }, [renderCallbacks]);
+
+  const renderMultipleToCanvas = useCallback(async (components: PinToCanvasData[]): Promise<string[]> => {
+    const nodeIds: string[] = [];
+    for (const component of components) {
+      const nodeId = await renderToCanvas(component);
+      nodeIds.push(nodeId);
+    }
+    return nodeIds;
+  }, [renderToCanvas]);
+
+  const onRender = useCallback((callback: RenderCallback) => {
+    renderCallbacks.add(callback);
+    return () => {
+      renderCallbacks.delete(callback);
+    };
+  }, [renderCallbacks]);
 
   return (
-    <PinToCanvasContext.Provider value={{ pinToCanvas, onPin, isPinning }}>
+    <PinToCanvasContext.Provider value={{
+      pinToCanvas,
+      onPin,
+      isPinning,
+      renderToCanvas,
+      renderMultipleToCanvas,
+      onRender,
+    }}>
       {children}
     </PinToCanvasContext.Provider>
   );

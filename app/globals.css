@@ -59,137 +59,155 @@
 
 :root {
   /* ═══════════════════════════════════════════════════════════════════════════
-     COMMAND CENTER - Light Theme (Alternative)
-     Light mode variant preserving TikTok-inspired accent colors
+     NOT A BOT - Light Theme (Alternative)
+     Amber-based light mode variant
      ═══════════════════════════════════════════════════════════════════════════ */
   --radius: 0.625rem;
 
   /* Core backgrounds - Clean light surfaces */
-  --background: oklch(0.99 0 0);
-  --surface: oklch(0.97 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.99 0.01 90);
+  --surface: oklch(0.97 0.01 90);
+  --foreground: oklch(0.205 0 0);
 
   /* Cards and popovers */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.205 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.205 0 0);
 
-  /* Primary: Darker cyan for light mode readability */
-  --primary: #00B8A0;
-  --primary-foreground: #FFFFFF;
+  /* Primary: Warm Amber for light mode */
+  --primary: oklch(0.65 0.18 70.08);
+  --primary-foreground: oklch(0.99 0 0);
 
-  /* Secondary: Darker magenta for light mode */
-  --secondary: #D4005C;
-  --secondary-foreground: #FFFFFF;
+  /* Secondary: Deep space purple for light mode */
+  --secondary: oklch(0.45 0.12 280);
+  --secondary-foreground: oklch(0.99 0 0);
 
-  /* Accent: Darker purple for light mode */
-  --accent: #6B2DC0;
-  --accent-foreground: #FFFFFF;
+  /* Accent: Amber highlight for light mode */
+  --accent: oklch(0.7 0.16 84.429);
+  --accent-foreground: oklch(0.205 0 0);
 
-  /* TikTok-inspired accent colors (adjusted for light mode) */
-  --cyan: #00B8A0;
-  --cyan-foreground: #FFFFFF;
-  --magenta: #D4005C;
-  --magenta-foreground: #FFFFFF;
-  --purple: #6B2DC0;
-  --purple-foreground: #FFFFFF;
+  /* Amber theme accent colors (adjusted for light mode) */
+  --cyan: oklch(0.65 0.18 70.08);
+  --cyan-foreground: oklch(0.99 0 0);
+  --magenta: oklch(0.45 0.12 280);
+  --magenta-foreground: oklch(0.99 0 0);
+  --purple: oklch(0.5 0.15 280);
+  --purple-foreground: oklch(0.99 0 0);
 
   /* Muted colors */
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted: oklch(0.97 0.01 90);
+  --muted-foreground: oklch(0.5 0.01 90);
 
   /* Destructive */
   --destructive: oklch(0.577 0.245 27.325);
 
   /* Borders and inputs */
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: #00B8A0;
+  --border: oklch(0.9 0.02 90);
+  --input: oklch(0.9 0.02 90);
+  --ring: oklch(0.65 0.18 70.08);
 
-  /* Chart colors - Light mode variants */
-  --chart-1: #00B8A0;
-  --chart-2: #D4005C;
-  --chart-3: #6B2DC0;
-  --chart-4: #E5A700;
-  --chart-5: #00A08A;
+  /* Chart colors - Light mode amber variants */
+  --chart-1: oklch(0.65 0.18 70.08);
+  --chart-2: oklch(0.7 0.16 84.429);
+  --chart-3: oklch(0.55 0.2 41.116);
+  --chart-4: oklch(0.5 0.1 184.704);
+  --chart-5: oklch(0.45 0.2 264.376);
 
   /* Sidebar */
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #00B8A0;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar: oklch(0.985 0.01 90);
+  --sidebar-foreground: oklch(0.205 0 0);
+  --sidebar-primary: oklch(0.65 0.18 70.08);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.97 0.01 90);
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: #00B8A0;
+  --sidebar-border: oklch(0.9 0.02 90);
+  --sidebar-ring: oklch(0.65 0.18 70.08);
 }
 
 .dark {
   /* ═══════════════════════════════════════════════════════════════════════════
-     COMMAND CENTER - Dark Theme (Primary)
-     TikTok Analytics Dashboard - Data-Dense Control Room Aesthetic
+     NOT A BOT - Dark Theme (Primary)
+     Amber Dark Space - "Bot Glow" Aesthetic
      ═══════════════════════════════════════════════════════════════════════════ */
 
-  /* Core backgrounds - Deep space for data visualization */
-  --background: #0A0A0F;
-  --surface: #12121A;
-  --foreground: oklch(0.95 0 0);
+  /* Primary: Warm Amber/Orange - "bot glow" */
+  --primary: oklch(0.769 0.188 70.08);
+  --primary-foreground: oklch(0.205 0 0);
 
-  /* Cards and popovers - Elevated surface panels */
-  --card: #12121A;
-  --card-foreground: oklch(0.95 0 0);
-  --popover: #12121A;
-  --popover-foreground: oklch(0.95 0 0);
+  /* Secondary: Deep space purple */
+  --secondary: oklch(0.371 0.1 280);
+  --secondary-foreground: oklch(0.985 0 0);
 
-  /* Primary: Electric Cyan - Main actions, highlights, success states */
-  --primary: #00F5D4;
-  --primary-foreground: #0A0A0F;
+  /* Accent: Electric amber highlight */
+  --accent: oklch(0.828 0.189 84.429);
+  --accent-foreground: oklch(0.205 0 0);
 
-  /* Secondary: Hot Magenta - Engagement metrics, notifications, CTAs */
-  --secondary: #FF006E;
-  --secondary-foreground: #FFFFFF;
+  /* Background: Deep space black */
+  --background: oklch(0.12 0.02 280);
+  --surface: oklch(0.16 0.02 280);
+  --foreground: oklch(0.95 0.01 90);
 
-  /* Accent: Deep Purple - Tertiary highlights, creative elements */
-  --accent: #8338EC;
-  --accent-foreground: #FFFFFF;
+  /* Cards */
+  --card: oklch(0.16 0.02 280);
+  --card-foreground: oklch(0.95 0.01 90);
+  --popover: oklch(0.16 0.02 280);
+  --popover-foreground: oklch(0.95 0.01 90);
 
-  /* TikTok-inspired accent colors for direct use */
-  --cyan: #00F5D4;
-  --cyan-foreground: #0A0A0F;
-  --magenta: #FF006E;
-  --magenta-foreground: #FFFFFF;
-  --purple: #8338EC;
-  --purple-foreground: #FFFFFF;
-
-  /* Muted colors - Subtle backgrounds, disabled states */
-  --muted: #1A1A24;
-  --muted-foreground: oklch(0.65 0 0);
+  /* Muted */
+  --muted: oklch(0.20 0.02 280);
+  --muted-foreground: oklch(0.65 0.01 90);
 
   /* Destructive - Error states, deletions */
   --destructive: #FF3B5C;
 
-  /* Borders and inputs - Subtle with cyan undertone */
-  --border: oklch(1 0.02 180 / 12%);
-  --input: oklch(1 0.02 180 / 18%);
-  --ring: #00F5D4;
+  /* Border */
+  --border: oklch(0.25 0.02 280);
+  --input: oklch(0.25 0.02 280);
+  --ring: oklch(0.769 0.188 70.08);
 
-  /* Chart colors - Vibrant analytics palette for data visualization */
-  --chart-1: #00F5D4; /* Electric Cyan - Primary metric */
-  --chart-2: #FF006E; /* Hot Magenta - Secondary metric */
-  --chart-3: #8338EC; /* Deep Purple - Tertiary metric */
-  --chart-4: #FFD60A; /* Warning Yellow - Alerts/attention */
-  --chart-5: #00D4AA; /* Teal variant - Alternative primary */
+  /* Chart colors (amber palette) */
+  --chart-1: oklch(0.769 0.188 70.08);   /* Amber */
+  --chart-2: oklch(0.828 0.189 84.429);  /* Gold */
+  --chart-3: oklch(0.646 0.222 41.116);  /* Orange */
+  --chart-4: oklch(0.6 0.118 184.704);   /* Teal contrast */
+  --chart-5: oklch(0.488 0.243 264.376); /* Purple accent */
 
-  /* Sidebar - Control panel navigation */
-  --sidebar: #0D0D14;
-  --sidebar-foreground: oklch(0.9 0 0);
-  --sidebar-primary: #00F5D4;
-  --sidebar-primary-foreground: #0A0A0F;
-  --sidebar-accent: #1A1A24;
-  --sidebar-accent-foreground: oklch(0.95 0 0);
-  --sidebar-border: oklch(1 0.02 180 / 10%);
-  --sidebar-ring: #00F5D4;
+  /* Sidebar */
+  --sidebar: oklch(0.14 0.02 280);
+  --sidebar-foreground: oklch(0.9 0.01 90);
+  --sidebar-primary: oklch(0.769 0.188 70.08);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
+  --sidebar-accent: oklch(0.20 0.02 280);
+  --sidebar-accent-foreground: oklch(0.95 0.01 90);
+  --sidebar-border: oklch(0.25 0.02 280);
+  --sidebar-ring: oklch(0.769 0.188 70.08);
+
+  /* Legacy accent colors mapped to amber theme */
+  --cyan: oklch(0.769 0.188 70.08);
+  --cyan-foreground: oklch(0.205 0 0);
+  --magenta: oklch(0.646 0.222 41.116);
+  --magenta-foreground: oklch(0.205 0 0);
+  --purple: oklch(0.488 0.243 264.376);
+  --purple-foreground: oklch(0.985 0 0);
+}
+
+/* ReactFlow theme integration */
+.react-flow {
+  --xy-node-background-color-default: var(--card);
+  --xy-node-border-default: 1px solid var(--border);
+  --xy-node-color-default: var(--foreground);
+  --xy-node-boxshadow-selected-default: 0 0 0 2px var(--primary);
+  --xy-node-boxshadow-hover-default: 0 4px 20px oklch(0.769 0.188 70.08 / 20%);
+  --xy-edge-stroke-default: var(--border);
+  --xy-edge-stroke-selected-default: var(--primary);
+  --xy-handle-background-color-default: var(--primary);
+  --xy-handle-border-color-default: var(--background);
+  --xy-background-pattern-dots-color-default: oklch(0.769 0.188 70.08 / 20%);
+  --xy-minimap-background-color-default: var(--surface);
+  --xy-controls-button-background-color-default: var(--card);
+  --xy-controls-button-color-default: var(--foreground);
+  --xy-controls-button-border-color-default: var(--border);
 }
 
 @layer base {
@@ -231,7 +249,7 @@
 
 /* Node selection glow effect */
 .react-flow__node.selected {
-  box-shadow: 0 0 0 2px var(--primary), 0 4px 20px rgba(0, 245, 212, 0.2);
+  box-shadow: 0 0 0 2px var(--primary), 0 4px 20px oklch(0.769 0.188 70.08 / 0.2);
 }
 
 /* Analytics card node hover effect */
@@ -240,7 +258,7 @@
 }
 
 .analytics-card-node:hover {
-  box-shadow: 0 4px 20px rgba(0, 245, 212, 0.15);
+  box-shadow: 0 4px 20px oklch(0.769 0.188 70.08 / 0.15);
 }
 
 /* Sticky note hover effect */
@@ -260,7 +278,7 @@
 
 .text-note-node:hover {
   border-color: var(--primary);
-  box-shadow: 0 2px 12px rgba(0, 245, 212, 0.1);
+  box-shadow: 0 2px 12px oklch(0.769 0.188 70.08 / 0.1);
 }
 
 /* New node appearance animation */
@@ -282,10 +300,10 @@
 /* Pinned node highlight animation */
 @keyframes pulse-highlight {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(0, 245, 212, 0.4);
+    box-shadow: 0 0 0 0 oklch(0.769 0.188 70.08 / 0.4);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(0, 245, 212, 0);
+    box-shadow: 0 0 0 8px oklch(0.769 0.188 70.08 / 0);
   }
 }
 
@@ -448,7 +466,7 @@
 }
 
 .analytics-card-node:hover .card-header {
-  background-color: rgba(0, 245, 212, 0.05);
+  background-color: oklch(0.769 0.188 70.08 / 0.05);
 }
 
 /* Delete button hover animation */

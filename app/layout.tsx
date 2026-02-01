@@ -43,7 +43,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Creator Analytics",
+  title: "Not a Bot",
   description: "AI-powered analytics dashboard for content creators",
 };
 
@@ -54,7 +54,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" className="dark">
         <body
           className={`${plusJakartaSans.variable} ${ibmPlexSans.variable} ${jetbrainsMono.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
         >

@@ -111,6 +111,38 @@ function AnalyticsCanvasInner() {
     return pinContext.onPin(handlePin);
   }, [pinContext, addNode, removeNode, getViewport]);
 
+  // Subscribe to render events from the chat (auto-render visualizations)
+  useEffect(() => {
+    if (!pinContext) return;
+
+    const handleRender = async (data: PinToCanvasData): Promise<string> => {
+      const viewport = getViewport();
+      const existingNodes = nodes.length;
+
+      // Smart grid positioning - arrange nodes in a 2-column grid
+      const gridCols = 2;
+      const spacing = { x: 350, y: 300 };
+      const col = existingNodes % gridCols;
+      const row = Math.floor(existingNodes / gridCols);
+
+      const position = {
+        x: (-viewport.x + 100 + col * spacing.x) / viewport.zoom,
+        y: (-viewport.y + 100 + row * spacing.y) / viewport.zoom,
+      };
+
+      // Create the node with delete handler
+      const nodeId = addNode('analyticsCard', {
+        title: data.title,
+        uiTree: data.uiTree,
+        onDelete: () => removeNode(nodeId),
+      }, position, { className: 'node-new' });
+
+      return nodeId;
+    };
+
+    return pinContext.onRender(handleRender);
+  }, [pinContext, addNode, removeNode, getViewport, nodes.length]);
+
   const isMobile = useIsMobile();
 
   const handleAddNode = useCallback((type: string, data?: Record<string, unknown>) => {
@@ -120,6 +152,7 @@ function AnalyticsCanvasInner() {
   return (
     <div className="w-full h-full touch-pan-x touch-pan-y">
       <ReactFlow
+        colorMode="dark"
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
@@ -153,7 +186,7 @@ function AnalyticsCanvasInner() {
         {!isMobile && (
           <MiniMap
             className="bg-surface border-border"
-            nodeColor="#00F5D4"
+            nodeColor="#F59E0B"
             maskColor="rgba(0, 0, 0, 0.8)"
           />
         )}
