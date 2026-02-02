@@ -33,11 +33,12 @@ interface DashboardWidgetProps {
 
 /**
  * Maps widget type to the appropriate data from dashboardData
+ * Returns data in the format expected by each widget's props
  */
 function getWidgetData(
   widgetType: string,
   dashboardData?: DashboardData
-): Record<string, unknown> | null {
+): unknown {
   if (!dashboardData) return null;
 
   const { overview, engagement, topContent, recentPosts, breakdown } = dashboardData;
@@ -93,19 +94,19 @@ function getWidgetData(
           }
         : null;
     case "overview-metrics":
-      return overview?.metrics ? { data: overview.metrics } : null;
+      return overview?.metrics ?? null;
 
-    // Chart widgets
+    // Chart widgets - pass the array directly, not wrapped in {data:}
     case "engagement-trend":
-      return engagement?.data ? { data: engagement.data } : null;
+      return engagement?.data ?? null;
     case "engagement-breakdown":
-      return breakdown?.breakdown ? { data: breakdown.breakdown } : null;
+      return breakdown?.breakdown ?? null;
 
-    // Content widgets
+    // Content widgets - pass the array directly
     case "top-content":
-      return topContent?.videos ? { data: topContent.videos } : null;
+      return topContent?.videos ?? null;
     case "recent-posts":
-      return recentPosts ? { data: recentPosts } : null;
+      return recentPosts ?? null;
 
     default:
       return null;
