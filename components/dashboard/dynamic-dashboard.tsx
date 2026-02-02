@@ -19,10 +19,9 @@ import {
   removeWidgetFromLayout,
   DEFAULT_LAYOUTS,
 } from "@/hooks/use-dashboard-layout";
+import { useDashboardData, Period } from "@/hooks/use-dashboard-data";
 import { widgetRegistry } from "@/lib/widgets";
 import { BreakpointLayouts } from "@/lib/db/schema/dashboard-layouts";
-
-type Period = "7d" | "30d" | "90d";
 
 interface DynamicDashboardProps {
   accounts: Array<{ id: number; username: string }>;
@@ -46,6 +45,17 @@ export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
     updateWidgetConfig,
     refetch: refetchLayout,
   } = useDashboardLayout();
+
+  // Fetch dashboard data
+  const {
+    data: dashboardData,
+    isLoading: dataLoading,
+    error: dataError,
+    refetch: refetchData,
+  } = useDashboardData({
+    accountId: selectedAccountId,
+    period,
+  });
 
   // Update selected account if accounts list changes
   useEffect(() => {
@@ -201,19 +211,24 @@ export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
       </div>
 
       {/* Error state */}
-      {layoutError && (
+      {(layoutError || dataError) && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <p className="text-sm font-medium text-destructive">
-                Error loading dashboard layout
+                {layoutError ? "Error loading dashboard layout" : "Error loading dashboard data"}
               </p>
-              <p className="text-sm text-destructive/80 mt-1">{layoutError.message}</p>
+              <p className="text-sm text-destructive/80 mt-1">
+                {layoutError?.message || dataError?.message}
+              </p>
             </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={refetchLayout}
+              onClick={() => {
+                if (layoutError) refetchLayout();
+                if (dataError) refetchData();
+              }}
               className="shrink-0"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -231,6 +246,8 @@ export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
           layout={effectiveLayouts}
           accountId={selectedAccountId}
           period={period}
+          dashboardData={dashboardData}
+          isDataLoading={dataLoading}
           widgetConfigs={widgetConfigs as Record<string, Record<string, unknown>>}
           isEditing={isEditing}
           onEditToggle={() => setIsEditing(!isEditing)}

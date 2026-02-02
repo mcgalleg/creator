@@ -26,11 +26,14 @@ import { useBreakpoint, Breakpoint } from "@/hooks/use-breakpoint";
 import { DashboardWidget } from "./dashboard-widget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DashboardData } from "@/hooks/use-dashboard-data";
 
 interface DashboardGridProps {
   layout: BreakpointLayouts;
   accountId: number | null;
   period: "7d" | "30d" | "90d";
+  dashboardData?: DashboardData;
+  isDataLoading?: boolean;
   widgetConfigs?: Record<string, Record<string, unknown>>;
   isEditing?: boolean;
   onEditToggle?: () => void;
@@ -51,6 +54,8 @@ export function DashboardGrid({
   layout,
   accountId,
   period,
+  dashboardData,
+  isDataLoading = false,
   widgetConfigs = {},
   isEditing = false,
   onEditToggle,
@@ -192,6 +197,8 @@ export function DashboardGrid({
                   widget={widget}
                   accountId={accountId}
                   period={period}
+                  dashboardData={dashboardData}
+                  isDataLoading={isDataLoading}
                   config={widgetConfigs[widget.id]}
                   isEditing={isEditing}
                   onDelete={onWidgetDelete}
@@ -216,6 +223,8 @@ export function DashboardGrid({
                 widget={activeWidget}
                 accountId={accountId}
                 period={period}
+                dashboardData={dashboardData}
+                isDataLoading={isDataLoading}
                 config={widgetConfigs[activeWidget.id]}
                 isEditing={false}
               />

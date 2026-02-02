@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 // Import from index to trigger widget registration
 import { widgetRegistry, WidgetProps } from "@/lib/widgets";
 import { WidgetPosition } from "@/lib/db/schema/dashboard-layouts";
+import { DashboardData } from "@/hooks/use-dashboard-data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -21,6 +22,8 @@ interface DashboardWidgetProps {
   widget: WidgetPosition;
   accountId: number | null;
   period: "7d" | "30d" | "90d";
+  dashboardData?: DashboardData;
+  isDataLoading?: boolean;
   config?: Record<string, unknown>;
   isEditing: boolean;
   onDelete?: (widgetId: string) => void;
@@ -28,10 +31,93 @@ interface DashboardWidgetProps {
   style?: React.CSSProperties;
 }
 
+/**
+ * Maps widget type to the appropriate data from dashboardData
+ */
+function getWidgetData(
+  widgetType: string,
+  dashboardData?: DashboardData
+): Record<string, unknown> | null {
+  if (!dashboardData) return null;
+
+  const { overview, engagement, topContent, recentPosts, breakdown } = dashboardData;
+
+  switch (widgetType) {
+    // KPI widgets - map from overview metrics
+    case "followers":
+      return overview?.metrics
+        ? { followers: overview.metrics.followers, followerChange: overview.metrics.followerChange }
+        : null;
+    case "total-plays":
+      return overview?.metrics
+        ? { totalPlays: overview.metrics.totalPlays, playsChange: overview.metrics.playsChange }
+        : null;
+    case "engagement-rate":
+      return overview?.metrics
+        ? { engagementRate: overview.metrics.engagementRate, engagementRateChange: overview.metrics.engagementRateChange }
+        : null;
+    case "total-likes":
+      // Calculate from engagement data
+      if (engagement?.data) {
+        const totalLikes = engagement.data.reduce((sum, d) => sum + d.likes, 0);
+        return { totalLikes, likesChange: 0 };
+      }
+      return null;
+    case "total-shares":
+      if (engagement?.data) {
+        const totalShares = engagement.data.reduce((sum, d) => sum + d.shares, 0);
+        return { totalShares, sharesChange: 0 };
+      }
+      return null;
+    case "total-saves":
+      if (engagement?.data) {
+        const totalSaves = engagement.data.reduce((sum, d) => sum + d.saves, 0);
+        return { totalSaves, savesChange: 0 };
+      }
+      return null;
+    case "avg-views":
+      if (engagement?.data && engagement.data.length > 0) {
+        const totalPlays = engagement.data.reduce((sum, d) => sum + d.plays, 0);
+        const avgViews = totalPlays / engagement.data.length;
+        return { avgViews, avgViewsChange: 0 };
+      }
+      return null;
+    case "content-velocity":
+      return overview?.metrics
+        ? {
+            postsPerWeek: overview.metrics.contentVelocity,
+            postsPerMonth: overview.metrics.contentVelocity * 4,
+            velocityChange: 0,
+            totalPosts: recentPosts?.total ?? 0,
+            periodDays: 30,
+          }
+        : null;
+    case "overview-metrics":
+      return overview?.metrics ? { data: overview.metrics } : null;
+
+    // Chart widgets
+    case "engagement-trend":
+      return engagement?.data ? { data: engagement.data } : null;
+    case "engagement-breakdown":
+      return breakdown?.breakdown ? { data: breakdown.breakdown } : null;
+
+    // Content widgets
+    case "top-content":
+      return topContent?.videos ? { data: topContent.videos } : null;
+    case "recent-posts":
+      return recentPosts ? { data: recentPosts } : null;
+
+    default:
+      return null;
+  }
+}
+
 export function DashboardWidget({
   widget,
   accountId,
   period,
+  dashboardData,
+  isDataLoading = false,
   config,
   isEditing,
   onDelete,
@@ -96,7 +182,10 @@ export function DashboardWidget({
 
   const WidgetComponent = widgetDef.component;
 
-  const widgetProps: WidgetProps = {
+  // Get the appropriate data for this widget type
+  const widgetData = getWidgetData(widget.widgetType, dashboardData);
+
+  const widgetProps: WidgetProps & { data?: unknown; isLoading?: boolean } = {
     id: widget.id,
     accountId,
     period,
@@ -105,6 +194,9 @@ export function DashboardWidget({
     onConfigChange: onConfigChange
       ? (newConfig) => onConfigChange(widget.id, newConfig)
       : undefined,
+    // Pass data and loading state to widget
+    data: widgetData,
+    isLoading: isDataLoading,
   };
 
   return (
