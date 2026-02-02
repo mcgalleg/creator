@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Pin, Check, Loader2 } from 'lucide-react';
 import { MarkdownRenderer } from './markdown-renderer';
 import { VisualizationReference } from './visualization-reference';
+import { useFeaturesOptional } from '@/contexts/feature-context';
 
 interface MessageListProps {
   messages: UIMessage[];
@@ -106,9 +107,14 @@ interface PinButtonProps {
 
 function PinButton({ uiTree, label, size = 'sm', variant = 'default' }: PinButtonProps) {
   const pinContext = usePinToCanvasOptional();
+  const featureContext = useFeaturesOptional();
   const [status, setStatus] = useState<'idle' | 'pinning' | 'pinned'>('idle');
 
-  if (!pinContext) {
+  // Check if user has canvas access
+  const hasCanvasAccess = featureContext?.hasAccess("canvas") ?? false;
+
+  // Don't render pin button if no context or no canvas access
+  if (!pinContext || !hasCanvasAccess) {
     return null;
   }
 

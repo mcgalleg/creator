@@ -1,0 +1,489 @@
+"use client";
+
+import * as React from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PostPickerModal, type Post } from "./post-picker-modal";
+import {
+  MessageCircle,
+  ListChecks,
+  TrendingUp,
+  Calendar,
+  Wallet,
+  Coins,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
+
+type SyncMode = "selection" | "top-performers" | "date-range" | "budget";
+
+interface CostEstimate {
+  postsCount: number;
+  estimatedComments: number;
+  creditCost: number;
+}
+
+const CREDITS_PER_100_COMMENTS = 15;
+
+function calculateCreditCost(comments: number): number {
+  return Math.ceil(comments / 100) * CREDITS_PER_100_COMMENTS;
+}
+
+export function CommentSyncConfig() {
+  // Sync mode state
+  const [syncMode, setSyncMode] = React.useState<SyncMode>("selection");
+
+  // Selection mode state
+  const [selectedPostIds, setSelectedPostIds] = React.useState<number[]>([]);
+  const [isPickerOpen, setIsPickerOpen] = React.useState(false);
+
+  // Top performers mode state
+  const [topN, setTopN] = React.useState<string>("10");
+
+  // Date range mode state
+  const [startDate, setStartDate] = React.useState<string>("");
+  const [endDate, setEndDate] = React.useState<string>("");
+  const [maxCommentsPerPost, setMaxCommentsPerPost] = React.useState<string>("100");
+
+  // Budget mode state
+  const [creditBudget, setCreditBudget] = React.useState<string>("100");
+
+  // Posts data
+  const [posts, setPosts] = React.useState<Post[]>([]);
+  const [isLoadingPosts, setIsLoadingPosts] = React.useState(true);
+  const [isSyncing, setIsSyncing] = React.useState(false);
+
+  // Fetch posts on mount
+  React.useEffect(() => {
+    async function fetchPosts() {
+      try {
+        const response = await fetch("/api/dashboard/recent-posts?limit=100");
+        if (response.ok) {
+          const data = await response.json();
+          setPosts(data.posts || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch posts:", error);
+      } finally {
+        setIsLoadingPosts(false);
+      }
+    }
+
+    fetchPosts();
+  }, []);
+
+  // Calculate cost estimate based on sync mode
+  const costEstimate = React.useMemo((): CostEstimate => {
+    let postsCount = 0;
+    let estimatedComments = 0;
+
+    switch (syncMode) {
+      case "selection": {
+        const selectedPosts = posts.filter((p) => selectedPostIds.includes(p.id));
+        postsCount = selectedPosts.length;
+        estimatedComments = selectedPosts.reduce((sum, p) => sum + p.comments, 0);
+        break;
+      }
+      case "top-performers": {
+        const topCount = parseInt(topN) || 10;
+        const sortedPosts = [...posts]
+          .sort((a, b) => {
+            const aEngagement = a.likes + a.comments + a.shares;
+            const bEngagement = b.likes + b.comments + b.shares;
+            return bEngagement - aEngagement;
+          })
+          .slice(0, topCount);
+        postsCount = sortedPosts.length;
+        estimatedComments = sortedPosts.reduce((sum, p) => sum + p.comments, 0);
+        break;
+      }
+      case "date-range": {
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+        const maxComments = parseInt(maxCommentsPerPost) || 100;
+
+        const filteredPosts = posts.filter((p) => {
+          if (!p.postedAt) return false;
+          const postDate = new Date(p.postedAt);
+          if (start && postDate < start) return false;
+          if (end && postDate > end) return false;
+          return true;
+        });
+
+        postsCount = filteredPosts.length;
+        estimatedComments = filteredPosts.reduce(
+          (sum, p) => sum + Math.min(p.comments, maxComments),
+          0
+        );
+        break;
+      }
+      case "budget": {
+        const budget = parseInt(creditBudget) || 0;
+        const maxComments = Math.floor((budget / CREDITS_PER_100_COMMENTS) * 100);
+
+        // Prioritize posts by engagement
+        const sortedPosts = [...posts].sort((a, b) => {
+          const aEngagement = a.likes + a.comments + a.shares;
+          const bEngagement = b.likes + b.comments + b.shares;
+          return bEngagement - aEngagement;
+        });
+
+        let remainingComments = maxComments;
+        let count = 0;
+        let totalComments = 0;
+
+        for (const post of sortedPosts) {
+          if (remainingComments <= 0) break;
+          const commentsToFetch = Math.min(post.comments, remainingComments);
+          remainingComments -= commentsToFetch;
+          totalComments += commentsToFetch;
+          count++;
+        }
+
+        postsCount = count;
+        estimatedComments = totalComments;
+        break;
+      }
+    }
+
+    return {
+      postsCount,
+      estimatedComments,
+      creditCost: calculateCreditCost(estimatedComments),
+    };
+  }, [syncMode, posts, selectedPostIds, topN, startDate, endDate, maxCommentsPerPost, creditBudget]);
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      // TODO: Implement actual sync API call
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      console.log("Sync started with mode:", syncMode);
+    } catch (error) {
+      console.error("Sync failed:", error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handlePickerConfirm = () => {
+    setIsPickerOpen(false);
+  };
+
+  const canSync =
+    costEstimate.postsCount > 0 &&
+    costEstimate.estimatedComments > 0 &&
+    !isSyncing;
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" />
+            Comment Sync Configuration
+          </CardTitle>
+          <CardDescription>
+            Configure how you want to sync comments from your TikTok posts. Choose a
+            sync mode that fits your needs and budget.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          {/* Sync Mode Selection */}
+          <RadioGroup
+            value={syncMode}
+            onValueChange={(value) => setSyncMode(value as SyncMode)}
+            className="space-y-4"
+          >
+            {/* Sync by Selection */}
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem value="selection" id="selection" className="mt-1" />
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="selection" className="font-medium cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <ListChecks className="h-4 w-4 text-muted-foreground" />
+                    Sync by Selection
+                  </div>
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Manually select which posts to sync comments for.
+                </p>
+
+                {syncMode === "selection" && (
+                  <div className="pt-2 space-y-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsPickerOpen(true)}
+                      disabled={isLoadingPosts}
+                    >
+                      {isLoadingPosts ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Loading posts...
+                        </>
+                      ) : (
+                        <>
+                          Select Posts
+                          {selectedPostIds.length > 0 && (
+                            <Badge variant="secondary" className="ml-2">
+                              {selectedPostIds.length} selected
+                            </Badge>
+                          )}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Sync Top Performers */}
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem value="top-performers" id="top-performers" className="mt-1" />
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="top-performers" className="font-medium cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    Sync Top Performers
+                  </div>
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Automatically sync comments from your best-performing posts by engagement.
+                </p>
+
+                {syncMode === "top-performers" && (
+                  <div className="pt-2">
+                    <div className="flex items-center gap-3">
+                      <Label htmlFor="top-n" className="text-sm whitespace-nowrap">
+                        Top posts:
+                      </Label>
+                      <Select value={topN} onValueChange={setTopN}>
+                        <SelectTrigger className="w-24">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="5">5</SelectItem>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="20">20</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Sync by Date Range */}
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem value="date-range" id="date-range" className="mt-1" />
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="date-range" className="font-medium cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    Sync by Date Range
+                  </div>
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Sync comments from posts within a specific date range.
+                </p>
+
+                {syncMode === "date-range" && (
+                  <div className="pt-2 space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="start-date" className="text-sm">
+                          Start Date
+                        </Label>
+                        <Input
+                          id="start-date"
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="end-date" className="text-sm">
+                          End Date
+                        </Label>
+                        <Input
+                          id="end-date"
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Label htmlFor="max-comments" className="text-sm whitespace-nowrap">
+                        Max comments per post:
+                      </Label>
+                      <Select
+                        value={maxCommentsPerPost}
+                        onValueChange={setMaxCommentsPerPost}
+                      >
+                        <SelectTrigger className="w-28">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                          <SelectItem value="200">200</SelectItem>
+                          <SelectItem value="500">500</SelectItem>
+                          <SelectItem value="1000">1,000</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Budget Mode */}
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem value="budget" id="budget" className="mt-1" />
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="budget" className="font-medium cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-muted-foreground" />
+                    Budget Mode
+                  </div>
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Set a credit budget and let the system optimize which comments to sync.
+                  Prioritizes high-engagement posts.
+                </p>
+
+                {syncMode === "budget" && (
+                  <div className="pt-2">
+                    <div className="flex items-center gap-3">
+                      <Label htmlFor="credit-budget" className="text-sm whitespace-nowrap">
+                        Credit budget:
+                      </Label>
+                      <div className="relative">
+                        <Coins className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="credit-budget"
+                          type="number"
+                          min="15"
+                          step="15"
+                          value={creditBudget}
+                          onChange={(e) => setCreditBudget(e.target.value)}
+                          className="w-32 pl-9"
+                          placeholder="100"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </RadioGroup>
+
+          {/* Cost Estimation */}
+          <div className="mt-6 p-4 rounded-lg bg-muted/50 border">
+            <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+              <Coins className="h-4 w-4" />
+              Cost Estimation
+            </h4>
+
+            {isLoadingPosts ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Posts</p>
+                  <p className="text-lg font-semibold">{costEstimate.postsCount}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Est. Comments</p>
+                  <p className="text-lg font-semibold">
+                    {costEstimate.estimatedComments.toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Credit Cost</p>
+                  <p className="text-lg font-semibold text-primary">
+                    {costEstimate.creditCost.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              {CREDITS_PER_100_COMMENTS} credits per 100 comments synced
+            </p>
+          </div>
+        </CardContent>
+
+        <CardFooter>
+          <Button
+            onClick={handleSync}
+            disabled={!canSync}
+            className="w-full"
+          >
+            {isSyncing ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Syncing Comments...
+              </>
+            ) : (
+              <>
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Sync Comments
+                {costEstimate.creditCost > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {costEstimate.creditCost} credits
+                  </Badge>
+                )}
+              </>
+            )}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <PostPickerModal
+        open={isPickerOpen}
+        onOpenChange={setIsPickerOpen}
+        posts={posts}
+        selectedPostIds={selectedPostIds}
+        onSelectionChange={setSelectedPostIds}
+        onConfirm={handlePickerConfirm}
+        isLoading={isLoadingPosts}
+      />
+    </>
+  );
+}

@@ -48,14 +48,6 @@ const chartConfig: ChartConfig = {
     label: "Likes",
     color: "var(--chart-2)",
   },
-  comments: {
-    label: "Comments",
-    color: "var(--chart-3)",
-  },
-  shares: {
-    label: "Shares",
-    color: "var(--chart-4)",
-  },
 }
 
 function formatDate(dateString: string): string {
@@ -148,22 +140,6 @@ function DashboardEngagementChart({
               dataKey="likes"
               stroke="var(--chart-2)"
               fill="var(--chart-2)"
-              fillOpacity={0.3}
-              strokeWidth={2}
-            />
-            <Area
-              type="monotone"
-              dataKey="comments"
-              stroke="var(--chart-3)"
-              fill="var(--chart-3)"
-              fillOpacity={0.3}
-              strokeWidth={2}
-            />
-            <Area
-              type="monotone"
-              dataKey="shares"
-              stroke="var(--chart-4)"
-              fill="var(--chart-4)"
               fillOpacity={0.3}
               strokeWidth={2}
             />

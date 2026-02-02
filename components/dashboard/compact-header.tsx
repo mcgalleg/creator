@@ -66,6 +66,7 @@ export function CompactHeader() {
         ) : accounts.length === 1 ? (
           <div className="flex items-center gap-2 px-3 py-1 text-sm font-medium">
             {selectedAccount?.avatarUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- External TikTok avatar URL
               <img
                 src={selectedAccount.avatarUrl}
                 alt={selectedAccount.username}
@@ -81,6 +82,7 @@ export function CompactHeader() {
                 {selectedAccount && (
                   <div className="flex items-center gap-2">
                     {selectedAccount.avatarUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element -- External TikTok avatar URL
                       <img
                         src={selectedAccount.avatarUrl}
                         alt={selectedAccount.username}
@@ -97,6 +99,7 @@ export function CompactHeader() {
                 <SelectItem key={account.id} value={String(account.id)}>
                   <div className="flex items-center gap-2">
                     {account.avatarUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element -- External TikTok avatar URL
                       <img
                         src={account.avatarUrl}
                         alt={account.username}

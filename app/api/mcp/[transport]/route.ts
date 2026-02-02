@@ -1,5 +1,5 @@
 import { createMcpHandler } from "mcp-handler";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {

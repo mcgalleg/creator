@@ -1,7 +1,8 @@
 'use client';
 
+import * as React from 'react';
 import Image from 'next/image';
-import { FileVideo } from 'lucide-react';
+import { FileVideo, Video } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -127,6 +128,61 @@ function EmptyState() {
   );
 }
 
+function RecentPostRow({ post }: { post: RecentPost }) {
+  const [imageError, setImageError] = React.useState(false);
+  const showFallback = !post.thumbnailUrl || imageError;
+
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="flex items-center gap-3">
+          {showFallback ? (
+            <div className="bg-muted flex h-10 w-10 items-center justify-center rounded">
+              <Video className="h-5 w-5 text-muted-foreground" />
+            </div>
+          ) : (
+            <Image
+              src={post.thumbnailUrl!}
+              alt=""
+              width={40}
+              height={40}
+              className="h-10 w-10 rounded object-cover"
+              unoptimized
+              onError={() => setImageError(true)}
+            />
+          )}
+          <span
+            className="max-w-[200px] truncate text-sm"
+            title={post.description || undefined}
+          >
+            {truncateText(post.description)}
+          </span>
+        </div>
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {formatNumber(post.plays)}
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {formatNumber(post.likes)}
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {formatNumber(post.comments)}
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {formatNumber(post.shares)}
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {formatRelativeDate(post.postedAt)}
+      </TableCell>
+      <TableCell>
+        <span className="font-medium">
+          {post.engagementRate.toFixed(2)}%
+        </span>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 export function DashboardRecentPosts({
   data,
   isLoading = false,
@@ -173,54 +229,7 @@ export function DashboardRecentPosts({
             </TableHeader>
             <TableBody>
               {data.posts.map((post) => (
-                <TableRow key={post.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      {post.thumbnailUrl ? (
-                        <Image
-                          src={post.thumbnailUrl}
-                          alt=""
-                          width={40}
-                          height={40}
-                          className="h-10 w-10 rounded object-cover"
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="bg-muted flex h-10 w-10 items-center justify-center rounded">
-                          <span className="text-muted-foreground text-xs">
-                            N/A
-                          </span>
-                        </div>
-                      )}
-                      <span
-                        className="max-w-[200px] truncate text-sm"
-                        title={post.description || undefined}
-                      >
-                        {truncateText(post.description)}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatNumber(post.plays)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatNumber(post.likes)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatNumber(post.comments)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatNumber(post.shares)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatRelativeDate(post.postedAt)}
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-medium">
-                      {post.engagementRate.toFixed(2)}%
-                    </span>
-                  </TableCell>
-                </TableRow>
+                <RecentPostRow key={post.id} post={post} />
               ))}
             </TableBody>
           </Table>

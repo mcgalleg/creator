@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
 // Protected routes require authentication
 const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"]);
@@ -6,6 +7,11 @@ const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"]);
 // Public routes: /, /api/auth/webhook (handled implicitly by not calling auth.protect())
 
 export default clerkMiddleware(async (auth, req) => {
+  // Bypass auth entirely in test mode
+  if (process.env.BYPASS_AUTH === "true") {
+    return NextResponse.next();
+  }
+
   // Protect dashboard routes - require authentication
   if (isProtectedRoute(req)) {
     await auth.protect();

@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { getUserCredits, getCreditPricing } from "@/lib/services/credit-service";
 

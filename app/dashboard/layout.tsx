@@ -1,10 +1,13 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, isAuthBypassed } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { tiktokAccounts } from "@/lib/db/schema";
 import { CompactHeader } from "@/components/dashboard/compact-header";
 import { ResponsiveLayout } from "@/components/dashboard/responsive-layout";
+import { FeatureProvider } from "@/contexts/feature-context";
+import { getUserFeatures, getUserTier } from "@/lib/services/feature-service";
+import type { FeatureKey, SubscriptionTier } from "@/lib/services/feature-service";
 
 export default async function DashboardLayout({
   children,
@@ -13,27 +16,46 @@ export default async function DashboardLayout({
 }) {
   const { userId } = await auth();
 
-  if (!userId) {
+  // Only redirect to sign-in if not in bypass mode
+  if (!userId && !isAuthBypassed()) {
     redirect("/sign-in");
   }
 
   // Fetch user's TikTok accounts for the layout
-  const accounts = await db
-    .select({
-      id: tiktokAccounts.id,
-      username: tiktokAccounts.username,
-    })
-    .from(tiktokAccounts)
-    .where(eq(tiktokAccounts.userId, userId));
+  const accounts = userId
+    ? await db
+        .select({
+          id: tiktokAccounts.id,
+          username: tiktokAccounts.username,
+        })
+        .from(tiktokAccounts)
+        .where(eq(tiktokAccounts.userId, userId))
+    : [];
+
+  // Fetch user tier and features server-side
+  let tier: SubscriptionTier = "free";
+  let features: Record<FeatureKey, boolean> = {
+    canvas: false,
+    analytics_assistant: false,
+  };
+
+  if (userId) {
+    [tier, features] = await Promise.all([
+      getUserTier(userId),
+      getUserFeatures(userId),
+    ]);
+  }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      <CompactHeader />
-      <div className="flex-1 overflow-hidden">
-        <ResponsiveLayout accounts={accounts}>
-          {children}
-        </ResponsiveLayout>
+    <FeatureProvider tier={tier} features={features}>
+      <div className="h-screen flex flex-col overflow-hidden">
+        <CompactHeader />
+        <div className="flex-1 overflow-hidden">
+          <ResponsiveLayout accounts={accounts}>
+            {children}
+          </ResponsiveLayout>
+        </div>
       </div>
-    </div>
+    </FeatureProvider>
   );
 }

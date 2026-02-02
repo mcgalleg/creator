@@ -2,9 +2,11 @@
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Sparkles } from "lucide-react";
+import { LayoutDashboard, Sparkles, Lock } from "lucide-react";
 import { DefaultDashboard } from "./default-dashboard";
 import { CanvasView } from "./canvas-view";
+import { useFeatures } from "@/contexts/feature-context";
+import { FeatureGate } from "@/components/feature-gate";
 
 interface ViewTabsProps {
   accounts: Array<{ id: number; username: string }>;
@@ -23,8 +25,15 @@ export function ViewTabs({
   activeTab,
   onTabChange,
 }: ViewTabsProps) {
+  const { hasAccess } = useFeatures();
+  const canAccessCanvas = hasAccess("canvas");
+
   const handleTabChange = (value: string) => {
     const tab = value as "dashboard" | "canvas";
+    // Prevent switching to canvas if user doesn't have access
+    if (tab === "canvas" && !canAccessCanvas) {
+      return;
+    }
     if (tab === "canvas" && onCanvasContentViewed) {
       onCanvasContentViewed();
     }
@@ -46,12 +55,25 @@ export function ViewTabs({
           <LayoutDashboard className="size-4" />
           Dashboard
         </TabsTrigger>
-        <TabsTrigger value="canvas" className="min-h-[44px] gap-2">
-          <Sparkles className="size-4" />
+        <TabsTrigger
+          value="canvas"
+          className="min-h-[44px] gap-2"
+          disabled={!canAccessCanvas}
+        >
+          {canAccessCanvas ? (
+            <Sparkles className="size-4" />
+          ) : (
+            <Lock className="size-4 text-muted-foreground" />
+          )}
           Canvas
-          {hasNewCanvasContent && (
+          {canAccessCanvas && hasNewCanvasContent && (
             <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px]">
               New
+            </Badge>
+          )}
+          {!canAccessCanvas && (
+            <Badge variant="outline" className="ml-1 px-1.5 py-0 text-[10px] text-muted-foreground">
+              Pro
             </Badge>
           )}
         </TabsTrigger>
@@ -62,9 +84,11 @@ export function ViewTabs({
       </TabsContent>
 
       {/* Force mount canvas so it can receive render events even when not visible */}
-      <TabsContent value="canvas" className="flex-1 mt-0 overflow-hidden data-[state=inactive]:hidden" forceMount>
-        <CanvasView />
-      </TabsContent>
+      <FeatureGate feature="canvas">
+        <TabsContent value="canvas" className="flex-1 mt-0 overflow-hidden data-[state=inactive]:hidden" forceMount>
+          <CanvasView />
+        </TabsContent>
+      </FeatureGate>
     </Tabs>
   );
 }

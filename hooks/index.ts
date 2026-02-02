@@ -23,3 +23,11 @@ export {
   type BreakdownItem,
   type EngagementType,
 } from './use-dashboard-data';
+export { useFeatures, FeatureProvider, type FeatureKey, type SubscriptionTier } from './use-features';
+export { useBreakpoint, getBreakpoints, type Breakpoint } from './use-breakpoint';
+export {
+  useDashboardLayout,
+  addWidgetToLayout,
+  removeWidgetFromLayout,
+  DEFAULT_LAYOUTS,
+} from './use-dashboard-layout';

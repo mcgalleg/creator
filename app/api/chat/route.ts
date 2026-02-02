@@ -1,6 +1,6 @@
 import { streamText, tool, UIMessage, convertToModelMessages, stepCountIs } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { tiktokAccounts, posts, comments, accountMetricsHistory } from "@/lib/db/schema";

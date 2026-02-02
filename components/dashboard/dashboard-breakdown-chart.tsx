@@ -35,10 +35,10 @@ interface DashboardBreakdownChartProps {
 }
 
 const ENGAGEMENT_COLORS: Record<BreakdownItem["type"], string> = {
-  likes: "var(--chart-likes)",
-  comments: "var(--chart-comments)",
-  shares: "var(--chart-shares)",
-  saves: "var(--chart-saves)",
+  likes: "var(--chart-1)",
+  comments: "var(--chart-2)",
+  shares: "var(--chart-3)",
+  saves: "var(--chart-4)",
 }
 
 const ENGAGEMENT_LABELS: Record<BreakdownItem["type"], string> = {
@@ -124,12 +124,6 @@ function DashboardBreakdownChart({ data, isLoading }: DashboardBreakdownChartPro
         <ChartContainer
           config={chartConfig}
           className="mx-auto aspect-square max-h-[250px] w-full"
-          style={{
-            "--chart-likes": "#f472b6",
-            "--chart-comments": "#60a5fa",
-            "--chart-shares": "#4ade80",
-            "--chart-saves": "#a78bfa",
-          } as React.CSSProperties}
         >
           <RechartsPieChart accessibilityLayer>
             <ChartTooltip

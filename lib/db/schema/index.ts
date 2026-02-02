@@ -9,6 +9,8 @@ export * from "./credits";
 export * from "./sync-jobs";
 export * from "./canvas-annotations";
 export * from "./canvases";
+export * from "./dashboard-layouts";
+export * from "./feature-flags";
 
 // Export all relations
 export * from "./relations";

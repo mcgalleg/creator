@@ -8,6 +8,8 @@ import { pinnedComponents } from "./pinned-components";
 import { creditTransactions } from "./credits";
 import { syncJobs } from "./sync-jobs";
 import { canvases } from "./canvases";
+import { dashboardLayouts } from "./dashboard-layouts";
+import { userFeatureOverrides } from "./feature-flags";
 
 // Users relations
 export const usersRelations = relations(users, ({ many }) => ({
@@ -16,6 +18,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   creditTransactions: many(creditTransactions),
   syncJobs: many(syncJobs),
   canvases: many(canvases),
+  dashboardLayouts: many(dashboardLayouts),
+  featureOverrides: many(userFeatureOverrides),
 }));
 
 // TikTok accounts relations
@@ -86,6 +90,22 @@ export const syncJobsRelations = relations(syncJobs, ({ one }) => ({
 export const canvasesRelations = relations(canvases, ({ one }) => ({
   user: one(users, {
     fields: [canvases.userId],
+    references: [users.id],
+  }),
+}));
+
+// Dashboard layouts relations
+export const dashboardLayoutsRelations = relations(dashboardLayouts, ({ one }) => ({
+  user: one(users, {
+    fields: [dashboardLayouts.userId],
+    references: [users.id],
+  }),
+}));
+
+// User feature overrides relations
+export const userFeatureOverridesRelations = relations(userFeatureOverrides, ({ one }) => ({
+  user: one(users, {
+    fields: [userFeatureOverrides.userId],
     references: [users.id],
   }),
 }));

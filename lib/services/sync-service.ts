@@ -8,7 +8,7 @@ import {
   accountMetricsHistory,
 } from "@/lib/db/schema";
 import { deductCredits } from "@/lib/services/credit-service";
-import { eq } from "drizzle-orm";
+import { eq, desc, and, gte, lte, inArray, sql } from "drizzle-orm";
 
 // Initialize Apify client
 const getApifyClient = () => {
@@ -36,6 +36,15 @@ export interface SyncOptions {
   postsLimit?: number;
   includeComments?: boolean;
   commentsLimit?: number;
+}
+
+export interface CommentSyncConfig {
+  mode: "selection" | "top_performers" | "date_range" | "budget";
+  selectedPostIds?: string[];
+  topCount?: number;
+  dateRange?: { start: Date; end: Date };
+  maxPerPost?: number;
+  creditBudget?: number;
 }
 
 export interface CostEstimate {
@@ -175,6 +184,37 @@ export function estimateSyncCost(options: {
 }
 
 /**
+ * Estimate the cost in credits for a comment-only sync operation
+ */
+export function estimateCommentSyncCost(options: {
+  postCount: number;
+  commentsPerPost?: number;
+  totalComments?: number;
+}): CostEstimate {
+  const { postCount, commentsPerPost = 100, totalComments } = options;
+
+  // Calculate total comments to sync
+  const estimatedComments = totalComments ?? (postCount * commentsPerPost);
+
+  // Comments cost (based on number of comments)
+  // Each post also incurs a small actor start fee
+  const commentsCost = Math.ceil(estimatedComments / 100) * CREDITS.COMMENTS_PER_100;
+  const actorFees = postCount * CREDITS.ACTOR_START_FEE;
+
+  const totalCredits = commentsCost + actorFees;
+
+  return {
+    credits: totalCredits,
+    description: `Comments for ${postCount} posts (~${estimatedComments} comments, ${totalCredits} credits)`,
+    breakdown: {
+      profile: 0,
+      posts: actorFees, // Actor fees grouped under posts
+      comments: commentsCost,
+    },
+  };
+}
+
+/**
  * Validate that a TikTok username exists and return basic profile data
  */
 export async function validateUsername(username: string): Promise<ValidationResult> {
@@ -298,6 +338,209 @@ export async function startProfileSync(options: SyncOptions & { userId: string }
       .where(eq(syncJobs.id, syncJob.id));
 
     throw error;
+  }
+}
+
+/**
+ * Start a comment-only sync job with configurable modes
+ */
+export async function startCommentSync(options: {
+  accountId: number;
+  userId: string;
+  config: CommentSyncConfig;
+}): Promise<SyncJobResult> {
+  const { accountId, userId, config } = options;
+
+  // Get posts to sync based on the config mode
+  const postsToSync = await getPostsForCommentSync(accountId, config);
+
+  if (postsToSync.length === 0) {
+    throw new Error("No posts found matching the specified criteria");
+  }
+
+  // Calculate comments per post based on mode
+  const commentsPerPost = config.maxPerPost ?? 100;
+  const totalEstimatedComments = postsToSync.length * commentsPerPost;
+
+  // Estimate credits for this sync
+  const costEstimate = estimateCommentSyncCost({
+    postCount: postsToSync.length,
+    commentsPerPost,
+    totalComments: totalEstimatedComments,
+  });
+
+  // Convert config to serializable format for storage
+  const configForStorage = {
+    ...config,
+    dateRange: config.dateRange
+      ? {
+          start: config.dateRange.start.toISOString(),
+          end: config.dateRange.end.toISOString(),
+        }
+      : undefined,
+  };
+
+  // Create sync job record with comment config
+  const [syncJob] = await db
+    .insert(syncJobs)
+    .values({
+      accountId,
+      userId,
+      type: "comments",
+      status: "pending",
+      creditsEstimated: costEstimate.credits,
+      commentSyncConfig: configForStorage,
+    })
+    .returning();
+
+  try {
+    const client = getApifyClient();
+
+    // Build input for the TikTok comments scraper actor
+    // The actor expects an array of video URLs or IDs
+    const postUrls = postsToSync.map((post) => post.videoUrl || `https://www.tiktok.com/@user/video/${post.tiktokId}`);
+
+    const actorInput: Record<string, unknown> = {
+      postURLs: postUrls,
+      commentsPerPost: commentsPerPost,
+      maxRepliesPerComment: 0, // Don't fetch replies by default
+    };
+
+    // Start the actor run (don't wait for completion)
+    const run = await client.actor("clockworks/tiktok-comments-scraper").start(actorInput);
+
+    // Update sync job with run ID and status
+    await db
+      .update(syncJobs)
+      .set({
+        apifyRunId: run.id,
+        status: "running",
+        startedAt: new Date(),
+      })
+      .where(eq(syncJobs.id, syncJob.id));
+
+    return {
+      jobId: syncJob.id,
+      runId: run.id,
+    };
+  } catch (error) {
+    // Update job status to failed
+    const errorMessage = error instanceof Error ? error.message : "Unknown error starting comment sync";
+    await db
+      .update(syncJobs)
+      .set({
+        status: "failed",
+        error: errorMessage,
+        completedAt: new Date(),
+      })
+      .where(eq(syncJobs.id, syncJob.id));
+
+    throw error;
+  }
+}
+
+/**
+ * Get posts to sync comments for based on the config mode
+ */
+async function getPostsForCommentSync(
+  accountId: number,
+  config: CommentSyncConfig
+): Promise<Array<{ id: number; tiktokId: string; videoUrl: string | null; engagement: number }>> {
+  switch (config.mode) {
+    case "selection": {
+      // Sync comments only for specifically selected posts
+      if (!config.selectedPostIds || config.selectedPostIds.length === 0) {
+        throw new Error("selectedPostIds required for selection mode");
+      }
+      return db
+        .select({
+          id: posts.id,
+          tiktokId: posts.tiktokId,
+          videoUrl: posts.videoUrl,
+          engagement: sql<number>`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`.as("engagement"),
+        })
+        .from(posts)
+        .where(
+          and(
+            eq(posts.accountId, accountId),
+            inArray(posts.tiktokId, config.selectedPostIds)
+          )
+        );
+    }
+
+    case "top_performers": {
+      // Query top N posts by engagement
+      const limit = config.topCount ?? 10;
+      return db
+        .select({
+          id: posts.id,
+          tiktokId: posts.tiktokId,
+          videoUrl: posts.videoUrl,
+          engagement: sql<number>`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`.as("engagement"),
+        })
+        .from(posts)
+        .where(eq(posts.accountId, accountId))
+        .orderBy(desc(sql`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`))
+        .limit(limit);
+    }
+
+    case "date_range": {
+      // Filter posts by date range
+      if (!config.dateRange) {
+        throw new Error("dateRange required for date_range mode");
+      }
+      return db
+        .select({
+          id: posts.id,
+          tiktokId: posts.tiktokId,
+          videoUrl: posts.videoUrl,
+          engagement: sql<number>`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`.as("engagement"),
+        })
+        .from(posts)
+        .where(
+          and(
+            eq(posts.accountId, accountId),
+            gte(posts.postedAt, config.dateRange.start),
+            lte(posts.postedAt, config.dateRange.end)
+          )
+        )
+        .orderBy(desc(sql`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`))
+        .limit(100); // Default reasonable limit for date range queries
+    }
+
+    case "budget": {
+      // Calculate how many comments fit in the credit budget
+      if (!config.creditBudget || config.creditBudget <= 0) {
+        throw new Error("creditBudget required for budget mode");
+      }
+
+      const commentsPerPost = config.maxPerPost ?? 100;
+
+      // Calculate how many posts we can afford
+      // Cost per post = (commentsPerPost / 100) * CREDITS.COMMENTS_PER_100 + CREDITS.ACTOR_START_FEE
+      const costPerPost = Math.ceil(commentsPerPost / 100) * CREDITS.COMMENTS_PER_100 + CREDITS.ACTOR_START_FEE;
+      const maxPosts = Math.floor(config.creditBudget / costPerPost);
+
+      if (maxPosts <= 0) {
+        throw new Error("Credit budget too low for any comment syncs");
+      }
+
+      // Prioritize high-engagement posts
+      return db
+        .select({
+          id: posts.id,
+          tiktokId: posts.tiktokId,
+          videoUrl: posts.videoUrl,
+          engagement: sql<number>`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`.as("engagement"),
+        })
+        .from(posts)
+        .where(eq(posts.accountId, accountId))
+        .orderBy(desc(sql`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`))
+        .limit(maxPosts);
+    }
+
+    default:
+      throw new Error(`Unknown comment sync mode: ${(config as CommentSyncConfig).mode}`);
   }
 }
 

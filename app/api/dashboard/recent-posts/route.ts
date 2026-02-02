@@ -1,8 +1,16 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { posts, tiktokAccounts } from "@/lib/db/schema";
-import { eq, and, desc, count } from "drizzle-orm";
+import { eq, and, desc, count, gte } from "drizzle-orm";
+
+type Period = "7d" | "30d" | "90d";
+
+function getStartDate(period: Period): Date {
+  const now = new Date();
+  const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
+  return new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+}
 
 /**
  * GET /api/dashboard/recent-posts
@@ -10,6 +18,7 @@ import { eq, and, desc, count } from "drizzle-orm";
  *
  * Query Parameters:
  * - accountId (required): TikTok account ID
+ * - period (optional): time period - "7d", "30d", or "90d" (default: "30d")
  * - limit (optional): number of posts (default: 10)
  * - offset (optional): pagination offset (default: 0)
  */
@@ -23,6 +32,7 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const accountIdParam = searchParams.get("accountId");
+    const periodParam = searchParams.get("period") as Period | null;
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
 
@@ -41,6 +51,11 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Validate period
+    const validPeriods: Period[] = ["7d", "30d", "90d"];
+    const period: Period = periodParam && validPeriods.includes(periodParam) ? periodParam : "30d";
+    const startDate = getStartDate(period);
 
     // Parse and validate limit
     const limit = limitParam ? parseInt(limitParam, 10) : 10;
@@ -79,15 +94,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get total count for pagination
+    // Get total count for pagination (within period)
     const [totalResult] = await db
       .select({ count: count() })
       .from(posts)
-      .where(eq(posts.accountId, accountId));
+      .where(
+        and(
+          eq(posts.accountId, accountId),
+          gte(posts.postedAt, startDate)
+        )
+      );
 
     const total = totalResult?.count ?? 0;
 
-    // Get posts with pagination
+    // Get posts with pagination (within period)
     const recentPosts = await db
       .select({
         id: posts.id,
@@ -102,7 +122,12 @@ export async function GET(request: NextRequest) {
         postedAt: posts.postedAt,
       })
       .from(posts)
-      .where(eq(posts.accountId, accountId))
+      .where(
+        and(
+          eq(posts.accountId, accountId),
+          gte(posts.postedAt, startDate)
+        )
+      )
       .orderBy(desc(posts.postedAt))
       .limit(limit)
       .offset(offset);

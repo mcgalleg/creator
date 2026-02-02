@@ -182,7 +182,7 @@ export function useDashboardData(
         overview: `/api/dashboard/overview?${baseParams}`,
         engagement: `/api/dashboard/engagement?${baseParams}`,
         topContent: `/api/dashboard/top-content?${baseParams}&limit=${topContentLimit}`,
-        recentPosts: `/api/dashboard/recent-posts?accountId=${accountId}&limit=${recentPostsLimit}`,
+        recentPosts: `/api/dashboard/recent-posts?${baseParams}&limit=${recentPostsLimit}`,
         breakdown: `/api/dashboard/breakdown?${baseParams}`,
       };
 

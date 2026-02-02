@@ -10,11 +10,9 @@ import { Button } from '@/components/ui/button';
 
 interface SplitPaneLayoutProps {
   children: React.ReactNode;
-  onVisualizationAdded?: () => void;
-  onSwitchToCanvas?: () => void;
 }
 
-export function SplitPaneLayout({ children, onVisualizationAdded, onSwitchToCanvas }: SplitPaneLayoutProps) {
+export function SplitPaneLayout({ children }: SplitPaneLayoutProps) {
   const chatPanelRef = usePanelRef();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -59,7 +57,7 @@ export function SplitPaneLayout({ children, onVisualizationAdded, onSwitchToCanv
           onResize={handlePanelResize}
           className="flex flex-col"
         >
-          <ChatPanel onVisualizationAdded={onVisualizationAdded} onSwitchToCanvas={onSwitchToCanvas} />
+          <ChatPanel />
         </Panel>
 
         {/* Resize Handle */}

@@ -1,11 +1,10 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tiktokAccounts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { validateUsername, estimateSyncCost, startProfileSync } from "@/lib/services/sync-service";
 import { checkCredits } from "@/lib/services/credit-service";
-import { ensureUserExists } from "@/lib/services/user-service";
 
 /**
  * GET /api/accounts

@@ -1,49 +1,20 @@
 'use client';
 
-import { useState, FormEvent, useRef, useEffect, useCallback } from 'react';
+import { useState, FormEvent, useRef, useEffect } from 'react';
 import { MessageSquare, AlertCircle } from 'lucide-react';
-import { useAnalyticsChat, type UITree } from '@/hooks/use-analytics-chat';
+import { useAnalyticsChat } from '@/hooks/use-analytics-chat';
 import { ChatInput } from '@/components/chat/chat-input';
 import { MessageList } from '@/components/chat/message-list';
 import { Skeleton } from '@/components/ui/skeleton';
-import { usePinToCanvasOptional } from '@/contexts/pin-to-canvas-context';
-import { toast } from 'sonner';
-
-/**
- * Extracts a title from a UI tree for display purposes.
- */
-function extractTitle(tree: UITree): string | null {
-  if (tree.props?.title && typeof tree.props.title === 'string') {
-    return tree.props.title;
-  }
-  if (tree.props?.label && typeof tree.props.label === 'string') {
-    return tree.props.label;
-  }
-  // Use component name as fallback (convert PascalCase to Title Case)
-  if (tree.component) {
-    return tree.component.replace(/([A-Z])/g, ' $1').trim();
-  }
-  return null;
-}
-
-interface ChatPanelProps {
-  onVisualizationAdded?: () => void;
-  onSwitchToCanvas?: () => void;
-}
 
 /**
  * Chat panel component that integrates with the analytics chat hook.
- * This is the left-side panel in the split-pane layout.
+ * Visualizations render inline in the chat by default.
+ * Users with canvas access can pin visualizations to the canvas via pin buttons.
  */
-export function ChatPanel({ onVisualizationAdded, onSwitchToCanvas }: ChatPanelProps) {
+export function ChatPanel() {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Track canvas node IDs for each message
-  const [canvasNodeIds, setCanvasNodeIds] = useState<Map<string, string>>(new Map());
-
-  // Get canvas context for rendering visualizations
-  const pinContext = usePinToCanvasOptional();
 
   const {
     messages,
@@ -53,59 +24,12 @@ export function ChatPanel({ onVisualizationAdded, onSwitchToCanvas }: ChatPanelP
     uiTrees,
     error,
     getMessageText,
-  } = useAnalyticsChat({
-    onVisualizationGenerated: async (newTrees) => {
-      if (!pinContext) return;
-
-      // Render each new tree to the canvas
-      for (const tree of newTrees) {
-        try {
-          const nodeId = await pinContext.renderToCanvas({
-            title: extractTitle(tree) || 'Visualization',
-            uiTree: tree,
-          });
-
-          // Find the message that contains this tree and associate the node ID
-          // We look for the most recent assistant message
-          const assistantMessages = messages.filter(m => m.role === 'assistant');
-          const latestMessage = assistantMessages[assistantMessages.length - 1];
-
-          if (latestMessage) {
-            setCanvasNodeIds(prev => {
-              const next = new Map(prev);
-              next.set(latestMessage.id, nodeId);
-              return next;
-            });
-          }
-
-          // Show toast notification and invoke callback
-          toast.success('Visualization added to Canvas', {
-            action: {
-              label: 'View',
-              onClick: () => {
-                onSwitchToCanvas?.();
-              },
-            },
-          });
-          onVisualizationAdded?.();
-        } catch (error) {
-          console.error('Failed to render visualization to canvas:', error);
-        }
-      }
-    },
-  });
+  } = useAnalyticsChat();
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isGenerating]);
-
-  // Handle "View on Canvas" button click - switches to canvas tab
-  const handleViewOnCanvas = useCallback((nodeId: string) => {
-    console.log('View on canvas:', nodeId);
-    // Switch to canvas tab
-    onSwitchToCanvas?.();
-  }, [onSwitchToCanvas]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -142,8 +66,6 @@ export function ChatPanel({ onVisualizationAdded, onSwitchToCanvas }: ChatPanelP
             messages={messages}
             uiTrees={uiTrees}
             getMessageText={getMessageText}
-            canvasNodeIds={canvasNodeIds}
-            onViewOnCanvas={handleViewOnCanvas}
           />
         )}
 

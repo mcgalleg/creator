@@ -27,7 +27,6 @@ import type {
   MetricCardProps,
   MetricGroupProps,
   DataTableProps,
-  DataTableColumn,
   VideoCardProps,
   TopVideosGridProps,
   EngagementTimelineProps,

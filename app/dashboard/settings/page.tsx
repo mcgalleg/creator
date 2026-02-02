@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
+import { auth, isAuthBypassed } from "@/lib/auth";
 import { Settings } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,7 +39,8 @@ function AccountInfoSkeleton() {
 export default async function SettingsPage() {
   const { userId } = await auth();
 
-  if (!userId) {
+  // Only redirect to sign-in if not in bypass mode
+  if (!userId && !isAuthBypassed()) {
     redirect("/sign-in");
   }
 

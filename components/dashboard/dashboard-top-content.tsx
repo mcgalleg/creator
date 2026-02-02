@@ -61,11 +61,15 @@ function VideoCardSkeleton() {
 }
 
 function TopContentVideoCard({ video }: { video: TopContentVideo }) {
+  const [imageError, setImageError] = React.useState(false);
+
   const handleClick = () => {
     if (video.videoUrl) {
       window.open(video.videoUrl, '_blank', 'noopener,noreferrer');
     }
   };
+
+  const showFallback = !video.thumbnailUrl || imageError;
 
   return (
     <div
@@ -75,14 +79,20 @@ function TopContentVideoCard({ video }: { video: TopContentVideo }) {
       onClick={handleClick}
     >
       <div className="relative aspect-[9/16] bg-muted">
-        {video.thumbnailUrl ? (
+        {showFallback ? (
+          <div className="flex h-full w-full items-center justify-center">
+            <Video className="h-12 w-12 text-muted-foreground" />
+          </div>
+        ) : (
           <>
             <Image
-              src={video.thumbnailUrl}
-              alt={video.description || 'Video thumbnail'}
+              src={video.thumbnailUrl!}
+              alt=""
               fill
               className="object-cover"
               sizes="(max-width: 768px) 50vw, 33vw"
+              unoptimized
+              onError={() => setImageError(true)}
             />
             {video.videoUrl && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity">
@@ -92,10 +102,6 @@ function TopContentVideoCard({ video }: { video: TopContentVideo }) {
               </div>
             )}
           </>
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <Video className="h-12 w-12 text-muted-foreground" />
-          </div>
         )}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3">
           <div className="flex items-center gap-1 text-white">

@@ -1,6 +1,16 @@
-import { pgTable, text, integer, timestamp, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, serial, jsonb } from "drizzle-orm/pg-core";
 import { tiktokAccounts } from "./tiktok-accounts";
 import { users } from "./users";
+
+// Type for comment sync configuration stored in jsonb
+export interface CommentSyncConfigSchema {
+  mode: "selection" | "top_performers" | "date_range" | "budget";
+  selectedPostIds?: string[];
+  topCount?: number;
+  dateRange?: { start: string; end: string }; // ISO date strings in DB
+  maxPerPost?: number;
+  creditBudget?: number;
+}
 
 export const syncJobs = pgTable("sync_jobs", {
   id: serial("id").primaryKey(),
@@ -13,6 +23,7 @@ export const syncJobs = pgTable("sync_jobs", {
   creditsUsed: integer("credits_used"),
   postsCount: integer("posts_count"),
   commentsCount: integer("comments_count"),
+  commentSyncConfig: jsonb("comment_sync_config").$type<CommentSyncConfigSchema>(),
   error: text("error"),
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
