@@ -31,37 +31,38 @@ interface UseDashboardLayoutReturn {
 
 /**
  * Default layout for new dashboards
+ * Widget types must match the registered widget IDs in lib/widgets
  */
 export const DEFAULT_LAYOUTS: BreakpointLayouts = {
   lg: [
-    { id: "kpi-followers", widgetType: "kpi-followers", x: 0, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-    { id: "kpi-views", widgetType: "kpi-views", x: 3, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-    { id: "kpi-engagement", widgetType: "kpi-engagement", x: 6, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-    { id: "kpi-velocity", widgetType: "kpi-velocity", x: 9, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-    { id: "engagement-chart", widgetType: "engagement-chart", x: 0, y: 2, w: 12, h: 4, minW: 6, minH: 3 },
-    { id: "top-content", widgetType: "top-content", x: 0, y: 6, w: 6, h: 4, minW: 4, minH: 3 },
-    { id: "breakdown-chart", widgetType: "breakdown-chart", x: 6, y: 6, w: 6, h: 4, minW: 4, minH: 3 },
-    { id: "recent-posts", widgetType: "recent-posts", x: 0, y: 10, w: 12, h: 4, minW: 6, minH: 3 },
+    { id: "followers-1", widgetType: "followers", x: 0, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
+    { id: "total-plays-1", widgetType: "total-plays", x: 3, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
+    { id: "engagement-rate-1", widgetType: "engagement-rate", x: 6, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
+    { id: "total-likes-1", widgetType: "total-likes", x: 9, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
+    { id: "engagement-trend-1", widgetType: "engagement-trend", x: 0, y: 2, w: 12, h: 4, minW: 6, minH: 3 },
+    { id: "top-content-1", widgetType: "top-content", x: 0, y: 6, w: 6, h: 4, minW: 4, minH: 3 },
+    { id: "engagement-breakdown-1", widgetType: "engagement-breakdown", x: 6, y: 6, w: 6, h: 4, minW: 4, minH: 3 },
+    { id: "recent-posts-1", widgetType: "recent-posts", x: 0, y: 10, w: 12, h: 4, minW: 6, minH: 3 },
   ],
   md: [
-    { id: "kpi-followers", widgetType: "kpi-followers", x: 0, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-    { id: "kpi-views", widgetType: "kpi-views", x: 3, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-    { id: "kpi-engagement", widgetType: "kpi-engagement", x: 0, y: 2, w: 3, h: 2, minW: 2, minH: 2 },
-    { id: "kpi-velocity", widgetType: "kpi-velocity", x: 3, y: 2, w: 3, h: 2, minW: 2, minH: 2 },
-    { id: "engagement-chart", widgetType: "engagement-chart", x: 0, y: 4, w: 6, h: 4, minW: 6, minH: 3 },
-    { id: "top-content", widgetType: "top-content", x: 0, y: 8, w: 6, h: 4, minW: 4, minH: 3 },
-    { id: "breakdown-chart", widgetType: "breakdown-chart", x: 0, y: 12, w: 6, h: 4, minW: 4, minH: 3 },
-    { id: "recent-posts", widgetType: "recent-posts", x: 0, y: 16, w: 6, h: 4, minW: 6, minH: 3 },
+    { id: "followers-1", widgetType: "followers", x: 0, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
+    { id: "total-plays-1", widgetType: "total-plays", x: 3, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
+    { id: "engagement-rate-1", widgetType: "engagement-rate", x: 0, y: 2, w: 3, h: 2, minW: 2, minH: 2 },
+    { id: "total-likes-1", widgetType: "total-likes", x: 3, y: 2, w: 3, h: 2, minW: 2, minH: 2 },
+    { id: "engagement-trend-1", widgetType: "engagement-trend", x: 0, y: 4, w: 6, h: 4, minW: 6, minH: 3 },
+    { id: "top-content-1", widgetType: "top-content", x: 0, y: 8, w: 6, h: 4, minW: 4, minH: 3 },
+    { id: "engagement-breakdown-1", widgetType: "engagement-breakdown", x: 0, y: 12, w: 6, h: 4, minW: 4, minH: 3 },
+    { id: "recent-posts-1", widgetType: "recent-posts", x: 0, y: 16, w: 6, h: 4, minW: 6, minH: 3 },
   ],
   sm: [
-    { id: "kpi-followers", widgetType: "kpi-followers", x: 0, y: 0, w: 6, h: 2, minW: 2, minH: 2 },
-    { id: "kpi-views", widgetType: "kpi-views", x: 0, y: 2, w: 6, h: 2, minW: 2, minH: 2 },
-    { id: "kpi-engagement", widgetType: "kpi-engagement", x: 0, y: 4, w: 6, h: 2, minW: 2, minH: 2 },
-    { id: "kpi-velocity", widgetType: "kpi-velocity", x: 0, y: 6, w: 6, h: 2, minW: 2, minH: 2 },
-    { id: "engagement-chart", widgetType: "engagement-chart", x: 0, y: 8, w: 6, h: 4, minW: 6, minH: 3 },
-    { id: "top-content", widgetType: "top-content", x: 0, y: 12, w: 6, h: 4, minW: 4, minH: 3 },
-    { id: "breakdown-chart", widgetType: "breakdown-chart", x: 0, y: 16, w: 6, h: 4, minW: 4, minH: 3 },
-    { id: "recent-posts", widgetType: "recent-posts", x: 0, y: 20, w: 6, h: 4, minW: 6, minH: 3 },
+    { id: "followers-1", widgetType: "followers", x: 0, y: 0, w: 6, h: 2, minW: 2, minH: 2 },
+    { id: "total-plays-1", widgetType: "total-plays", x: 0, y: 2, w: 6, h: 2, minW: 2, minH: 2 },
+    { id: "engagement-rate-1", widgetType: "engagement-rate", x: 0, y: 4, w: 6, h: 2, minW: 2, minH: 2 },
+    { id: "total-likes-1", widgetType: "total-likes", x: 0, y: 6, w: 6, h: 2, minW: 2, minH: 2 },
+    { id: "engagement-trend-1", widgetType: "engagement-trend", x: 0, y: 8, w: 6, h: 4, minW: 6, minH: 3 },
+    { id: "top-content-1", widgetType: "top-content", x: 0, y: 12, w: 6, h: 4, minW: 4, minH: 3 },
+    { id: "engagement-breakdown-1", widgetType: "engagement-breakdown", x: 0, y: 16, w: 6, h: 4, minW: 4, minH: 3 },
+    { id: "recent-posts-1", widgetType: "recent-posts", x: 0, y: 20, w: 6, h: 4, minW: 6, minH: 3 },
   ],
 };
 

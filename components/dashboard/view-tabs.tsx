@@ -3,7 +3,7 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { LayoutDashboard, Sparkles, Lock } from "lucide-react";
-import { DefaultDashboard } from "./default-dashboard";
+import { DynamicDashboard } from "./dynamic-dashboard";
 import { CanvasView } from "./canvas-view";
 import { useFeatures } from "@/contexts/feature-context";
 import { FeatureGate } from "@/components/feature-gate";
@@ -80,7 +80,7 @@ export function ViewTabs({
       </TabsList>
 
       <TabsContent value="dashboard" className="flex-1 mt-0 overflow-auto p-6">
-        <DefaultDashboard accounts={accounts} />
+        <DynamicDashboard accounts={accounts} />
       </TabsContent>
 
       {/* Force mount canvas so it can receive render events even when not visible */}

@@ -29,7 +29,9 @@ import {
   Video,
   Clock,
   AlertCircle,
+  MessageCircle,
 } from "lucide-react";
+import { CommentSyncDialog } from "./comment-sync-dialog";
 import { toast } from "sonner";
 import type { TikTokAccount, SyncJob } from "@/hooks/use-accounts";
 
@@ -56,6 +58,7 @@ export function AccountList({
 }: AccountListProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<TikTokAccount | null>(null);
+  const [commentSyncAccount, setCommentSyncAccount] = useState<TikTokAccount | null>(null);
 
   const formatNumber = (num: number | null): string => {
     if (num === null) return "0";
@@ -265,6 +268,15 @@ export function AccountList({
                   </Button>
                   <Button
                     variant="outline"
+                    size="sm"
+                    onClick={() => setCommentSyncAccount(account)}
+                    disabled={isSyncing || isDisconnecting}
+                  >
+                    <MessageCircle className="size-4" />
+                    Comments
+                  </Button>
+                  <Button
+                    variant="outline"
                     size="icon-sm"
                     onClick={() => handleDeleteClick(account)}
                     disabled={isSyncing || isDisconnecting}
@@ -311,6 +323,16 @@ export function AccountList({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Comment Sync Dialog */}
+      {commentSyncAccount && (
+        <CommentSyncDialog
+          isOpen={!!commentSyncAccount}
+          onClose={() => setCommentSyncAccount(null)}
+          accountId={commentSyncAccount.id}
+          accountUsername={commentSyncAccount.username}
+        />
+      )}
     </>
   );
 }

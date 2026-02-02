@@ -5,7 +5,8 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { widgetRegistry, WidgetProps } from "@/lib/widgets/registry";
+// Import from index to trigger widget registration
+import { widgetRegistry, WidgetProps } from "@/lib/widgets";
 import { WidgetPosition } from "@/lib/db/schema/dashboard-layouts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

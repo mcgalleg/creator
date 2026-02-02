@@ -35,6 +35,20 @@ export {
   type RecentPostsWidgetProps,
 } from "./content/recent-posts";
 
+export {
+  ViralPostsWidget,
+  viralPostsWidgetDefinition,
+  type ViralPost,
+  type ViralPostsWidgetProps,
+} from "./content/viral-posts";
+
+export {
+  UnderperformingWidget,
+  underperformingWidgetDefinition,
+  type UnderperformingPost,
+  type UnderperformingWidgetProps,
+} from "./content/underperforming";
+
 // KPI - Overview (combined card)
 export {
   OverviewMetricsWidget,
@@ -79,6 +93,12 @@ export {
   avgViewsWidgetDefinition,
 } from "./kpi/avg-views";
 
+export {
+  ContentVelocityWidget,
+  contentVelocityWidgetDefinition,
+  type ContentVelocityWidgetProps,
+} from "./kpi/content-velocity";
+
 // Charts - Additional
 export {
   PostingFrequencyWidget,
@@ -112,3 +132,18 @@ export {
   type RecentCommentsData,
   type RecentCommentsWidgetProps,
 } from "./comments/recent-comments";
+
+export {
+  TopCommentersWidget,
+  topCommentersWidgetDefinition,
+} from "./comments/top-commenters";
+
+export {
+  CommentSentimentWidget,
+  commentSentimentWidgetDefinition,
+} from "./comments/comment-sentiment";
+
+export {
+  CommentActivityWidget,
+  commentActivityWidgetDefinition,
+} from "./comments/comment-activity";
