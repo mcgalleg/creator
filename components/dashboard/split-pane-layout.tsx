@@ -1,12 +1,25 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useState, useEffect, useCallback } from 'react';
 import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels';
 import type { PanelSize } from 'react-resizable-panels';
-import { PanelLeftClose, PanelLeft } from 'lucide-react';
-import { ChatPanel } from './chat-panel';
+import { PanelLeftClose, PanelLeft, Loader2 } from 'lucide-react';
 import { PinToCanvasProvider } from '@/contexts/pin-to-canvas-context';
 import { Button } from '@/components/ui/button';
+
+// Dynamically import ChatPanel to defer AI SDK compilation
+const ChatPanel = dynamic(
+  () => import('./chat-panel').then((mod) => mod.ChatPanel),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    ),
+  }
+);
 
 interface SplitPaneLayoutProps {
   children: React.ReactNode;
@@ -75,19 +88,7 @@ export function SplitPaneLayout({ children }: SplitPaneLayoutProps) {
         </Separator>
 
         {/* Canvas Area - Right Side */}
-        <Panel minSize="50%" className="relative flex flex-col">
-          {/* Persistent toggle button when collapsed */}
-          {isCollapsed && (
-            <Button
-              variant="default"
-              size="icon"
-              onClick={togglePanel}
-              className="absolute top-4 left-4 z-20 h-10 w-10 rounded-full shadow-lg hover:scale-110 transition-transform"
-              aria-label="Expand chat panel"
-            >
-              <PanelLeft className="h-5 w-5" />
-            </Button>
-          )}
+        <Panel minSize="50%" className="flex flex-col">
           <div className="flex-1 overflow-hidden">
             {children}
           </div>
