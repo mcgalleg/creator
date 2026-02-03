@@ -1,13 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import {
-  setPendingAccountSync,
-  clearPendingAccountSync,
-  clearPendingCommentSync,
-  clearPendingConnectionForUsername,
-  getAllPendingSyncs,
-} from "@/lib/persistent-async-state";
 
 export interface TikTokAccount {
   id: number;
@@ -26,9 +19,10 @@ export interface TikTokAccount {
 
 export interface SyncJob {
   id: number;
-  status: "pending" | "running" | "completed" | "failed";
   type: string;
+  status: string;
   creditsEstimated: number | null;
+  creditsHeld: number | null;
   creditsUsed: number | null;
   postsCount: number | null;
   commentsCount: number | null;
@@ -69,29 +63,19 @@ export interface ConnectResult {
 
 export interface SyncResult {
   jobId: number;
-  runId: string;
-  estimatedCredits: number;
-  breakdown: {
-    profile: number;
-    posts: number;
-    comments: number;
-  };
-  description: string;
+  creditsHeld: number;
 }
 
-export interface CommentSyncJob {
-  id: number;
-  status: "pending" | "running" | "completed" | "failed";
-  type: string;
-  mode: "selection" | "top_performers" | "date_range" | "budget";
-  postCount: number;
-  creditsEstimated: number | null;
-  creditsUsed: number | null;
-  commentsCount: number | null;
-  error: string | null;
-  startedAt: string | null;
-  completedAt: string | null;
-  createdAt: string;
+// Sync data returned by GET /api/accounts/[id]/sync
+export interface AccountSyncData {
+  activeJobs: SyncJob[];
+  recentJobs: SyncJob[];
+  stats: {
+    syncedPosts: number;
+    totalPosts: number;
+    syncedComments: number;
+    lastSyncedAt: string | null;
+  };
 }
 
 export interface UseAccountsReturn {
@@ -105,11 +89,9 @@ export interface UseAccountsReturn {
   ) => Promise<ConnectResult>;
   disconnectAccount: (accountId: number) => Promise<void>;
   triggerSync: (accountId: number, options?: SyncOptions) => Promise<SyncResult>;
-  syncStatus: Record<number, SyncJob | null>;
-  commentSyncStatus: Record<number, CommentSyncJob | null>;
-  pollSyncStatus: (accountId: number, jobId: number) => void;
-  pollCommentSyncStatus: (accountId: number, jobId: number, mode: CommentSyncJob["mode"], postCount: number) => void;
-  stopPolling: (accountId: number) => void;
+  refreshProfile: (accountId: number) => Promise<void>;
+  syncData: Record<number, AccountSyncData>;
+  fetchSyncData: (accountId: number) => Promise<void>;
   connecting: boolean;
   syncing: Record<number, boolean>;
   disconnecting: Record<number, boolean>;
@@ -122,14 +104,20 @@ export function useAccounts(): UseAccountsReturn {
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState<Record<number, boolean>>({});
   const [disconnecting, setDisconnecting] = useState<Record<number, boolean>>({});
-  const [syncStatus, setSyncStatus] = useState<Record<number, SyncJob | null>>({});
-  const [commentSyncStatus, setCommentSyncStatus] = useState<Record<number, CommentSyncJob | null>>({});
 
-  // Keep track of polling intervals (separate for account and comment syncs)
-  const pollingIntervals = useRef<Record<number, NodeJS.Timeout>>({});
-  const commentPollingIntervals = useRef<Record<number, NodeJS.Timeout>>({});
-  // Track if we've restored pending syncs
-  const hasRestoredPendingSyncs = useRef(false);
+  // Sync data per account (from DB, not localStorage)
+  const [syncData, setSyncData] = useState<Record<number, AccountSyncData>>({});
+
+  // Polling refs - one interval per account that has active jobs
+  const pollingRefs = useRef<Record<number, NodeJS.Timeout>>({});
+
+  // Stop polling for a specific account
+  const stopPolling = useCallback((accountId: number) => {
+    if (pollingRefs.current[accountId]) {
+      clearInterval(pollingRefs.current[accountId]);
+      delete pollingRefs.current[accountId];
+    }
+  }, []);
 
   // Fetch all accounts
   const fetchAccounts = useCallback(async () => {
@@ -152,6 +140,57 @@ export function useAccounts(): UseAccountsReturn {
       setLoading(false);
     }
   }, []);
+
+  // Start polling for an account with active jobs
+  const startPolling = useCallback(
+    (accountId: number) => {
+      // Don't double-poll
+      if (pollingRefs.current[accountId]) return;
+
+      pollingRefs.current[accountId] = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/accounts/${accountId}/sync`);
+          if (!res.ok) return;
+          const data = await res.json();
+          setSyncData((prev) => ({ ...prev, [accountId]: data }));
+
+          // Stop polling when no more active jobs
+          if (!data.activeJobs || data.activeJobs.length === 0) {
+            stopPolling(accountId);
+            // Refresh accounts to get updated stats
+            const accountsRes = await fetch("/api/accounts");
+            if (accountsRes.ok) {
+              const accountsData = await accountsRes.json();
+              setAccounts(accountsData.accounts);
+            }
+          }
+        } catch (err) {
+          console.error("Error polling sync data:", err);
+        }
+      }, 3000);
+    },
+    [stopPolling]
+  );
+
+  // Fetch sync data for a single account
+  const fetchSyncData = useCallback(
+    async (accountId: number) => {
+      try {
+        const res = await fetch(`/api/accounts/${accountId}/sync`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setSyncData((prev) => ({ ...prev, [accountId]: data }));
+
+        // If there are active jobs, start polling
+        if (data.activeJobs?.length > 0) {
+          startPolling(accountId);
+        }
+      } catch (err) {
+        console.error("Error fetching sync data:", err);
+      }
+    },
+    [startPolling]
+  );
 
   // Connect a new account
   const connectAccount = useCallback(
@@ -183,69 +222,65 @@ export function useAccounts(): UseAccountsReturn {
         // Add the new account to the list
         setAccounts((prev) => [...prev, data.account]);
 
+        // If a sync was triggered, fetch sync data to pick up the active job
+        if (data.syncJob?.jobId && data.account?.id) {
+          fetchSyncData(data.account.id);
+        }
+
         return data;
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to connect account";
-        // Don't set the shared error state for connection errors
-        // The caller (account-connection-form) handles its own error display
         throw err;
       } finally {
         setConnecting(false);
       }
     },
-    []
+    [fetchSyncData]
   );
 
   // Disconnect an account
-  const disconnectAccount = useCallback(async (accountId: number): Promise<void> => {
-    // Find the account before deleting to get its username
-    const accountToDelete = accounts.find((a) => a.id === accountId);
+  const disconnectAccount = useCallback(
+    async (accountId: number): Promise<void> => {
+      try {
+        setDisconnecting((prev) => ({ ...prev, [accountId]: true }));
+        setError(null);
 
-    try {
-      setDisconnecting((prev) => ({ ...prev, [accountId]: true }));
-      setError(null);
+        const response = await fetch(`/api/accounts/${accountId}`, {
+          method: "DELETE",
+        });
 
-      const response = await fetch(`/api/accounts/${accountId}`, {
-        method: "DELETE",
-      });
+        const data = await response.json();
 
-      const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to disconnect account");
+        }
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to disconnect account");
+        // Remove the account from the list
+        setAccounts((prev) => prev.filter((acc) => acc.id !== accountId));
+
+        // Stop any polling for this account
+        stopPolling(accountId);
+
+        // Clean up sync data
+        setSyncData((prev) => {
+          const next = { ...prev };
+          delete next[accountId];
+          return next;
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to disconnect account";
+        setError(message);
+        throw err;
+      } finally {
+        setDisconnecting((prev) => ({ ...prev, [accountId]: false }));
       }
-
-      // Remove the account from the list
-      setAccounts((prev) => prev.filter((acc) => acc.id !== accountId));
-
-      // Stop any polling for this account
-      if (pollingIntervals.current[accountId]) {
-        clearInterval(pollingIntervals.current[accountId]);
-        delete pollingIntervals.current[accountId];
-      }
-
-      // Clear any pending sync state
-      clearPendingAccountSync(accountId);
-
-      // Clear any pending connection state for this username
-      if (accountToDelete?.username) {
-        clearPendingConnectionForUsername(accountToDelete.username);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to disconnect account";
-      setError(message);
-      throw err;
-    } finally {
-      setDisconnecting((prev) => ({ ...prev, [accountId]: false }));
-    }
-  }, [accounts]);
+    },
+    [stopPolling]
+  );
 
   // Trigger sync for an account
   const triggerSync = useCallback(
     async (accountId: number, options?: SyncOptions): Promise<SyncResult> => {
-      // Find account username for persistence
-      const account = accounts.find((a) => a.id === accountId);
-
       try {
         setSyncing((prev) => ({ ...prev, [accountId]: true }));
         setError(null);
@@ -269,35 +304,13 @@ export function useAccounts(): UseAccountsReturn {
           throw new Error(data.error || "Failed to start sync");
         }
 
-        const syncType = options?.includeComments ? "full" : "posts";
+        // Immediately fetch sync data which will pick up the new active job and start polling
+        await fetchSyncData(accountId);
 
-        // Persist sync state to localStorage
-        setPendingAccountSync(accountId, {
-          accountId,
-          accountUsername: account?.username || "",
+        return {
           jobId: data.jobId,
-          type: syncType,
-        });
-
-        // Set initial sync status
-        setSyncStatus((prev) => ({
-          ...prev,
-          [accountId]: {
-            id: data.jobId,
-            status: "running",
-            type: syncType,
-            creditsEstimated: data.estimatedCredits,
-            creditsUsed: null,
-            postsCount: null,
-            commentsCount: null,
-            error: null,
-            startedAt: new Date().toISOString(),
-            completedAt: null,
-            createdAt: new Date().toISOString(),
-          },
-        }));
-
-        return data;
+          creditsHeld: data.creditsHeld ?? data.estimatedCredits ?? 0,
+        };
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to start sync";
         setError(message);
@@ -306,214 +319,50 @@ export function useAccounts(): UseAccountsReturn {
         setSyncing((prev) => ({ ...prev, [accountId]: false }));
       }
     },
-    [accounts]
+    [fetchSyncData]
   );
 
-  // Poll for sync status
-  const pollSyncStatus = useCallback((accountId: number, jobId: number) => {
-    // Clear any existing interval for this account
-    if (pollingIntervals.current[accountId]) {
-      clearInterval(pollingIntervals.current[accountId]);
-    }
+  // Refresh profile for an account
+  const refreshProfile = useCallback(
+    async (accountId: number): Promise<void> => {
+      const response = await fetch(`/api/accounts/${accountId}/refresh-profile`, {
+        method: "POST",
+      });
 
-    const poll = async () => {
-      try {
-        const response = await fetch(
-          `/api/accounts/${accountId}/sync?jobId=${jobId}`
-        );
+      if (!response.ok) {
         const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to fetch sync status");
-        }
-
-        if (data.job) {
-          setSyncStatus((prev) => ({ ...prev, [accountId]: data.job }));
-
-          // If job is complete or failed, stop polling and refresh accounts
-          if (data.job.status === "completed" || data.job.status === "failed") {
-            if (pollingIntervals.current[accountId]) {
-              clearInterval(pollingIntervals.current[accountId]);
-              delete pollingIntervals.current[accountId];
-            }
-
-            // Clear persistent state
-            clearPendingAccountSync(accountId);
-
-            // Refresh accounts to get updated data
-            const accountsResponse = await fetch("/api/accounts");
-            const accountsData = await accountsResponse.json();
-            if (accountsResponse.ok) {
-              setAccounts(accountsData.accounts);
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Error polling sync status:", err);
-      }
-    };
-
-    // Poll immediately
-    poll();
-
-    // Then poll every 3 seconds
-    pollingIntervals.current[accountId] = setInterval(poll, 3000);
-  }, []);
-
-  // Stop polling for an account
-  const stopPolling = useCallback((accountId: number) => {
-    if (pollingIntervals.current[accountId]) {
-      clearInterval(pollingIntervals.current[accountId]);
-      delete pollingIntervals.current[accountId];
-    }
-    if (commentPollingIntervals.current[accountId]) {
-      clearInterval(commentPollingIntervals.current[accountId]);
-      delete commentPollingIntervals.current[accountId];
-    }
-  }, []);
-
-  // Poll for comment sync status
-  const pollCommentSyncStatus = useCallback(
-    (accountId: number, jobId: number, mode: CommentSyncJob["mode"], postCount: number) => {
-      // Clear any existing interval for this account
-      if (commentPollingIntervals.current[accountId]) {
-        clearInterval(commentPollingIntervals.current[accountId]);
+        throw new Error(data.error || "Failed to refresh profile");
       }
 
-      const poll = async () => {
-        try {
-          // Comment syncs use the same endpoint as account syncs
-          const response = await fetch(
-            `/api/accounts/${accountId}/sync?jobId=${jobId}`
-          );
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data.error || "Failed to fetch comment sync status");
-          }
-
-          if (data.job) {
-            setCommentSyncStatus((prev) => ({
-              ...prev,
-              [accountId]: {
-                id: data.job.id,
-                status: data.job.status,
-                type: data.job.type,
-                mode,
-                postCount,
-                creditsEstimated: data.job.creditsEstimated,
-                creditsUsed: data.job.creditsUsed,
-                commentsCount: data.job.commentsCount,
-                error: data.job.error,
-                startedAt: data.job.startedAt,
-                completedAt: data.job.completedAt,
-                createdAt: data.job.createdAt,
-              },
-            }));
-
-            // If job is complete or failed, stop polling
-            if (data.job.status === "completed" || data.job.status === "failed") {
-              if (commentPollingIntervals.current[accountId]) {
-                clearInterval(commentPollingIntervals.current[accountId]);
-                delete commentPollingIntervals.current[accountId];
-              }
-
-              // Clear persistent state
-              clearPendingCommentSync(accountId);
-
-              // Refresh accounts to get updated data
-              const accountsResponse = await fetch("/api/accounts");
-              const accountsData = await accountsResponse.json();
-              if (accountsResponse.ok) {
-                setAccounts(accountsData.accounts);
-              }
-            }
-          }
-        } catch (err) {
-          console.error("Error polling comment sync status:", err);
-        }
-      };
-
-      // Poll immediately
-      poll();
-
-      // Then poll every 3 seconds
-      commentPollingIntervals.current[accountId] = setInterval(poll, 3000);
+      // Refresh accounts to show updated data
+      await fetchAccounts();
     },
-    []
+    [fetchAccounts]
   );
-
-  // Restore pending syncs from localStorage on mount
-  useEffect(() => {
-    if (hasRestoredPendingSyncs.current) return;
-    hasRestoredPendingSyncs.current = true;
-
-    const { accountSyncs, commentSyncs } = getAllPendingSyncs();
-
-    // For each pending account sync, set initial status and start polling
-    accountSyncs.forEach((pending) => {
-      // Set a "resuming" status
-      setSyncStatus((prev) => ({
-        ...prev,
-        [pending.accountId]: {
-          id: pending.jobId,
-          status: "running",
-          type: pending.type,
-          creditsEstimated: null,
-          creditsUsed: null,
-          postsCount: null,
-          commentsCount: null,
-          error: null,
-          startedAt: new Date(pending.startedAt).toISOString(),
-          completedAt: null,
-          createdAt: new Date(pending.startedAt).toISOString(),
-        },
-      }));
-
-      // Resume polling for this sync
-      pollSyncStatus(pending.accountId, pending.jobId);
-    });
-
-    // For each pending comment sync, set initial status and start polling
-    commentSyncs.forEach((pending) => {
-      // Set a "resuming" status
-      setCommentSyncStatus((prev) => ({
-        ...prev,
-        [pending.accountId]: {
-          id: pending.jobId,
-          status: "running",
-          type: "comments",
-          mode: pending.mode,
-          postCount: pending.postCount,
-          creditsEstimated: null,
-          creditsUsed: null,
-          commentsCount: null,
-          error: null,
-          startedAt: new Date(pending.startedAt).toISOString(),
-          completedAt: null,
-          createdAt: new Date(pending.startedAt).toISOString(),
-        },
-      }));
-
-      // Resume polling for this comment sync
-      pollCommentSyncStatus(pending.accountId, pending.jobId, pending.mode, pending.postCount);
-    });
-  }, [pollSyncStatus, pollCommentSyncStatus]);
-
-  // Cleanup polling on unmount
-  useEffect(() => {
-    const intervals = pollingIntervals.current;
-    const commentIntervals = commentPollingIntervals.current;
-    return () => {
-      Object.values(intervals).forEach(clearInterval);
-      Object.values(commentIntervals).forEach(clearInterval);
-    };
-  }, []);
 
   // Fetch accounts on mount
   useEffect(() => {
     fetchAccounts();
   }, [fetchAccounts]);
+
+  // After accounts load, fetch sync data for each account
+  useEffect(() => {
+    if (accounts.length === 0) return;
+
+    accounts.forEach((account) => {
+      fetchSyncData(account.id);
+    });
+    // Only run when accounts array identity changes (after fetch)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accounts.length > 0 && accounts.map((a) => a.id).join(",")]);
+
+  // Cleanup all polling intervals on unmount
+  useEffect(() => {
+    const refs = pollingRefs.current;
+    return () => {
+      Object.values(refs).forEach(clearInterval);
+    };
+  }, []);
 
   return {
     accounts,
@@ -523,11 +372,9 @@ export function useAccounts(): UseAccountsReturn {
     connectAccount,
     disconnectAccount,
     triggerSync,
-    syncStatus,
-    commentSyncStatus,
-    pollSyncStatus,
-    pollCommentSyncStatus,
-    stopPolling,
+    refreshProfile,
+    syncData,
+    fetchSyncData,
     connecting,
     syncing,
     disconnecting,

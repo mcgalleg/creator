@@ -2,14 +2,12 @@ import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tiktokAccounts, syncJobs } from "@/lib/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import {
-  startProfileSync,
-  estimateSyncCost,
-  pollSyncStatus,
+  startSync,
   getSyncJobStatus,
+  getAccountSyncData,
 } from "@/lib/services/sync-service";
-import { checkCredits } from "@/lib/services/credit-service";
 
 interface RouteParams {
   params: Promise<{ accountId: string }>;
@@ -53,13 +51,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Parse body for sync options
     const body = await request.json().catch(() => ({}));
     const {
-      postsLimit = 50,
+      postsLimit: rawPostsLimit = 50,
       includeComments = false,
-      commentsLimit = 0,
       sorting,
       oldestPostDate,
       newestPostDate,
     } = body;
+
+    // Ensure postsLimit is a positive integer
+    const postsLimit = Math.max(1, Math.min(500, Math.floor(Number(rawPostsLimit) || 50)));
 
     // Validate sorting parameter
     const validSortingValues = ["latest", "popular", "oldest"] as const;
@@ -114,46 +114,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Estimate credits
-    const costEstimate = estimateSyncCost({
-      postsLimit,
-      includeComments,
-      commentsLimit,
-    });
-
-    // Check sufficient credits
-    const creditCheck = await checkCredits(userId, costEstimate.credits);
-
-    if (!creditCheck.sufficient) {
-      return NextResponse.json(
-        {
-          error: "Insufficient credits",
-          required: costEstimate.credits,
-          balance: creditCheck.balance,
-        },
-        { status: 402 }
-      );
-    }
-
-    // Start the sync
-    const syncResult = await startProfileSync({
+    // Start the sync (credit estimation + hold happens inside startSync)
+    const syncResult = await startSync({
       accountId: accountIdNum,
-      username: account.username,
-      postsLimit,
-      includeComments,
-      commentsLimit,
-      sorting,
-      oldestPostDate,
-      newestPostDate,
       userId,
+      type: includeComments ? "full" : "posts",
+      config: {
+        postsLimit,
+        sorting,
+        oldestPostDate,
+        newestPostDate,
+      },
     });
 
     return NextResponse.json({
       jobId: syncResult.jobId,
-      runId: syncResult.runId,
-      estimatedCredits: costEstimate.credits,
-      breakdown: costEstimate.breakdown,
-      description: costEstimate.description,
+      creditsHeld: syncResult.creditsHeld,
     });
   } catch (error) {
     console.error("Error starting sync:", error);
@@ -166,8 +142,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
 /**
  * GET /api/accounts/[accountId]/sync
- * Get sync status (poll endpoint)
- * Query params: jobId
+ * Get sync data for an account, or status for a specific job.
+ * Query params: jobId (optional)
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
@@ -189,66 +165,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const jobIdParam = searchParams.get("jobId");
 
     if (!jobIdParam) {
-      // If no jobId, return the most recent job for this account
-      const [recentJob] = await db
-        .select()
-        .from(syncJobs)
-        .where(
-          and(
-            eq(syncJobs.accountId, accountIdNum),
-            eq(syncJobs.userId, userId)
-          )
-        )
-        .orderBy(desc(syncJobs.createdAt))
-        .limit(1);
-
-      if (!recentJob) {
-        return NextResponse.json({ job: null });
-      }
-
-      // If the job is still running, poll Apify for status
-      if (recentJob.status === "running" && recentJob.apifyRunId) {
-        try {
-          const apifyStatus = await pollSyncStatus(recentJob.apifyRunId);
-          return NextResponse.json({
-            job: {
-              id: recentJob.id,
-              status: recentJob.status,
-              type: recentJob.type,
-              creditsEstimated: recentJob.creditsEstimated,
-              creditsUsed: recentJob.creditsUsed,
-              postsCount: recentJob.postsCount,
-              commentsCount: recentJob.commentsCount,
-              startedAt: recentJob.startedAt,
-              completedAt: recentJob.completedAt,
-              createdAt: recentJob.createdAt,
-            },
-            apifyStatus: {
-              status: apifyStatus.status,
-              startedAt: apifyStatus.startedAt,
-              finishedAt: apifyStatus.finishedAt,
-            },
-          });
-        } catch {
-          // If we can't poll Apify, just return the job status
-        }
-      }
-
-      return NextResponse.json({
-        job: {
-          id: recentJob.id,
-          status: recentJob.status,
-          type: recentJob.type,
-          creditsEstimated: recentJob.creditsEstimated,
-          creditsUsed: recentJob.creditsUsed,
-          postsCount: recentJob.postsCount,
-          commentsCount: recentJob.commentsCount,
-          error: recentJob.error,
-          startedAt: recentJob.startedAt,
-          completedAt: recentJob.completedAt,
-          createdAt: recentJob.createdAt,
-        },
-      });
+      // No jobId — return unified sync data for this account
+      const syncData = await getAccountSyncData(accountIdNum, userId);
+      return NextResponse.json(syncData);
     }
 
     // Get specific job by ID

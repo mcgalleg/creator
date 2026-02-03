@@ -9,9 +9,9 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Users } from "lucide-react";
-import { AccountDataTree } from "./account-data-tree";
+import { AccountCard } from "./account-card";
 import { toast } from "sonner";
-import type { TikTokAccount, SyncJob, CommentSyncJob } from "@/hooks/use-accounts";
+import type { TikTokAccount, AccountSyncData } from "@/hooks/use-accounts";
 import type { PostImportConfig } from "./post-import-dialog";
 
 interface AccountListProps {
@@ -23,9 +23,8 @@ interface AccountListProps {
   onDelete: (accountId: number) => Promise<void>;
   syncing: Record<number, boolean>;
   disconnecting: Record<number, boolean>;
-  syncStatus: Record<number, SyncJob | null>;
-  commentSyncStatus?: Record<number, CommentSyncJob | null>;
-  onCommentSyncStarted?: (accountId: number, jobId: number, mode: CommentSyncJob["mode"], postCount: number) => void;
+  syncData: Record<number, AccountSyncData>;
+  onFetchSyncData?: (accountId: number) => Promise<void>;
   userCreditBalance?: number;
 }
 
@@ -38,9 +37,8 @@ export function AccountList({
   onDelete,
   syncing,
   disconnecting,
-  syncStatus,
-  commentSyncStatus,
-  onCommentSyncStarted,
+  syncData,
+  onFetchSyncData,
   userCreditBalance,
 }: AccountListProps) {
   const handleDelete = async (accountId: number) => {
@@ -138,27 +136,23 @@ export function AccountList({
       </CardHeader>
       <CardContent className="space-y-4">
         {accounts.map((account) => {
-          const currentSyncStatus = syncStatus[account.id];
-          const currentCommentSyncStatus = commentSyncStatus?.[account.id];
-          const isSyncing =
-            syncing[account.id] ||
-            currentSyncStatus?.status === "running" ||
-            currentCommentSyncStatus?.status === "running";
+          const accountSyncData = syncData[account.id];
+          const hasActiveJobs = (accountSyncData?.activeJobs?.length ?? 0) > 0;
+          const isSyncing = syncing[account.id] || hasActiveJobs;
           const isDisconnecting = disconnecting[account.id];
 
           return (
-            <AccountDataTree
+            <AccountCard
               key={account.id}
               account={account}
-              syncStatus={currentSyncStatus}
-              commentSyncStatus={currentCommentSyncStatus}
+              syncData={accountSyncData}
               onSync={onSync}
               onProfileRefresh={onProfileRefresh}
               onDelete={handleDelete}
               isSyncing={isSyncing}
               isDisconnecting={isDisconnecting}
               userCreditBalance={userCreditBalance}
-              onCommentSyncStarted={onCommentSyncStarted}
+              onFetchSyncData={onFetchSyncData}
             />
           );
         })}

@@ -17,10 +17,9 @@ export default function AccountsPage() {
     connectAccount,
     disconnectAccount,
     triggerSync,
-    syncStatus,
-    commentSyncStatus,
-    pollSyncStatus,
-    pollCommentSyncStatus,
+    refreshProfile,
+    syncData,
+    fetchSyncData,
     connecting,
     syncing,
     disconnecting,
@@ -65,10 +64,8 @@ export default function AccountsPage() {
       newestPostDate: config?.customDateEnd,
     };
 
-    const result = await triggerSync(accountId, syncOptions);
-    // Start polling for status
-    pollSyncStatus(accountId, result.jobId);
-    // Refresh credits after sync completes (handled by polling)
+    await triggerSync(accountId, syncOptions);
+    // Polling is automatically started by triggerSync via fetchSyncData
   };
 
   const handleDelete = async (accountId: number) => {
@@ -80,21 +77,11 @@ export default function AccountsPage() {
     if (!account) return;
 
     try {
-      const response = await fetch(`/api/accounts/${accountId}/refresh-profile`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to refresh profile");
-      }
+      await refreshProfile(accountId);
 
       toast.success("Profile refreshed", {
         description: `Updated stats for @${account.username}`,
       });
-
-      // Refresh the accounts list to show updated data
-      await fetchAccounts();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to refresh profile";
       toast.error("Profile refresh failed", {
@@ -140,9 +127,8 @@ export default function AccountsPage() {
           syncing={syncing}
           userCreditBalance={creditBalance}
           disconnecting={disconnecting}
-          syncStatus={syncStatus}
-          commentSyncStatus={commentSyncStatus}
-          onCommentSyncStarted={pollCommentSyncStatus}
+          syncData={syncData}
+          onFetchSyncData={fetchSyncData}
         />
       </div>
     </div>

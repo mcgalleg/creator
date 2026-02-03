@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { posts, tiktokAccounts } from "@/lib/db/schema";
-import { eq, and, desc, count, gte } from "drizzle-orm";
+import { eq, and, desc, count, gte, sql } from "drizzle-orm";
 
 type Period = "7d" | "30d" | "90d";
 
@@ -21,6 +21,8 @@ function getStartDate(period: Period): Date {
  * - period (optional): time period - "7d", "30d", or "90d" (default: "30d")
  * - limit (optional): number of posts (default: 10)
  * - offset (optional): pagination offset (default: 0)
+ * - allPosts (optional): when "true" and accountId is provided, returns ALL posts
+ *   for the account without date filtering, ordered by engagement descending
  */
 export async function GET(request: NextRequest) {
   try {
@@ -35,6 +37,7 @@ export async function GET(request: NextRequest) {
     const periodParam = searchParams.get("period") as Period | null;
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
+    const allPostsParam = searchParams.get("allPosts");
 
     // Validate accountId
     if (!accountIdParam) {
@@ -52,7 +55,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Validate period
+    // Determine if we should skip the date filter
+    const showAllPosts = allPostsParam === "true";
+
+    // Validate period (used only when not showing all posts)
     const validPeriods: Period[] = ["7d", "30d", "90d"];
     const period: Period = periodParam && validPeriods.includes(periodParam) ? periodParam : "30d";
     const startDate = getStartDate(period);
@@ -94,20 +100,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get total count for pagination (within period)
+    // Build the where clause: skip date filter when allPosts=true
+    const whereClause = showAllPosts
+      ? eq(posts.accountId, accountId)
+      : and(
+          eq(posts.accountId, accountId),
+          gte(posts.postedAt, startDate)
+        );
+
+    // Get total count for pagination
     const [totalResult] = await db
       .select({ count: count() })
       .from(posts)
-      .where(
-        and(
-          eq(posts.accountId, accountId),
-          gte(posts.postedAt, startDate)
-        )
-      );
+      .where(whereClause);
 
     const total = totalResult?.count ?? 0;
 
-    // Get posts with pagination (within period)
+    // Order by engagement (likes + comments + shares + saves) desc when showing all posts,
+    // otherwise order by postedAt desc for the default recent-posts behavior
+    const orderClause = showAllPosts
+      ? desc(sql`COALESCE(${posts.likes}, 0) + COALESCE(${posts.comments}, 0) + COALESCE(${posts.shares}, 0) + COALESCE(${posts.saves}, 0)`)
+      : desc(posts.postedAt);
+
+    // Get posts with pagination
     const recentPosts = await db
       .select({
         id: posts.id,
@@ -122,13 +137,8 @@ export async function GET(request: NextRequest) {
         postedAt: posts.postedAt,
       })
       .from(posts)
-      .where(
-        and(
-          eq(posts.accountId, accountId),
-          gte(posts.postedAt, startDate)
-        )
-      )
-      .orderBy(desc(posts.postedAt))
+      .where(whereClause)
+      .orderBy(orderClause)
       .limit(limit)
       .offset(offset);
 

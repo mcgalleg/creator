@@ -4,10 +4,10 @@ import { db } from "@/lib/db";
 import { tiktokAccounts, syncJobs } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import {
-  startCommentSync,
+  startSync,
   estimateCommentSyncCost,
-  CommentSyncConfig,
 } from "@/lib/services/sync-service";
+import type { SyncConfigSchema } from "@/lib/db/schema/sync-jobs";
 import { checkCredits } from "@/lib/services/credit-service";
 
 interface RouteParams {
@@ -107,27 +107,27 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Build the config
-    const config: CommentSyncConfig = {
-      mode,
-      maxPerPost: maxPerPost ?? 100,
+    // Build the unified sync config
+    const syncConfig: SyncConfigSchema = {
+      commentMode: mode,
+      maxCommentsPerPost: maxPerPost ?? 100,
     };
 
     switch (mode) {
       case "selection":
-        config.selectedPostIds = selectedPostIds;
+        syncConfig.selectedPostIds = selectedPostIds;
         break;
       case "top_performers":
-        config.topCount = topCount ?? 10;
+        syncConfig.topCount = topCount ?? 10;
         break;
       case "date_range":
-        config.dateRange = {
-          start: new Date(dateRange.start),
-          end: new Date(dateRange.end),
+        syncConfig.dateRange = {
+          start: dateRange.start,
+          end: dateRange.end,
         };
         break;
       case "budget":
-        config.creditBudget = creditBudget;
+        syncConfig.creditBudget = creditBudget;
         break;
     }
 
@@ -141,19 +141,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         estimatedPostCount = topCount ?? 10;
         break;
       case "date_range":
-        estimatedPostCount = 20; // Default estimate for date range
+        estimatedPostCount = 20;
         break;
-      case "budget":
-        const costPerPost = Math.ceil((config.maxPerPost ?? 100) / 100) * 15 + 6;
+      case "budget": {
+        const commentsPerPost = syncConfig.maxCommentsPerPost ?? 100;
+        const costPerPost = commentsPerPost * 0.15;
         estimatedPostCount = Math.floor(creditBudget / costPerPost);
         break;
+      }
       default:
         estimatedPostCount = 10;
     }
 
     const costEstimate = estimateCommentSyncCost({
       postCount: estimatedPostCount,
-      commentsPerPost: config.maxPerPost ?? 100,
+      commentsPerPost: syncConfig.maxCommentsPerPost ?? 100,
     });
 
     // For budget mode, cap at the specified budget
@@ -175,23 +177,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Start the comment sync
-    const syncResult = await startCommentSync({
+    // Start the comment sync via unified pipeline
+    const syncResult = await startSync({
       accountId: accountIdNum,
       userId,
-      config,
+      type: "comments",
+      config: syncConfig,
     });
 
     return NextResponse.json({
       jobId: syncResult.jobId,
-      runId: syncResult.runId,
+      creditsHeld: syncResult.creditsHeld,
       estimatedCredits: creditsToCheck,
       breakdown: costEstimate.breakdown,
       description: costEstimate.description,
       config: {
         mode,
         postCount: estimatedPostCount,
-        maxPerPost: config.maxPerPost,
+        maxPerPost: syncConfig.maxCommentsPerPost,
       },
     });
   } catch (error) {

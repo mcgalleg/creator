@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tiktokAccounts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { validateUsername, estimateSyncCost, startProfileSync } from "@/lib/services/sync-service";
+import { validateUsername, estimateSyncCost, startSync } from "@/lib/services/sync-service";
 import { checkCredits } from "@/lib/services/credit-service";
 
 // Type for import options
@@ -173,12 +173,13 @@ export async function POST(request: NextRequest) {
     let syncError: string | null = null;
     if (shouldSync) {
       try {
-        syncJob = await startProfileSync({
+        syncJob = await startSync({
           accountId: account.id,
-          username: account.username,
-          postsLimit,
-          includeComments: shouldIncludeComments,
           userId,
+          type: shouldIncludeComments ? "full" : "posts",
+          config: {
+            postsLimit,
+          },
         });
       } catch (err) {
         console.error("Failed to start initial sync:", err);

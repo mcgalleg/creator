@@ -1,20 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, AlertCircle, UserPlus, X, RefreshCw, Search } from "lucide-react";
+import { Loader2, AlertCircle, UserPlus, Search } from "lucide-react";
 import { toast } from "sonner";
-import {
-  STORAGE_KEYS,
-  EXPIRATION_TIMES,
-  getPendingState,
-  setPendingState,
-  clearPendingState,
-  type PendingAccountConnection,
-} from "@/lib/persistent-async-state";
 import { TikTokPreviewCard, type PostImportConfig } from "./tiktok-preview-card";
 
 interface TikTokProfile {
@@ -64,19 +56,6 @@ export function AccountConnectionForm({
   const [error, setError] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [pendingImportConfig, setPendingImportConfig] = useState<PostImportConfig | null>(null);
-  const [storedPending, setStoredPending] = useState<PendingAccountConnection | null>(null);
-  const hasShownCompletionToast = useRef(false);
-  const hasAttemptedRetry = useRef(false);
-  const isRetrying = useRef(false);
-
-  // Load pending connection from localStorage on mount
-  useEffect(() => {
-    const pending = getPendingState<PendingAccountConnection>(
-      STORAGE_KEYS.ACCOUNT_CONNECTION,
-      EXPIRATION_TIMES.SHORT
-    );
-    setStoredPending(pending);
-  }, []);
 
   // Check if account is already connected
   const isAlreadyConnected = useCallback(
@@ -86,105 +65,6 @@ export function AccountConnectionForm({
       ),
     [connectedUsernames]
   );
-
-  // Derive if there's an active pending connection that hasn't completed yet
-  const pendingUsername = storedPending
-    ? isAlreadyConnected(storedPending.username)
-      ? null
-      : storedPending.username
-    : null;
-
-  // Show toast when a pending connection completes
-  useEffect(() => {
-    if (
-      storedPending &&
-      !pendingUsername &&
-      !hasShownCompletionToast.current &&
-      !isLoadingAccounts
-    ) {
-      hasShownCompletionToast.current = true;
-      clearPendingState(STORAGE_KEYS.ACCOUNT_CONNECTION);
-      toast.success("Account connected successfully!", {
-        description: `@${storedPending.username} has been added to your accounts.`,
-      });
-      setStoredPending(null);
-      setStep("input");
-      setPreviewData(null);
-    }
-  }, [storedPending, pendingUsername, isLoadingAccounts]);
-
-  // Auto-retry connection if we have a pending state
-  useEffect(() => {
-    if (
-      storedPending &&
-      pendingUsername &&
-      !hasAttemptedRetry.current &&
-      !isRetrying.current &&
-      step !== "connecting" &&
-      step !== "loading" &&
-      !isLoadingAccounts
-    ) {
-      hasAttemptedRetry.current = true;
-      isRetrying.current = true;
-
-      const retryConnection = async () => {
-        try {
-          setStep("connecting");
-          setError(null);
-
-          const result = await onConnect(storedPending.username);
-
-          clearPendingState(STORAGE_KEYS.ACCOUNT_CONNECTION);
-          setStoredPending(null);
-          setStep("input");
-          setPreviewData(null);
-          hasShownCompletionToast.current = true;
-
-          toast.success("Account connected successfully!", {
-            description: `@${result.profile.username} has been added to your accounts.`,
-          });
-
-          onRefreshCredits?.();
-        } catch (err) {
-          const message = err instanceof Error ? err.message : "Failed to connect account";
-          setError(message);
-          setStep("input");
-
-          toast.error("Connection attempt failed", {
-            description: `${message}. You can try again.`,
-          });
-        } finally {
-          isRetrying.current = false;
-        }
-      };
-
-      retryConnection();
-    }
-  }, [storedPending, pendingUsername, step, onConnect, isLoadingAccounts, onRefreshCredits]);
-
-  const isConnectionInProgress =
-    step === "connecting" ||
-    step === "loading" ||
-    (pendingUsername !== null && !hasAttemptedRetry.current) ||
-    (storedPending !== null && isLoadingAccounts);
-
-  const canRetryPendingConnection = storedPending !== null && error !== null && !isRetrying.current;
-
-  const handleCancelPending = () => {
-    clearPendingState(STORAGE_KEYS.ACCOUNT_CONNECTION);
-    setStoredPending(null);
-    setStep("input");
-    setError(null);
-    setPreviewData(null);
-    hasAttemptedRetry.current = false;
-  };
-
-  const handleRetryPending = () => {
-    if (!storedPending) return;
-    hasAttemptedRetry.current = false;
-    isRetrying.current = false;
-    setStep("input");
-  };
 
   const handleCheckAccount = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,12 +115,6 @@ export function AccountConnectionForm({
       setStep("connecting");
       setError(null);
       setPendingImportConfig(importConfig ?? null);
-      setPendingState<PendingAccountConnection>(STORAGE_KEYS.ACCOUNT_CONNECTION, {
-        username: normalizedUsername,
-      });
-      setStoredPending({ username: normalizedUsername, startedAt: Date.now() });
-      hasShownCompletionToast.current = false;
-      hasAttemptedRetry.current = false;
 
       // Determine sync options based on import config
       const triggerSync = !!importConfig;
@@ -253,13 +127,10 @@ export function AccountConnectionForm({
         includeComments,
       });
 
-      clearPendingState(STORAGE_KEYS.ACCOUNT_CONNECTION);
-      setStoredPending(null);
       setStep("input");
       setUsername("");
       setPreviewData(null);
       setPendingImportConfig(null);
-      hasShownCompletionToast.current = true;
 
       toast.success("Account connected successfully!", {
         description: `@${result.profile.username} has been added to your accounts.`,
@@ -369,7 +240,7 @@ export function AccountConnectionForm({
             Connect TikTok Account
           </CardTitle>
           <CardDescription>
-            Connecting @{previewData?.profile.username || storedPending?.username || username}...
+            Connecting @{previewData?.profile.username || username}...
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -413,20 +284,20 @@ export function AccountConnectionForm({
                   }
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && username.trim() && !isConnectionInProgress) {
+                  if (e.key === "Enter" && username.trim() && !isConnecting) {
                     e.preventDefault();
                     handleCheckAccount(e as unknown as React.FormEvent);
                   }
                 }}
-                disabled={isConnecting || isConnectionInProgress}
+                disabled={isConnecting}
                 className="pl-8"
               />
             </div>
             <Button
               type="submit"
-              disabled={isConnecting || isConnectionInProgress || !username.trim()}
+              disabled={isConnecting || !username.trim()}
             >
-              {isConnectionInProgress ? (
+              {isConnecting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
                   Checking...
@@ -445,48 +316,6 @@ export function AccountConnectionForm({
             <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
               <AlertCircle className="size-4 shrink-0" />
               <span className="flex-1">{error}</span>
-              {canRetryPendingConnection && (
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRetryPending}
-                    className="h-7 px-2"
-                  >
-                    <RefreshCw className="size-3 mr-1" />
-                    Retry
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCancelPending}
-                    className="h-7 px-2"
-                  >
-                    <X className="size-3 mr-1" />
-                    Cancel
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Pending connection being retried */}
-          {storedPending && !isConnectionInProgress && !error && (
-            <div className="flex items-center gap-2 rounded-lg border border-muted-foreground/20 bg-muted/50 p-3 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin shrink-0" />
-              <span className="flex-1">Resuming connection for @{storedPending.username}...</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleCancelPending}
-                className="h-7 px-2"
-              >
-                <X className="size-3 mr-1" />
-                Cancel
-              </Button>
             </div>
           )}
         </form>

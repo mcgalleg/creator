@@ -7,10 +7,16 @@ import {
   comments,
   accountMetricsHistory,
 } from "@/lib/db/schema";
-import { deductCredits } from "@/lib/services/credit-service";
+import type { SyncConfigSchema } from "@/lib/db/schema/sync-jobs";
+import {
+  holdCredits,
+  finalizeCredits,
+  refundHold,
+} from "@/lib/services/credit-service";
 import { eq, desc, and, gte, lte, inArray, sql } from "drizzle-orm";
 
-// Initialize Apify client
+// ─── Apify Client ────────────────────────────────────────────────────────────
+
 const getApifyClient = () => {
   const token = process.env.APIFY_API_TOKEN;
   if (!token) {
@@ -19,44 +25,34 @@ const getApifyClient = () => {
   return new ApifyClient({ token });
 };
 
-// Constants for credit calculations
-// Profile sync is FREE - users only pay for posts and comments they receive
+// ─── Constants ───────────────────────────────────────────────────────────────
+
 const CREDITS = {
-  PROFILE_SYNC_BASE: 0, // Profile sync is FREE
-  PER_POST: 1, // 1 credit per post (granular pricing)
-  PER_COMMENT: 0.15, // 0.15 credits per comment
-  ACTOR_START_FEE: 6, // ~$0.006 converted to credits (internal cost tracking)
-  // Legacy batch constants (kept for reference, not used in calculations)
-  POSTS_PER_50: 25, // Deprecated: was 25 credits per 50 posts
-  COMMENTS_PER_100: 15, // Deprecated: was 15 credits per 100 comments
+  PER_POST: 1,
+  PER_COMMENT: 0.15,
 } as const;
 
-// Types
-export interface SyncOptions {
+const SYNC_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export interface StartSyncInput {
   accountId: number;
-  username: string;
-  postsLimit?: number;
-  includeComments?: boolean;
-  commentsLimit?: number;
-  sorting?: "latest" | "popular" | "oldest";
-  oldestPostDate?: string;  // ISO date string
-  newestPostDate?: string;  // ISO date string
+  userId: string;
+  type: "posts" | "comments" | "full";
+  config: SyncConfigSchema;
 }
 
-export interface CommentSyncConfig {
-  mode: "selection" | "top_performers" | "date_range" | "budget";
-  selectedPostIds?: string[];
-  topCount?: number;
-  dateRange?: { start: Date; end: Date };
-  maxPerPost?: number;
-  creditBudget?: number;
+export interface StartSyncResult {
+  jobId: number;
+  creditsHeld: number;
+  estimatedBreakdown: { posts: number; comments: number };
 }
 
 export interface CostEstimate {
   credits: number;
   description: string;
   breakdown: {
-    profile: number;
     posts: number;
     comments: number;
   };
@@ -78,18 +74,12 @@ export interface ValidationResult {
   error?: string;
 }
 
-export interface SyncJobResult {
-  jobId: number;
-  runId: string;
-}
-
 export interface SyncStatus {
   status: "RUNNING" | "SUCCEEDED" | "FAILED" | "READY" | "ABORTING" | "ABORTED" | "TIMING-OUT" | "TIMED-OUT";
   startedAt?: Date;
   finishedAt?: Date;
   exitCode?: number;
   defaultDatasetId?: string;
-  statsItemCount?: number;
 }
 
 export interface ProcessedSyncResults {
@@ -97,14 +87,9 @@ export interface ProcessedSyncResults {
   commentsCount: number;
   creditsUsed: number;
   profileUpdated: boolean;
-  // Visibility into Apify results
-  itemsReturnedByApify: number;
-  itemsProcessed: number;
-  itemsSkipped: number;
-  skippedReasons?: string[];
 }
 
-// TikTok data types from Apify
+// Apify TikTok data types
 interface TikTokAuthorMeta {
   id: string;
   name: string;
@@ -138,6 +123,7 @@ interface TikTokPostData {
   playCount: number;
   collectCount: number;
   commentCount: number;
+  comments?: TikTokCommentData[];
 }
 
 interface TikTokCommentData {
@@ -151,52 +137,39 @@ interface TikTokCommentData {
   };
 }
 
+// ─── Cost Estimation ─────────────────────────────────────────────────────────
+
 /**
- * Estimate the cost in credits for a sync operation
- * Uses per-item pricing: users only pay for what they receive
+ * Estimate credits for a post sync (optionally with inline comments)
  */
 export function estimateSyncCost(options: {
   postsLimit?: number;
   includeComments?: boolean;
   commentsLimit?: number;
 }): CostEstimate {
-  const postsLimit = options.postsLimit ?? 50;
-  const includeComments = options.includeComments ?? false;
-  const commentsLimit = options.commentsLimit ?? 0;
+  const postsLimit = Math.max(0, options.postsLimit ?? 50);
+  const postsCost = Math.max(0, Math.round(postsLimit * CREDITS.PER_POST));
 
-  // Profile sync is FREE
-  const profileCost = CREDITS.PROFILE_SYNC_BASE;
-
-  // Posts cost: per-post pricing
-  const postsCost = Math.round(postsLimit * CREDITS.PER_POST);
-
-  // Comments cost: per-comment pricing
   let commentsCost = 0;
-  if (includeComments && commentsLimit > 0) {
-    commentsCost = Math.round(commentsLimit * CREDITS.PER_COMMENT);
+  if (options.includeComments && options.commentsLimit && options.commentsLimit > 0) {
+    commentsCost = Math.max(0, Math.round(options.commentsLimit * CREDITS.PER_COMMENT));
   }
 
-  const totalCredits = profileCost + postsCost + commentsCost;
-
-  const descriptionParts = [`Profile sync (free)`, `${postsLimit} posts (~${postsCost} credits)`];
-  if (includeComments && commentsLimit > 0) {
-    descriptionParts.push(`${commentsLimit} comments (~${commentsCost} credits)`);
+  const totalCredits = postsCost + commentsCost;
+  const parts = [`${postsLimit} posts (~${postsCost} credits)`];
+  if (commentsCost > 0) {
+    parts.push(`${options.commentsLimit} comments (~${commentsCost} credits)`);
   }
 
   return {
     credits: totalCredits,
-    description: descriptionParts.join(", "),
-    breakdown: {
-      profile: profileCost,
-      posts: postsCost,
-      comments: commentsCost,
-    },
+    description: parts.join(", "),
+    breakdown: { posts: postsCost, comments: commentsCost },
   };
 }
 
 /**
- * Estimate the cost in credits for a comment-only sync operation
- * Uses per-comment pricing: users only pay for what they receive
+ * Estimate credits for a comment-only sync
  */
 export function estimateCommentSyncCost(options: {
   postCount: number;
@@ -204,25 +177,17 @@ export function estimateCommentSyncCost(options: {
   totalComments?: number;
 }): CostEstimate {
   const { postCount, commentsPerPost = 100, totalComments } = options;
-
-  // Calculate total comments to sync
-  const estimatedComments = totalComments ?? (postCount * commentsPerPost);
-
-  // Comments cost: per-comment pricing
-  const commentsCost = Math.round(estimatedComments * CREDITS.PER_COMMENT);
-
-  const totalCredits = commentsCost;
+  const estimatedComments = Math.max(0, totalComments ?? postCount * commentsPerPost);
+  const commentsCost = Math.max(0, Math.round(estimatedComments * CREDITS.PER_COMMENT));
 
   return {
-    credits: totalCredits,
-    description: `Comments for ${postCount} posts (~${estimatedComments} comments, ${totalCredits} credits)`,
-    breakdown: {
-      profile: 0,
-      posts: 0,
-      comments: commentsCost,
-    },
+    credits: commentsCost,
+    description: `Comments for ${postCount} posts (~${estimatedComments} comments, ${commentsCost} credits)`,
+    breakdown: { posts: 0, comments: commentsCost },
   };
 }
+
+// ─── Username Validation ─────────────────────────────────────────────────────
 
 /**
  * Validate that a TikTok username exists and return basic profile data
@@ -231,31 +196,20 @@ export async function validateUsername(username: string): Promise<ValidationResu
   const client = getApifyClient();
 
   try {
-    // Run the actor with minimal settings to just validate the profile
     const run = await client.actor("clockworks/tiktok-scraper").call({
       profiles: [username.replace("@", "")],
-      resultsPerPage: 1, // Just get 1 result to validate
+      resultsPerPage: 1,
     });
 
-    // Fetch results from the dataset
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
     if (!items || items.length === 0) {
-      return {
-        valid: false,
-        error: "Username not found or no public content available",
-      };
+      return { valid: false, error: "Username not found or no public content available" };
     }
 
-    // Extract profile data from the first result
-    const firstResult = items[0] as unknown as TikTokPostData;
-    const authorMeta = firstResult?.authorMeta;
-
+    const authorMeta = (items[0] as unknown as TikTokPostData)?.authorMeta;
     if (!authorMeta) {
-      return {
-        valid: false,
-        error: "Could not retrieve profile information",
-      };
+      return { valid: false, error: "Could not retrieve profile information" };
     }
 
     return {
@@ -273,67 +227,83 @@ export async function validateUsername(username: string): Promise<ValidationResu
       },
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error validating username";
     return {
       valid: false,
-      error: message,
+      error: error instanceof Error ? error.message : "Unknown error validating username",
     };
   }
 }
 
+// ─── Unified Sync Pipeline ───────────────────────────────────────────────────
+
 /**
- * Start a profile sync job
+ * Start any sync type (posts, comments, or full).
+ *
+ * Flow:
+ * 1. Estimate credits → hold in escrow
+ * 2. Create sync_job with status "pending"
+ * 3. Build Apify actor input based on type + config
+ * 4. Start Apify actor run with ad-hoc webhook
+ * 5. Update job with apifyRunId, status "running"
+ * 6. Return jobId + creditsHeld
  */
-export async function startProfileSync(options: SyncOptions & { userId: string }): Promise<SyncJobResult> {
-  const { accountId, username, postsLimit = 50, includeComments = false, commentsLimit = 0, userId, sorting = "latest", oldestPostDate, newestPostDate } = options;
+export async function startSync(input: StartSyncInput): Promise<StartSyncResult> {
+  const { accountId, userId, type, config } = input;
 
-  // Estimate credits for this sync
-  const costEstimate = estimateSyncCost({ postsLimit, includeComments, commentsLimit });
+  // Get the account (need username for Apify)
+  const [account] = await db
+    .select()
+    .from(tiktokAccounts)
+    .where(eq(tiktokAccounts.id, accountId))
+    .limit(1);
 
-  // Create sync job record
+  if (!account) {
+    throw new Error(`Account ${accountId} not found`);
+  }
+
+  // 1. Estimate and hold credits
+  const estimate = calculateEstimate(type, config);
+  const creditsToHold = estimate.credits;
+
+  await holdCredits(
+    userId,
+    creditsToHold,
+    `Hold for ${type} sync of @${account.username}`
+  );
+
+  // 2. Create sync job
   const [syncJob] = await db
     .insert(syncJobs)
     .values({
       accountId,
       userId,
-      type: includeComments ? "full" : "posts",
+      type,
       status: "pending",
-      creditsEstimated: costEstimate.credits,
+      creditsEstimated: creditsToHold,
+      creditsHeld: creditsToHold,
+      syncConfig: config,
     })
     .returning();
 
   try {
     const client = getApifyClient();
 
-    // Build input for the actor
-    const actorInput: Record<string, unknown> = {
-      profiles: [username.replace("@", "")],
-      resultsPerPage: postsLimit,
-      profileScrapeSections: ["videos"],
-      profileSorting: sorting,
-    };
+    // 3. Build actor input and start run
+    let runId: string;
 
-    // Add date filters if provided
-    if (oldestPostDate) {
-      actorInput.oldestPostDateUnified = oldestPostDate;
-    }
-    if (newestPostDate) {
-      actorInput.newestPostDate = newestPostDate;
+    if (type === "comments") {
+      // Comment-only sync uses the comments scraper actor
+      runId = await startCommentActor(client, accountId, config, syncJob.id);
+    } else {
+      // Posts or full sync uses the main TikTok scraper
+      runId = await startPostActor(client, account.username, config, syncJob.id);
     }
 
-    // Add comments if requested
-    if (includeComments && commentsLimit > 0) {
-      actorInput.commentsPerPost = Math.min(Math.ceil(commentsLimit / postsLimit), 100);
-    }
-
-    // Start the actor run (don't wait for completion)
-    const run = await client.actor("clockworks/tiktok-scraper").start(actorInput);
-
-    // Update sync job with run ID and status
+    // 4. Update job with run ID and status
     await db
       .update(syncJobs)
       .set({
-        apifyRunId: run.id,
+        apifyRunId: runId,
         status: "running",
         startedAt: new Date(),
       })
@@ -341,10 +311,17 @@ export async function startProfileSync(options: SyncOptions & { userId: string }
 
     return {
       jobId: syncJob.id,
-      runId: run.id,
+      creditsHeld: creditsToHold,
+      estimatedBreakdown: estimate.breakdown,
     };
   } catch (error) {
-    // Update job status to failed
+    // On failure to start: refund held credits and mark job failed
+    await refundHold(
+      userId,
+      creditsToHold,
+      `Refund: failed to start ${type} sync of @${account.username}`
+    );
+
     const errorMessage = error instanceof Error ? error.message : "Unknown error starting sync";
     await db
       .update(syncJobs)
@@ -360,90 +337,182 @@ export async function startProfileSync(options: SyncOptions & { userId: string }
 }
 
 /**
- * Start a comment-only sync job with configurable modes
+ * Calculate cost estimate based on sync type and config
  */
-export async function startCommentSync(options: {
-  accountId: number;
-  userId: string;
-  config: CommentSyncConfig;
-}): Promise<SyncJobResult> {
-  const { accountId, userId, config } = options;
+function calculateEstimate(
+  type: "posts" | "comments" | "full",
+  config: SyncConfigSchema
+): CostEstimate {
+  if (type === "comments") {
+    const postCount = config.selectedPostIds?.length ?? config.topCount ?? 10;
+    return estimateCommentSyncCost({
+      postCount,
+      commentsPerPost: config.maxCommentsPerPost ?? 100,
+    });
+  }
 
-  // Get posts to sync based on the config mode
+  return estimateSyncCost({
+    postsLimit: config.postsLimit ?? 50,
+    includeComments: type === "full",
+    commentsLimit: type === "full" ? (config.postsLimit ?? 50) * (config.maxCommentsPerPost ?? 100) : 0,
+  });
+}
+
+/**
+ * Start the TikTok post scraper actor
+ */
+async function startPostActor(
+  client: ApifyClient,
+  username: string,
+  config: SyncConfigSchema,
+  jobId: number
+): Promise<string> {
+  const actorInput: Record<string, unknown> = {
+    profiles: [username.replace("@", "")],
+    resultsPerPage: config.postsLimit ?? 50,
+    profileScrapeSections: ["videos"],
+    profileSorting: config.sorting ?? "latest",
+  };
+
+  if (config.oldestPostDate) {
+    actorInput.oldestPostDateUnified = config.oldestPostDate;
+  }
+  if (config.newestPostDate) {
+    actorInput.newestPostDate = config.newestPostDate;
+  }
+
+  // Build webhook options
+  const webhooks = buildWebhooks();
+
+  const run = await client.actor("clockworks/tiktok-scraper").start(actorInput, {
+    webhooks,
+  });
+
+  console.log(`[Sync Job ${jobId}] Started post actor run: ${run.id}`);
+  return run.id;
+}
+
+/**
+ * Start the TikTok comment scraper actor
+ */
+async function startCommentActor(
+  client: ApifyClient,
+  accountId: number,
+  config: SyncConfigSchema,
+  jobId: number
+): Promise<string> {
+  // Resolve posts to sync based on config
   const postsToSync = await getPostsForCommentSync(accountId, config);
 
   if (postsToSync.length === 0) {
     throw new Error("No posts found matching the specified criteria");
   }
 
-  // Calculate comments per post based on mode
-  const commentsPerPost = config.maxPerPost ?? 100;
-  const totalEstimatedComments = postsToSync.length * commentsPerPost;
+  const postUrls = postsToSync.map(
+    (p) => p.videoUrl || `https://www.tiktok.com/@user/video/${p.tiktokId}`
+  );
 
-  // Estimate credits for this sync
-  const costEstimate = estimateCommentSyncCost({
-    postCount: postsToSync.length,
-    commentsPerPost,
-    totalComments: totalEstimatedComments,
-  });
-
-  // Convert config to serializable format for storage
-  const configForStorage = {
-    ...config,
-    dateRange: config.dateRange
-      ? {
-          start: config.dateRange.start.toISOString(),
-          end: config.dateRange.end.toISOString(),
-        }
-      : undefined,
+  const actorInput: Record<string, unknown> = {
+    postURLs: postUrls,
+    commentsPerPost: config.maxCommentsPerPost ?? 100,
+    maxRepliesPerComment: 0,
   };
 
-  // Create sync job record with comment config
-  const [syncJob] = await db
-    .insert(syncJobs)
-    .values({
-      accountId,
-      userId,
-      type: "comments",
-      status: "pending",
-      creditsEstimated: costEstimate.credits,
-      commentSyncConfig: configForStorage,
-    })
-    .returning();
+  const webhooks = buildWebhooks();
+
+  const run = await client.actor("clockworks/tiktok-comments-scraper").start(actorInput, {
+    webhooks,
+  });
+
+  console.log(`[Sync Job ${jobId}] Started comment actor run: ${run.id} for ${postsToSync.length} posts`);
+  return run.id;
+}
+
+/**
+ * Build Apify ad-hoc webhook configuration.
+ * In production (NEXT_PUBLIC_APP_URL is set), registers webhooks for instant processing.
+ * In local dev, webhook won't fire — polling fallback handles it.
+ */
+function buildWebhooks() {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const webhookSecret = process.env.APIFY_WEBHOOK_SECRET;
+
+  if (!appUrl || !webhookSecret) {
+    return undefined;
+  }
+
+  return [
+    {
+      eventTypes: [
+        "ACTOR.RUN.SUCCEEDED" as const,
+        "ACTOR.RUN.FAILED" as const,
+        "ACTOR.RUN.ABORTED" as const,
+        "ACTOR.RUN.TIMED_OUT" as const,
+      ],
+      requestUrl: `${appUrl}/api/webhooks/apify?secret=${webhookSecret}`,
+    },
+  ];
+}
+
+// ─── Result Processing ───────────────────────────────────────────────────────
+
+/**
+ * Process results from a completed sync job.
+ * Called by either the Apify webhook or the polling fallback.
+ *
+ * Handles:
+ * - Profile data update (from post scraper)
+ * - Post upsert scoped by (accountId, tiktokId) — fixes ownership bug
+ * - Comment upsert
+ * - Credit escrow finalization (refund overpayment)
+ */
+export async function processSyncResults(jobId: number): Promise<ProcessedSyncResults> {
+  const [job] = await db.select().from(syncJobs).where(eq(syncJobs.id, jobId));
+  if (!job) {
+    throw new Error(`Sync job ${jobId} not found`);
+  }
+
+  if (!job.apifyRunId) {
+    throw new Error(`Sync job ${jobId} has no Apify run ID`);
+  }
 
   try {
     const client = getApifyClient();
+    const run = await client.run(job.apifyRunId).get();
 
-    // Build input for the TikTok comments scraper actor
-    // The actor expects an array of video URLs or IDs
-    const postUrls = postsToSync.map((post) => post.videoUrl || `https://www.tiktok.com/@user/video/${post.tiktokId}`);
+    if (!run || !run.defaultDatasetId) {
+      throw new Error("Could not retrieve Apify run dataset");
+    }
 
-    const actorInput: Record<string, unknown> = {
-      postURLs: postUrls,
-      commentsPerPost: commentsPerPost,
-      maxRepliesPerComment: 0, // Don't fetch replies by default
-    };
+    const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
-    // Start the actor run (don't wait for completion)
-    const run = await client.actor("clockworks/tiktok-comments-scraper").start(actorInput);
+    if (!items || items.length === 0) {
+      // No data returned — finalize with 0 credits (refund full hold)
+      await finalizeAndComplete(job, 0, 0, 0, false);
+      return { postsCount: 0, commentsCount: 0, creditsUsed: 0, profileUpdated: false };
+    }
 
-    // Update sync job with run ID and status
-    await db
-      .update(syncJobs)
-      .set({
-        apifyRunId: run.id,
-        status: "running",
-        startedAt: new Date(),
-      })
-      .where(eq(syncJobs.id, syncJob.id));
+    let result: ProcessedSyncResults;
 
-    return {
-      jobId: syncJob.id,
-      runId: run.id,
-    };
+    if (job.type === "comments") {
+      result = await processCommentResults(job, items);
+    } else {
+      result = await processPostResults(job, items as unknown as TikTokPostData[]);
+    }
+
+    return result;
   } catch (error) {
-    // Update job status to failed
-    const errorMessage = error instanceof Error ? error.message : "Unknown error starting comment sync";
+    // On processing failure: refund held credits and mark job failed
+    const errorMessage = error instanceof Error ? error.message : "Unknown error processing results";
+
+    if (job.creditsHeld && job.creditsHeld > 0) {
+      await refundHold(
+        job.userId,
+        job.creditsHeld,
+        `Refund: sync processing failed for job ${jobId}`
+      );
+    }
+
     await db
       .update(syncJobs)
       .set({
@@ -451,32 +520,276 @@ export async function startCommentSync(options: {
         error: errorMessage,
         completedAt: new Date(),
       })
-      .where(eq(syncJobs.id, syncJob.id));
+      .where(eq(syncJobs.id, jobId));
 
     throw error;
   }
 }
 
 /**
- * Get posts to sync comments for based on the config mode
+ * Process post/full sync results
+ */
+async function processPostResults(
+  job: typeof syncJobs.$inferSelect,
+  typedItems: TikTokPostData[]
+): Promise<ProcessedSyncResults> {
+  let profileUpdated = false;
+
+  // Update profile from authorMeta of the first result
+  const authorMeta = typedItems[0]?.authorMeta;
+  if (authorMeta) {
+    await db
+      .update(tiktokAccounts)
+      .set({
+        displayName: authorMeta.nickName,
+        avatarUrl: authorMeta.avatar,
+        followerCount: authorMeta.fans || 0,
+        followingCount: authorMeta.following || 0,
+        likesCount: authorMeta.heart || 0,
+        videoCount: authorMeta.video || 0,
+        bio: authorMeta.signature,
+        isVerified: authorMeta.verified,
+        lastSyncedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(tiktokAccounts.id, job.accountId));
+
+    await db.insert(accountMetricsHistory).values({
+      accountId: job.accountId,
+      followerCount: authorMeta.fans || 0,
+      followingCount: authorMeta.following || 0,
+      likesCount: authorMeta.heart || 0,
+      videoCount: authorMeta.video || 0,
+      recordedAt: new Date(),
+    });
+
+    profileUpdated = true;
+  }
+
+  // Upsert posts — scoped by (accountId, tiktokId) to prevent ownership collision
+  let postsCount = 0;
+  let commentsCount = 0;
+
+  for (const item of typedItems) {
+    if (!item.id) continue;
+
+    // Check for existing post scoped to THIS account
+    const [existingPost] = await db
+      .select()
+      .from(posts)
+      .where(
+        and(
+          eq(posts.accountId, job.accountId),
+          eq(posts.tiktokId, item.id)
+        )
+      )
+      .limit(1);
+
+    const postData = {
+      description: item.text || "",
+      likes: item.diggCount || 0,
+      comments: item.commentCount || 0,
+      shares: item.shareCount || 0,
+      plays: item.playCount || 0,
+      saves: item.collectCount || 0,
+      duration: item.videoMeta?.duration || 0,
+      thumbnailUrl: item.videoMeta?.coverUrl || "",
+      videoUrl: item.webVideoUrl || "",
+      updatedAt: new Date(),
+    };
+
+    if (existingPost) {
+      await db.update(posts).set(postData).where(eq(posts.id, existingPost.id));
+    } else {
+      await db.insert(posts).values({
+        accountId: job.accountId,
+        tiktokId: item.id,
+        ...postData,
+        postedAt: item.createTimeISO ? new Date(item.createTimeISO) : undefined,
+      });
+    }
+    postsCount++;
+
+    // Process inline comments if present (from full sync)
+    if (item.comments && Array.isArray(item.comments)) {
+      const [postRecord] = await db
+        .select({ id: posts.id })
+        .from(posts)
+        .where(
+          and(
+            eq(posts.accountId, job.accountId),
+            eq(posts.tiktokId, item.id)
+          )
+        )
+        .limit(1);
+
+      if (postRecord) {
+        for (const comment of item.comments) {
+          if (!comment.cid) continue;
+
+          const [existing] = await db
+            .select({ id: comments.id })
+            .from(comments)
+            .where(eq(comments.tiktokId, comment.cid))
+            .limit(1);
+
+          if (!existing) {
+            await db.insert(comments).values({
+              postId: postRecord.id,
+              tiktokId: comment.cid,
+              text: comment.text || "",
+              authorUsername: comment.user?.uniqueId || "",
+              authorAvatarUrl: comment.user?.avatarThumb || "",
+              likes: comment.diggCount || 0,
+              postedAt: comment.createTime ? new Date(comment.createTime * 1000) : undefined,
+            });
+            commentsCount++;
+          }
+        }
+      }
+    }
+  }
+
+  const actualCredits = calculateActualCredits(postsCount, commentsCount);
+  await finalizeAndComplete(job, postsCount, commentsCount, actualCredits, profileUpdated);
+
+  return { postsCount, commentsCount, creditsUsed: actualCredits, profileUpdated };
+}
+
+/**
+ * Process comment-only sync results
+ */
+async function processCommentResults(
+  job: typeof syncJobs.$inferSelect,
+  items: Record<string, unknown>[]
+): Promise<ProcessedSyncResults> {
+  let commentsCount = 0;
+
+  for (const item of items) {
+    const comment = item as unknown as TikTokCommentData & { postUrl?: string; videoId?: string };
+    if (!comment.cid) continue;
+
+    // Extract video ID from postUrl or videoId field
+    const videoId = comment.videoId ||
+      (comment.postUrl ? extractVideoId(comment.postUrl as string) : null);
+
+    if (!videoId) continue;
+
+    // Find the post in our DB scoped to this account
+    const [postRecord] = await db
+      .select({ id: posts.id })
+      .from(posts)
+      .where(
+        and(
+          eq(posts.accountId, job.accountId),
+          eq(posts.tiktokId, videoId)
+        )
+      )
+      .limit(1);
+
+    if (!postRecord) continue;
+
+    // Upsert comment
+    const [existing] = await db
+      .select({ id: comments.id })
+      .from(comments)
+      .where(eq(comments.tiktokId, comment.cid))
+      .limit(1);
+
+    if (!existing) {
+      await db.insert(comments).values({
+        postId: postRecord.id,
+        tiktokId: comment.cid,
+        text: comment.text || "",
+        authorUsername: comment.user?.uniqueId || "",
+        authorAvatarUrl: comment.user?.avatarThumb || "",
+        likes: comment.diggCount || 0,
+        postedAt: comment.createTime ? new Date(comment.createTime * 1000) : undefined,
+      });
+      commentsCount++;
+    }
+  }
+
+  const actualCredits = calculateActualCredits(0, commentsCount);
+  await finalizeAndComplete(job, 0, commentsCount, actualCredits, false);
+
+  return { postsCount: 0, commentsCount, creditsUsed: actualCredits, profileUpdated: false };
+}
+
+/**
+ * Finalize credit escrow and mark job as completed
+ */
+async function finalizeAndComplete(
+  job: typeof syncJobs.$inferSelect,
+  postsCount: number,
+  commentsCount: number,
+  actualCredits: number,
+  profileUpdated: boolean
+): Promise<void> {
+  const held = job.creditsHeld ?? 0;
+  const creditType = job.type === "comments" ? "sync_comments" as const : "sync_posts" as const;
+
+  // Settle the credit hold
+  await finalizeCredits(
+    job.userId,
+    held,
+    actualCredits,
+    creditType,
+    `Synced ${postsCount} posts, ${commentsCount} comments for job ${job.id}`
+  );
+
+  // Update account lastSyncedAt if profile was updated
+  if (profileUpdated) {
+    await db
+      .update(tiktokAccounts)
+      .set({ lastSyncedAt: new Date() })
+      .where(eq(tiktokAccounts.id, job.accountId));
+  }
+
+  // Mark job complete
+  await db
+    .update(syncJobs)
+    .set({
+      status: "completed",
+      postsCount,
+      commentsCount,
+      creditsUsed: actualCredits,
+      completedAt: new Date(),
+    })
+    .where(eq(syncJobs.id, job.id));
+
+  console.log(`[Sync Job ${job.id}] Completed: ${postsCount} posts, ${commentsCount} comments, ${actualCredits} credits used (${held} held)`);
+}
+
+/**
+ * Calculate actual credits based on what was received
+ */
+function calculateActualCredits(postsCount: number, commentsCount: number): number {
+  let credits = Math.max(0, postsCount) * CREDITS.PER_POST;
+  if (commentsCount > 0) {
+    credits += Math.round(commentsCount * CREDITS.PER_COMMENT);
+  }
+  return Math.max(0, credits);
+}
+
+// ─── Post Selection for Comment Sync ─────────────────────────────────────────
+
+/**
+ * Get posts to sync comments for based on config mode
  */
 async function getPostsForCommentSync(
   accountId: number,
-  config: CommentSyncConfig
-): Promise<Array<{ id: number; tiktokId: string; videoUrl: string | null; engagement: number }>> {
-  switch (config.mode) {
+  config: SyncConfigSchema
+): Promise<Array<{ id: number; tiktokId: string; videoUrl: string | null }>> {
+  const mode = config.commentMode ?? "top_performers";
+
+  switch (mode) {
     case "selection": {
-      // Sync comments only for specifically selected posts
       if (!config.selectedPostIds || config.selectedPostIds.length === 0) {
         throw new Error("selectedPostIds required for selection mode");
       }
       return db
-        .select({
-          id: posts.id,
-          tiktokId: posts.tiktokId,
-          videoUrl: posts.videoUrl,
-          engagement: sql<number>`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`.as("engagement"),
-        })
+        .select({ id: posts.id, tiktokId: posts.tiktokId, videoUrl: posts.videoUrl })
         .from(posts)
         .where(
           and(
@@ -487,15 +800,9 @@ async function getPostsForCommentSync(
     }
 
     case "top_performers": {
-      // Query top N posts by engagement
       const limit = config.topCount ?? 10;
       return db
-        .select({
-          id: posts.id,
-          tiktokId: posts.tiktokId,
-          videoUrl: posts.videoUrl,
-          engagement: sql<number>`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`.as("engagement"),
-        })
+        .select({ id: posts.id, tiktokId: posts.tiktokId, videoUrl: posts.videoUrl })
         .from(posts)
         .where(eq(posts.accountId, accountId))
         .orderBy(desc(sql`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`))
@@ -503,38 +810,28 @@ async function getPostsForCommentSync(
     }
 
     case "date_range": {
-      // Filter posts by date range
       if (!config.dateRange) {
         throw new Error("dateRange required for date_range mode");
       }
       return db
-        .select({
-          id: posts.id,
-          tiktokId: posts.tiktokId,
-          videoUrl: posts.videoUrl,
-          engagement: sql<number>`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`.as("engagement"),
-        })
+        .select({ id: posts.id, tiktokId: posts.tiktokId, videoUrl: posts.videoUrl })
         .from(posts)
         .where(
           and(
             eq(posts.accountId, accountId),
-            gte(posts.postedAt, config.dateRange.start),
-            lte(posts.postedAt, config.dateRange.end)
+            gte(posts.postedAt, new Date(config.dateRange.start)),
+            lte(posts.postedAt, new Date(config.dateRange.end))
           )
         )
         .orderBy(desc(sql`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`))
-        .limit(100); // Default reasonable limit for date range queries
+        .limit(100);
     }
 
     case "budget": {
-      // Calculate how many comments fit in the credit budget
       if (!config.creditBudget || config.creditBudget <= 0) {
         throw new Error("creditBudget required for budget mode");
       }
-
-      const commentsPerPost = config.maxPerPost ?? 100;
-
-      // Calculate how many posts we can afford using per-comment pricing
+      const commentsPerPost = config.maxCommentsPerPost ?? 100;
       const costPerPost = commentsPerPost * CREDITS.PER_COMMENT;
       const maxPosts = Math.floor(config.creditBudget / costPerPost);
 
@@ -542,14 +839,8 @@ async function getPostsForCommentSync(
         throw new Error("Credit budget too low for any comment syncs");
       }
 
-      // Prioritize high-engagement posts
       return db
-        .select({
-          id: posts.id,
-          tiktokId: posts.tiktokId,
-          videoUrl: posts.videoUrl,
-          engagement: sql<number>`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`.as("engagement"),
-        })
+        .select({ id: posts.id, tiktokId: posts.tiktokId, videoUrl: posts.videoUrl })
         .from(posts)
         .where(eq(posts.accountId, accountId))
         .orderBy(desc(sql`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`))
@@ -557,314 +848,24 @@ async function getPostsForCommentSync(
     }
 
     default:
-      throw new Error(`Unknown comment sync mode: ${(config as CommentSyncConfig).mode}`);
+      throw new Error(`Unknown comment sync mode: ${mode}`);
   }
 }
 
 /**
- * Poll the status of an Apify run
+ * Extract TikTok video ID from a URL
  */
-export async function pollSyncStatus(runId: string): Promise<SyncStatus> {
-  const client = getApifyClient();
-
-  try {
-    const run = await client.run(runId).get();
-
-    if (!run) {
-      throw new Error(`Run ${runId} not found`);
-    }
-
-    return {
-      status: run.status as SyncStatus["status"],
-      startedAt: run.startedAt ? new Date(run.startedAt) : undefined,
-      finishedAt: run.finishedAt ? new Date(run.finishedAt) : undefined,
-      exitCode: run.exitCode,
-      defaultDatasetId: run.defaultDatasetId,
-      statsItemCount: run.stats?.inputBodyLen,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error polling status";
-    throw new Error(`Failed to poll sync status: ${message}`);
-  }
+function extractVideoId(url: string): string | null {
+  const match = url.match(/\/video\/(\d+)/);
+  return match ? match[1] : null;
 }
 
-/**
- * Process the results of a completed sync job
- */
-export async function processSyncResults(jobId: number, runId: string): Promise<ProcessedSyncResults> {
-  const client = getApifyClient();
-
-  // Get the sync job
-  const [job] = await db.select().from(syncJobs).where(eq(syncJobs.id, jobId));
-  if (!job) {
-    throw new Error(`Sync job ${jobId} not found`);
-  }
-
-  // Track items for visibility
-  let itemsReturnedByApify = 0;
-  let itemsProcessed = 0;
-  let itemsSkipped = 0;
-  const skippedReasons: string[] = [];
-
-  try {
-    // Get the run details to get dataset ID
-    const run = await client.run(runId).get();
-    if (!run || !run.defaultDatasetId) {
-      throw new Error("Could not retrieve run dataset");
-    }
-
-    // Fetch all items from the dataset
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    itemsReturnedByApify = items?.length ?? 0;
-
-    // Log what Apify returned vs what was estimated
-    console.log(`[Sync Job ${jobId}] Apify returned ${itemsReturnedByApify} items (estimated credits: ${job.creditsEstimated})`);
-
-    if (!items || items.length === 0) {
-      console.warn(`[Sync Job ${jobId}] WARNING: Apify returned 0 items. Run ID: ${runId}`);
-      throw new Error("No data returned from sync - Apify returned 0 items");
-    }
-
-    const typedItems = items as unknown as TikTokPostData[];
-
-    // Extract profile data from the first result
-    const firstResult = typedItems[0];
-    const authorMeta = firstResult?.authorMeta;
-
-    let profileUpdated = false;
-
-    if (authorMeta) {
-      // Update the TikTok account with latest profile data
-      await db
-        .update(tiktokAccounts)
-        .set({
-          displayName: authorMeta.nickName,
-          avatarUrl: authorMeta.avatar,
-          followerCount: authorMeta.fans || 0,
-          followingCount: authorMeta.following || 0,
-          likesCount: authorMeta.heart || 0,
-          videoCount: authorMeta.video || 0,
-          bio: authorMeta.signature,
-          isVerified: authorMeta.verified,
-          lastSyncedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(tiktokAccounts.id, job.accountId));
-
-      // Record metrics snapshot
-      await db.insert(accountMetricsHistory).values({
-        accountId: job.accountId,
-        followerCount: authorMeta.fans || 0,
-        followingCount: authorMeta.following || 0,
-        likesCount: authorMeta.heart || 0,
-        videoCount: authorMeta.video || 0,
-        recordedAt: new Date(),
-      });
-
-      profileUpdated = true;
-    }
-
-    // Process posts
-    let postsCount = 0;
-    let commentsCount = 0;
-
-    for (const item of typedItems) {
-      if (!item.id) {
-        itemsSkipped++;
-        skippedReasons.push(`Item missing 'id' field`);
-        continue;
-      }
-      itemsProcessed++;
-
-      // Upsert the post
-      const existingPost = await db
-        .select()
-        .from(posts)
-        .where(eq(posts.tiktokId, item.id))
-        .limit(1);
-
-      if (existingPost.length > 0) {
-        // Update existing post
-        await db
-          .update(posts)
-          .set({
-            description: item.text || "",
-            likes: item.diggCount || 0,
-            comments: item.commentCount || 0,
-            shares: item.shareCount || 0,
-            plays: item.playCount || 0,
-            saves: item.collectCount || 0,
-            duration: item.videoMeta?.duration || 0,
-            thumbnailUrl: item.videoMeta?.coverUrl || "",
-            videoUrl: item.webVideoUrl || "",
-            updatedAt: new Date(),
-          })
-          .where(eq(posts.tiktokId, item.id));
-      } else {
-        // Insert new post
-        await db.insert(posts).values({
-          accountId: job.accountId,
-          tiktokId: item.id,
-          description: item.text || "",
-          likes: item.diggCount || 0,
-          comments: item.commentCount || 0,
-          shares: item.shareCount || 0,
-          plays: item.playCount || 0,
-          saves: item.collectCount || 0,
-          duration: item.videoMeta?.duration || 0,
-          thumbnailUrl: item.videoMeta?.coverUrl || "",
-          videoUrl: item.webVideoUrl || "",
-          postedAt: item.createTimeISO ? new Date(item.createTimeISO) : undefined,
-        });
-      }
-      postsCount++;
-
-      // Process comments if available (from a separate comments dataset if included)
-      // Note: Comments come in a different structure from Apify
-      const itemWithComments = item as TikTokPostData & { comments?: TikTokCommentData[] };
-      if (itemWithComments.comments && Array.isArray(itemWithComments.comments)) {
-        // Get the post ID
-        const [postRecord] = await db
-          .select()
-          .from(posts)
-          .where(eq(posts.tiktokId, item.id));
-
-        if (postRecord) {
-          for (const comment of itemWithComments.comments) {
-            if (!comment.cid) continue;
-
-            // Check if comment already exists
-            const existingComment = await db
-              .select()
-              .from(comments)
-              .where(eq(comments.tiktokId, comment.cid))
-              .limit(1);
-
-            if (existingComment.length === 0) {
-              await db.insert(comments).values({
-                postId: postRecord.id,
-                tiktokId: comment.cid,
-                text: comment.text || "",
-                authorUsername: comment.user?.uniqueId || "",
-                authorAvatarUrl: comment.user?.avatarThumb || "",
-                likes: comment.diggCount || 0,
-                postedAt: comment.createTime ? new Date(comment.createTime * 1000) : undefined,
-              });
-              commentsCount++;
-            }
-          }
-        }
-      }
-    }
-
-    // Calculate actual credits used - per-item pricing
-    const actualCredits = calculateActualCredits(postsCount, commentsCount);
-
-    // Log summary for visibility
-    console.log(`[Sync Job ${jobId}] Summary:
-      - Items from Apify: ${itemsReturnedByApify}
-      - Items processed: ${itemsProcessed}
-      - Items skipped: ${itemsSkipped}
-      - Posts saved: ${postsCount}
-      - Comments saved: ${commentsCount}
-      - Credits charged: ${actualCredits} (estimated: ${job.creditsEstimated})`);
-
-    if (itemsSkipped > 0) {
-      console.warn(`[Sync Job ${jobId}] Skipped ${itemsSkipped} items. Reasons: ${skippedReasons.slice(0, 5).join(", ")}${skippedReasons.length > 5 ? "..." : ""}`);
-    }
-
-    // Update sync job with results
-    await db
-      .update(syncJobs)
-      .set({
-        status: "completed",
-        postsCount,
-        commentsCount,
-        creditsUsed: actualCredits,
-        completedAt: new Date(),
-      })
-      .where(eq(syncJobs.id, jobId));
-
-    // Deduct credits from user balance (only charge for what they received)
-    await deductCredits(
-      job.userId,
-      actualCredits,
-      commentsCount > 0 ? "sync_comments" : "sync_posts",
-      `Synced ${postsCount} posts${commentsCount > 0 ? ` and ${commentsCount} comments` : ""} for TikTok account`
-    );
-
-    return {
-      postsCount,
-      commentsCount,
-      creditsUsed: actualCredits,
-      profileUpdated,
-      itemsReturnedByApify,
-      itemsProcessed,
-      itemsSkipped,
-      skippedReasons: skippedReasons.length > 0 ? skippedReasons.slice(0, 10) : undefined,
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error processing results";
-
-    // Update job status to failed
-    await db
-      .update(syncJobs)
-      .set({
-        status: "failed",
-        error: errorMessage,
-        completedAt: new Date(),
-      })
-      .where(eq(syncJobs.id, jobId));
-
-    throw error;
-  }
-}
+// ─── Job Status & Polling ────────────────────────────────────────────────────
 
 /**
- * Calculate actual credits used based on results
- * Uses per-item pricing: users only pay for what they actually received
- */
-function calculateActualCredits(postsCount: number, commentsCount: number): number {
-  // Profile sync is FREE
-  let credits = CREDITS.PROFILE_SYNC_BASE;
-
-  // Per-post pricing
-  credits += postsCount * CREDITS.PER_POST;
-
-  // Per-comment pricing
-  if (commentsCount > 0) {
-    credits += Math.round(commentsCount * CREDITS.PER_COMMENT);
-  }
-
-  return credits;
-}
-
-/**
- * Record sync completion and finalize the job
- */
-export async function recordSyncCompletion(
-  jobId: number,
-  actualCredits: number
-): Promise<void> {
-  const [job] = await db.select().from(syncJobs).where(eq(syncJobs.id, jobId));
-
-  if (!job) {
-    throw new Error(`Sync job ${jobId} not found`);
-  }
-
-  // Update the job with final credits if different from estimated
-  if (job.creditsUsed !== actualCredits) {
-    await db
-      .update(syncJobs)
-      .set({
-        creditsUsed: actualCredits,
-      })
-      .where(eq(syncJobs.id, jobId));
-  }
-}
-
-/**
- * Get the status of a sync job by ID
+ * Get sync job status. If job is running and Apify has finished,
+ * process results inline (polling fallback for local dev without webhooks).
+ * Also enforces the 30-minute timeout.
  */
 export async function getSyncJobStatus(jobId: number): Promise<{
   job: typeof syncJobs.$inferSelect;
@@ -879,40 +880,25 @@ export async function getSyncJobStatus(jobId: number): Promise<{
   let apifyStatus: SyncStatus | undefined;
 
   if (job.apifyRunId && job.status === "running") {
-    apifyStatus = await pollSyncStatus(job.apifyRunId);
+    // Check for timeout
+    if (job.startedAt && Date.now() - job.startedAt.getTime() > SYNC_TIMEOUT_MS) {
+      await handleJobTimeout(job);
+      [job] = await db.select().from(syncJobs).where(eq(syncJobs.id, jobId));
+      return { job };
+    }
 
-    // If Apify run is complete, process the results and update job status
+    apifyStatus = await pollApifyStatus(job.apifyRunId);
+
     if (apifyStatus.status === "SUCCEEDED") {
+      // Polling fallback: Apify is done but webhook hasn't processed it yet
       try {
-        await processSyncResults(jobId, job.apifyRunId);
-        // Refresh job from database after processing
-        [job] = await db.select().from(syncJobs).where(eq(syncJobs.id, jobId));
+        await processSyncResults(jobId);
       } catch (error) {
-        console.error("Error processing sync results:", error);
-        const errorMessage = error instanceof Error ? error.message : "Unknown processing error";
-        // Ensure job status is updated to failed with the error message
-        await db
-          .update(syncJobs)
-          .set({
-            status: "failed",
-            error: errorMessage,
-            completedAt: new Date(),
-          })
-          .where(eq(syncJobs.id, jobId));
-        // Refresh job from database after processing
-        [job] = await db.select().from(syncJobs).where(eq(syncJobs.id, jobId));
+        console.error(`[Sync Job ${jobId}] Error processing results during polling:`, error);
       }
+      [job] = await db.select().from(syncJobs).where(eq(syncJobs.id, jobId));
     } else if (["FAILED", "ABORTED", "TIMED-OUT"].includes(apifyStatus.status)) {
-      // Update job as failed
-      await db
-        .update(syncJobs)
-        .set({
-          status: "failed",
-          error: `Apify run ${apifyStatus.status.toLowerCase()}`,
-          completedAt: new Date(),
-        })
-        .where(eq(syncJobs.id, jobId));
-      // Refresh job from database
+      await handleJobFailure(job, `Apify run ${apifyStatus.status.toLowerCase()}`);
       [job] = await db.select().from(syncJobs).where(eq(syncJobs.id, jobId));
     }
   }
@@ -921,33 +907,173 @@ export async function getSyncJobStatus(jobId: number): Promise<{
 }
 
 /**
- * Handle a webhook callback from Apify when a run completes
+ * Get active and recent jobs for an account — single endpoint for UI
+ */
+export async function getAccountSyncData(accountId: number, userId: string) {
+  // Active jobs (pending or running)
+  const activeJobs = await db
+    .select()
+    .from(syncJobs)
+    .where(
+      and(
+        eq(syncJobs.accountId, accountId),
+        eq(syncJobs.userId, userId),
+        inArray(syncJobs.status, ["pending", "running"])
+      )
+    )
+    .orderBy(desc(syncJobs.createdAt));
+
+  // Recent completed/failed jobs (last 5)
+  const recentJobs = await db
+    .select()
+    .from(syncJobs)
+    .where(
+      and(
+        eq(syncJobs.accountId, accountId),
+        eq(syncJobs.userId, userId),
+        inArray(syncJobs.status, ["completed", "failed"])
+      )
+    )
+    .orderBy(desc(syncJobs.createdAt))
+    .limit(5);
+
+  // Account stats
+  const [postStats] = await db
+    .select({
+      syncedPosts: sql<number>`count(*)`,
+    })
+    .from(posts)
+    .where(eq(posts.accountId, accountId));
+
+  const [commentStats] = await db
+    .select({
+      syncedComments: sql<number>`count(*)`,
+    })
+    .from(comments)
+    .innerJoin(posts, eq(comments.postId, posts.id))
+    .where(eq(posts.accountId, accountId));
+
+  const [accountData] = await db
+    .select({
+      videoCount: tiktokAccounts.videoCount,
+      lastSyncedAt: tiktokAccounts.lastSyncedAt,
+    })
+    .from(tiktokAccounts)
+    .where(eq(tiktokAccounts.id, accountId))
+    .limit(1);
+
+  return {
+    activeJobs,
+    recentJobs,
+    stats: {
+      syncedPosts: Number(postStats?.syncedPosts ?? 0),
+      totalPosts: accountData?.videoCount ?? 0,
+      syncedComments: Number(commentStats?.syncedComments ?? 0),
+      lastSyncedAt: accountData?.lastSyncedAt?.toISOString() ?? null,
+    },
+  };
+}
+
+/**
+ * Poll Apify run status
+ */
+async function pollApifyStatus(runId: string): Promise<SyncStatus> {
+  const client = getApifyClient();
+  const run = await client.run(runId).get();
+
+  if (!run) {
+    throw new Error(`Apify run ${runId} not found`);
+  }
+
+  return {
+    status: run.status as SyncStatus["status"],
+    startedAt: run.startedAt ? new Date(run.startedAt) : undefined,
+    finishedAt: run.finishedAt ? new Date(run.finishedAt) : undefined,
+    exitCode: run.exitCode,
+    defaultDatasetId: run.defaultDatasetId,
+  };
+}
+
+// Also export for use by API routes that need raw polling
+export { pollApifyStatus as pollSyncStatus };
+
+// ─── Failure & Timeout Handling ──────────────────────────────────────────────
+
+/**
+ * Handle a timed-out job: refund credits and mark failed
+ */
+async function handleJobTimeout(job: typeof syncJobs.$inferSelect): Promise<void> {
+  console.warn(`[Sync Job ${job.id}] Timed out after ${SYNC_TIMEOUT_MS / 60000} minutes`);
+
+  // Try to abort the Apify run
+  try {
+    const client = getApifyClient();
+    await client.run(job.apifyRunId!).abort();
+  } catch {
+    // Best-effort abort
+  }
+
+  await handleJobFailure(job, `Timed out after ${SYNC_TIMEOUT_MS / 60000} minutes`);
+}
+
+/**
+ * Handle job failure: refund held credits and update status
+ */
+async function handleJobFailure(
+  job: typeof syncJobs.$inferSelect,
+  errorMessage: string
+): Promise<void> {
+  // Refund held credits
+  if (job.creditsHeld && job.creditsHeld > 0) {
+    await refundHold(
+      job.userId,
+      job.creditsHeld,
+      `Refund: ${errorMessage} for job ${job.id}`
+    );
+  }
+
+  await db
+    .update(syncJobs)
+    .set({
+      status: "failed",
+      error: errorMessage,
+      completedAt: new Date(),
+    })
+    .where(eq(syncJobs.id, job.id));
+}
+
+/**
+ * Handle Apify webhook callback
  */
 export async function handleSyncWebhook(
   runId: string,
   status: "SUCCEEDED" | "FAILED" | "ABORTED" | "TIMED-OUT"
 ): Promise<void> {
-  // Find the sync job by run ID
-  const [job] = await db.select().from(syncJobs).where(eq(syncJobs.apifyRunId, runId));
+  const [job] = await db
+    .select()
+    .from(syncJobs)
+    .where(eq(syncJobs.apifyRunId, runId));
 
   if (!job) {
-    console.error(`No sync job found for run ID: ${runId}`);
+    console.error(`[Webhook] No sync job found for Apify run: ${runId}`);
+    return;
+  }
+
+  // Skip if job is already completed/failed (e.g., polling already processed it)
+  if (job.status === "completed" || job.status === "failed") {
+    console.log(`[Webhook] Job ${job.id} already ${job.status}, skipping`);
     return;
   }
 
   if (status === "SUCCEEDED") {
-    // Process the results
-    await processSyncResults(job.id, runId);
+    try {
+      await processSyncResults(job.id);
+    } catch (error) {
+      console.error(`[Webhook] Error processing results for job ${job.id}:`, error);
+      // processSyncResults already handles failure + refund
+    }
   } else {
-    // Update job as failed
-    await db
-      .update(syncJobs)
-      .set({
-        status: "failed",
-        error: `Apify run ${status.toLowerCase()}`,
-        completedAt: new Date(),
-      })
-      .where(eq(syncJobs.id, job.id));
+    await handleJobFailure(job, `Apify run ${status.toLowerCase()}`);
   }
 }
 
@@ -968,32 +1094,42 @@ export async function cancelSyncJob(jobId: number): Promise<void> {
   const client = getApifyClient();
 
   try {
-    // Abort the Apify run
     await client.run(job.apifyRunId).abort();
-
-    // Update job status
-    await db
-      .update(syncJobs)
-      .set({
-        status: "failed",
-        error: "Cancelled by user",
-        completedAt: new Date(),
-      })
-      .where(eq(syncJobs.id, jobId));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error cancelling job";
-    throw new Error(`Failed to cancel sync job: ${message}`);
+  } catch {
+    // Best-effort abort
   }
+
+  await handleJobFailure(job, "Cancelled by user");
 }
 
+// ─── Maintenance ─────────────────────────────────────────────────────────────
+
 /**
- * Get recent sync jobs for an account
+ * Clean up stuck jobs: any job running longer than SYNC_TIMEOUT_MS
+ * Can be called from a cron job or admin endpoint
  */
-export async function getRecentSyncJobs(accountId: number, limit = 10) {
-  return db
+export async function cleanupStuckJobs(): Promise<number> {
+  const cutoff = new Date(Date.now() - SYNC_TIMEOUT_MS);
+
+  const stuckJobs = await db
     .select()
     .from(syncJobs)
-    .where(eq(syncJobs.accountId, accountId))
-    .orderBy(syncJobs.createdAt)
-    .limit(limit);
+    .where(
+      and(
+        inArray(syncJobs.status, ["pending", "running"]),
+        lte(syncJobs.createdAt, cutoff)
+      )
+    );
+
+  let cleaned = 0;
+  for (const job of stuckJobs) {
+    await handleJobTimeout(job);
+    cleaned++;
+  }
+
+  if (cleaned > 0) {
+    console.log(`[Cleanup] Cleaned up ${cleaned} stuck sync jobs`);
+  }
+
+  return cleaned;
 }
