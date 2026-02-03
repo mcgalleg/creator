@@ -8,6 +8,20 @@
       "when": 1770003131099,
       "tag": "0000_salty_mandrill",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770066004723,
+      "tag": "0001_careless_ma_gnuci",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770068302038,
+      "tag": "0002_yielding_daredevil",
+      "breakpoints": true
     }
   ]
 }

@@ -114,10 +114,11 @@ export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
     [updateWidgetConfig]
   );
 
+  // Get the effective layouts (use default if none loaded yet)
+  const effectiveLayouts = layouts ?? DEFAULT_LAYOUTS;
+
   const handleAddWidget = useCallback(
     (widgetId: string) => {
-      if (!layouts) return;
-
       // Get widget definition from registry
       const widgetDef = widgetRegistry.get(widgetId);
       if (!widgetDef) {
@@ -128,8 +129,8 @@ export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
       // Create a unique instance ID
       const instanceId = `${widgetId}-${Date.now()}`;
 
-      // Add widget to layout
-      const newLayouts = addWidgetToLayout(layouts, {
+      // Add widget to layout - use effectiveLayouts to ensure we always have a base
+      const newLayouts = addWidgetToLayout(effectiveLayouts, {
         id: instanceId,
         widgetType: widgetId,
         w: widgetDef.defaultSize.w,
@@ -140,7 +141,7 @@ export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
 
       updateLayout(newLayouts);
     },
-    [layouts, updateLayout]
+    [effectiveLayouts, updateLayout]
   );
 
   // Empty state when no accounts
@@ -157,9 +158,6 @@ export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
       </div>
     );
   }
-
-  // Get the effective layouts (use default if none loaded yet)
-  const effectiveLayouts = layouts ?? DEFAULT_LAYOUTS;
 
   return (
     <div className="space-y-6">

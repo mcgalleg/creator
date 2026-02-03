@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tiktokAccounts, syncJobs } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import {
   startProfileSync,
   estimateSyncCost,
@@ -52,7 +52,44 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Parse body for sync options
     const body = await request.json().catch(() => ({}));
-    const { postsLimit = 50, includeComments = false, commentsLimit = 0 } = body;
+    const {
+      postsLimit = 50,
+      includeComments = false,
+      commentsLimit = 0,
+      sorting,
+      oldestPostDate,
+      newestPostDate,
+    } = body;
+
+    // Validate sorting parameter
+    const validSortingValues = ["latest", "popular", "oldest"] as const;
+    if (sorting !== undefined && !validSortingValues.includes(sorting)) {
+      return NextResponse.json(
+        { error: "Invalid sorting value. Must be one of: latest, popular, oldest" },
+        { status: 400 }
+      );
+    }
+
+    // Validate date parameters (if provided, must be valid ISO date strings)
+    if (oldestPostDate !== undefined) {
+      const date = new Date(oldestPostDate);
+      if (isNaN(date.getTime())) {
+        return NextResponse.json(
+          { error: "Invalid oldestPostDate. Must be a valid ISO date string" },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (newestPostDate !== undefined) {
+      const date = new Date(newestPostDate);
+      if (isNaN(date.getTime())) {
+        return NextResponse.json(
+          { error: "Invalid newestPostDate. Must be a valid ISO date string" },
+          { status: 400 }
+        );
+      }
+    }
 
     // Check if there's already a running sync for this account
     const [runningJob] = await db
@@ -105,6 +142,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       postsLimit,
       includeComments,
       commentsLimit,
+      sorting,
+      oldestPostDate,
+      newestPostDate,
       userId,
     });
 
@@ -159,7 +199,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             eq(syncJobs.userId, userId)
           )
         )
-        .orderBy(syncJobs.createdAt)
+        .orderBy(desc(syncJobs.createdAt))
         .limit(1);
 
       if (!recentJob) {

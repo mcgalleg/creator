@@ -1,15 +1,41 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { PieChart } from "lucide-react";
-import {
-  DashboardBreakdownChart,
-  type BreakdownItem,
-} from "@/components/dashboard/dashboard-breakdown-chart";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import type { BreakdownItem } from "@/components/dashboard/dashboard-breakdown-chart";
 import {
   widgetRegistry,
   type WidgetProps,
   type WidgetDefinition,
 } from "../registry";
+
+// Dynamically import the chart to defer Recharts compilation
+const DashboardBreakdownChart = dynamic(
+  () => import("@/components/dashboard/dashboard-breakdown-chart").then((mod) => mod.DashboardBreakdownChart),
+  {
+    ssr: false,
+    loading: () => (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-40" />
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center gap-4">
+            <Skeleton className="h-48 w-48 rounded-full" />
+            <div className="flex gap-4">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    ),
+  }
+);
 
 interface EngagementBreakdownWidgetProps extends WidgetProps {
   data?: BreakdownItem[] | null;
@@ -45,3 +71,4 @@ export const engagementBreakdownWidgetDefinition: WidgetDefinition = {
 widgetRegistry.register(engagementBreakdownWidgetDefinition);
 
 export { EngagementBreakdownWidget };
+export type { BreakdownItem };

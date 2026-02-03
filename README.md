@@ -10,8 +10,10 @@ AI-powered TikTok analytics dashboard that lets content creators understand thei
 - **Dynamic Dashboard** - Customizable widget-based dashboard with 20+ widget types
 - **Multi-Account Support** - Connect and analyze multiple TikTok accounts
 - **Smart Comment Sync** - Flexible sync options (by selection, top performers, date range, or budget)
+- **Persistent Async State** - Long-running operations (syncs, connections) survive page refreshes
 - **Subscription Tiers** - Feature gating with Free, Pro, and Enterprise tiers
 - **Credit System** - Pay-as-you-go pricing for data syncs
+- **Keyboard Shortcuts** - Command palette (Cmd+K) and customizable shortcuts
 
 ## Tech Stack
 
@@ -22,6 +24,7 @@ AI-powered TikTok analytics dashboard that lets content creators understand thei
 - **Data Source**: Apify TikTok Scraper
 - **Styling**: Tailwind CSS v4, Shadcn/ui, Radix UI
 - **Charts**: Recharts
+- **Canvas**: React Flow for node-based visualization workspace
 - **UI Generation**: @json-render for validated component trees
 
 ## Getting Started
@@ -83,31 +86,49 @@ APIFY_API_TOKEN=apify_...
 creator/
 ├── app/                    # Next.js App Router
 │   ├── api/               # API routes
-│   │   ├── accounts/      # TikTok account management
+│   │   ├── accounts/      # TikTok account management & sync
 │   │   ├── chat/          # AI analytics chat
-│   │   ├── credits/       # Credit system
+│   │   ├── credits/       # Credit system & history
 │   │   ├── canvases/      # Canvas persistence
 │   │   ├── dashboard/     # Dashboard data APIs
 │   │   ├── features/      # Feature flags API
 │   │   ├── pinned/        # Dashboard pinned components
+│   │   ├── mcp/           # MCP server endpoint
 │   │   └── auth/webhook/  # Clerk webhook
 │   ├── dashboard/         # Protected dashboard pages
+│   │   ├── accounts/      # Account management page
+│   │   └── settings/      # User settings page
 │   └── page.tsx           # Public landing page
 ├── components/
 │   ├── analytics/         # Chart and visualization components
+│   ├── backgrounds/       # Animated background effects
 │   ├── canvas/            # Canvas workspace (React Flow)
 │   ├── chat/              # Chat interface
-│   ├── dashboard/         # Dashboard shell and navigation
+│   ├── dashboard/         # Dashboard shell, widgets, and navigation
 │   ├── settings/          # Settings page components
-│   ├── layout/            # Layout primitives
+│   ├── layout/            # Layout primitives (Row, Column, Grid)
 │   └── ui/                # Shadcn/ui components
 ├── contexts/              # React contexts (features, canvas)
+├── hooks/                 # Custom React hooks
+│   ├── use-accounts.ts    # Account management with persistent sync state
+│   ├── use-analytics-chat.ts
+│   ├── use-breakpoint.ts
+│   ├── use-canvas-state.ts
+│   ├── use-canvases.ts
+│   ├── use-dashboard-data.ts
+│   ├── use-dashboard-layout.ts
+│   ├── use-features.ts
+│   ├── use-keyboard-shortcuts.ts
+│   └── use-pinned-components.ts
 ├── lib/
 │   ├── db/                # Drizzle ORM setup and schemas
-│   ├── services/          # Business logic (sync, credits, features)
+│   ├── services/          # Business logic (sync, credits, features, users)
 │   ├── widgets/           # Widget registry and implementations
-│   └── catalog.ts         # AI component catalog
-└── hooks/                 # Custom React hooks
+│   ├── persistent-async-state.ts  # localStorage persistence utilities
+│   ├── catalog.ts         # AI component catalog
+│   ├── auth.ts            # Authentication utilities
+│   └── utils.ts           # General utilities
+└── public/                # Static assets
 ```
 
 ## Architecture
@@ -120,6 +141,16 @@ creator/
 4. **Analytics Chat**: User asks questions; Claude AI queries data and generates visualizations
 5. **Dashboard**: Pinned charts persist across sessions; real-time updates via hooks
 
+### Persistent Async State
+
+Long-running operations persist to localStorage and survive page refreshes:
+
+- **Account Connection**: Shows "Connecting @username..." after refresh until complete
+- **Account Sync**: Resumes polling for sync status after refresh
+- **Comment Sync**: Shows sync-in-progress banner in dialog
+
+State expires after configurable timeouts (2 minutes for connections, 15 minutes for syncs).
+
 ### Database Schema
 
 - **users** - User profiles with subscription tier (free/pro/enterprise)
@@ -131,6 +162,7 @@ creator/
 - **sync_jobs** - Background sync job tracking with comment sync config
 - **pinned_components** - User dashboard customizations
 - **canvases** - Persistent canvas workspaces with React Flow state
+- **canvas_annotations** - Canvas sticky notes and text annotations
 - **dashboard_layouts** - Custom dashboard widget layouts
 - **feature_flags** - System-wide feature configuration
 - **user_feature_overrides** - Per-user feature access overrides
@@ -156,15 +188,25 @@ Pay-per-sync model (1 credit = $0.01):
 
 ### Widget Library
 
-The dashboard includes 20+ customizable widgets:
+The dashboard includes 23 customizable widgets organized by category:
 
-**KPI Widgets**: Followers, Total Plays, Engagement Rate, Likes, Saves, Shares, Average Views
+**KPI Widgets**
+- Followers, Total Plays, Engagement Rate
+- Total Likes, Total Saves, Total Shares
+- Average Views, Content Velocity, Overview Metrics
 
-**Chart Widgets**: Engagement Trends, Engagement Breakdown, Posting Frequency, Best Posting Times, Growth Chart, Duration vs Performance
+**Chart Widgets**
+- Engagement Trend, Engagement Breakdown
+- Posting Frequency, Best Posting Times
+- Growth Chart, Duration vs Performance
 
-**Content Widgets**: Top Performing Videos, Recent Posts
+**Content Widgets**
+- Top Performing Videos, Recent Posts
+- Viral Posts, Underperforming Content
 
-**Comment Widgets**: Recent Comments, Top Commenters, Comment Sentiment, Comment Activity
+**Comment Widgets**
+- Recent Comments, Top Commenters
+- Comment Sentiment, Comment Activity
 
 ### Comment Sync Options
 
@@ -213,28 +255,93 @@ This creates a test user (`test_user_123`) with 1000 credits and pro tier access
 
 ## API Routes
 
+### Account Management
+
 | Method | Route | Description |
 |--------|-------|-------------|
 | GET | `/api/accounts` | List connected accounts |
 | POST | `/api/accounts` | Connect new TikTok account |
 | DELETE | `/api/accounts/[id]` | Disconnect account |
 | POST | `/api/accounts/[id]/sync` | Trigger data sync |
+| GET | `/api/accounts/[id]/sync` | Get sync job status |
+| POST | `/api/accounts/[id]/sync/comments` | Trigger comment sync |
+
+### Dashboard Data
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/api/dashboard/overview` | Account overview metrics |
+| GET | `/api/dashboard/engagement` | Engagement trend data |
+| GET | `/api/dashboard/breakdown` | Engagement breakdown by type |
+| GET | `/api/dashboard/top-content` | Top performing posts |
+| GET | `/api/dashboard/recent-posts` | Recent posts list |
+| GET | `/api/dashboard/posting-times` | Best posting times analysis |
+| GET | `/api/dashboard/growth` | Follower growth data |
+| GET | `/api/dashboard/comments` | Recent comments |
+| GET | `/api/dashboard/comments/top-commenters` | Most active commenters |
+| GET | `/api/dashboard/comments/sentiment` | Comment sentiment analysis |
+| GET | `/api/dashboard/comments/activity` | Comment activity over time |
+| GET/PUT | `/api/dashboard/layouts` | Dashboard layout management |
+
+### Other APIs
+
+| Method | Route | Description |
+|--------|-------|-------------|
 | POST | `/api/chat` | AI analytics chat |
 | GET | `/api/credits` | Get credit balance |
+| GET | `/api/credits/history` | Credit transaction history |
+| GET | `/api/features` | Get feature flags |
 | GET/POST/DELETE | `/api/pinned` | Manage pinned charts |
+| GET/POST | `/api/canvases` | Canvas CRUD operations |
+| GET/PUT/DELETE | `/api/canvases/[id]` | Single canvas operations |
+| * | `/api/mcp/[transport]` | MCP server endpoint |
 
 ## Key Components
 
 ### Analytics Visualizations
-- `MetricCard` - Single KPI display
+- `MetricCard` - Single KPI display with trend indicator
+- `MetricGroup` - Grouped metrics display
 - `BarChart`, `LineChart`, `AreaChart`, `PieChart` - Recharts wrappers
-- `DataTable` - Structured data display
+- `DataTable` - Structured data display with sorting
 - `VideoCard`, `TopVideosGrid` - TikTok video previews
 - `EngagementTimeline` - Engagement trends over time
 
+### Dashboard Components
+- `DynamicDashboard` - Widget-based customizable dashboard
+- `DashboardGrid` - Responsive grid layout with react-grid-layout
+- `DashboardWidget` - Individual widget container
+- `WidgetPicker` - Widget selection dialog
+- `ViewTabs` - Dashboard/Canvas/Chat view switcher
+
 ### Chat Interface
 - `ChatContainer` - Main AI chat UI
+- `ChatPanel` - Resizable chat sidebar
+- `MessageList` - Chat message display
 - `AnalyticsRenderer` - Renders AI-generated component trees
+- `VisualizationReference` - Referenced chart in chat
+
+### Canvas Components
+- `AnalyticsCanvas` - React Flow canvas workspace
+- `CanvasToolbar` - Canvas editing tools
+- `StickyNoteNode`, `TextNoteNode` - Annotation nodes
+- `AnalyticsCardNode` - Pinned visualization node
+
+### Account Management
+- `AccountConnectionForm` - TikTok username input with persistent state
+- `AccountList` - Connected accounts display
+- `CommentSyncDialog` - Comment sync configuration
+- `SyncStatus` - Sync progress indicator
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+K` | Open command palette |
+| `Cmd+/` | Toggle chat panel |
+| `Cmd+1` | Switch to Dashboard view |
+| `Cmd+2` | Switch to Canvas view |
+| `Cmd+3` | Switch to Chat view |
+| `?` | Show keyboard shortcuts help |
 
 ## Deployment
 

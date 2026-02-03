@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -30,8 +30,16 @@ import {
   Wallet,
   AlertCircle,
   Loader2,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  getPendingCommentSync,
+  setPendingCommentSync,
+  clearPendingCommentSync,
+  type PendingCommentSync,
+} from "@/lib/persistent-async-state";
+import type { CommentSyncJob } from "@/hooks/use-accounts";
 
 type SyncMode = "selection" | "top_performers" | "date_range" | "budget";
 
@@ -51,6 +59,8 @@ interface CommentSyncDialogProps {
   onClose: () => void;
   accountId: number;
   accountUsername: string;
+  pendingSyncStatus?: CommentSyncJob | null;
+  onSyncStarted?: (accountId: number, jobId: number, mode: SyncMode, postCount: number) => void;
 }
 
 interface CostEstimate {
@@ -64,6 +74,8 @@ export function CommentSyncDialog({
   onClose,
   accountId,
   accountUsername,
+  pendingSyncStatus,
+  onSyncStarted,
 }: CommentSyncDialogProps) {
   const [mode, setMode] = useState<SyncMode>("top_performers");
   const [topCount, setTopCount] = useState(10);
@@ -77,6 +89,41 @@ export function CommentSyncDialog({
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [costEstimate, setCostEstimate] = useState<CostEstimate | null>(null);
   const [syncing, setSyncing] = useState(false);
+
+  // Persistent sync state (prefer prop from hook, fallback to localStorage)
+  const [localPendingSync, setLocalPendingSync] = useState<PendingCommentSync | null>(null);
+  const hasCheckedPending = useRef(false);
+
+  // Check for pending sync on mount/open (fallback to localStorage if no prop)
+  useEffect(() => {
+    if (isOpen && !hasCheckedPending.current) {
+      hasCheckedPending.current = true;
+      // Only check localStorage if we don't have a status from the hook
+      if (!pendingSyncStatus) {
+        const pending = getPendingCommentSync(accountId);
+        setLocalPendingSync(pending);
+      }
+    }
+
+    // Reset when dialog closes
+    if (!isOpen) {
+      hasCheckedPending.current = false;
+    }
+  }, [isOpen, accountId, pendingSyncStatus]);
+
+  // Derive pending sync state: prefer hook status, then local state
+  const pendingSync: PendingCommentSync | null = pendingSyncStatus
+    ? {
+        accountId: pendingSyncStatus.id,
+        accountUsername,
+        jobId: pendingSyncStatus.id,
+        mode: pendingSyncStatus.mode,
+        postCount: pendingSyncStatus.postCount,
+        startedAt: pendingSyncStatus.startedAt
+          ? new Date(pendingSyncStatus.startedAt).getTime()
+          : Date.now(),
+      }
+    : localPendingSync;
 
   // Fetch posts when in selection mode
   useEffect(() => {
@@ -184,6 +231,28 @@ export function CommentSyncDialog({
         throw new Error(data.error || "Failed to start comment sync");
       }
 
+      // Persist sync state to localStorage
+      setPendingCommentSync(accountId, {
+        accountId,
+        accountUsername,
+        jobId: data.jobId || 0,
+        mode,
+        postCount: costEstimate.postCount,
+      });
+      setLocalPendingSync({
+        accountId,
+        accountUsername,
+        jobId: data.jobId || 0,
+        mode,
+        postCount: costEstimate.postCount,
+        startedAt: Date.now(),
+      });
+
+      // Trigger polling via hook callback if provided
+      if (onSyncStarted) {
+        onSyncStarted(accountId, data.jobId || 0, mode, costEstimate.postCount);
+      }
+
       toast.success("Comment sync started", {
         description: `Syncing comments for ${costEstimate.postCount} posts (~${costEstimate.estimatedComments} comments)`,
       });
@@ -194,6 +263,11 @@ export function CommentSyncDialog({
     } finally {
       setSyncing(false);
     }
+  };
+
+  const handleDismissPending = () => {
+    clearPendingCommentSync(accountId);
+    setLocalPendingSync(null);
   };
 
   const togglePostSelection = (tiktokId: string) => {
@@ -210,6 +284,15 @@ export function CommentSyncDialog({
     return num.toString();
   };
 
+  const formatTimeAgo = (timestamp: number): string => {
+    const minutes = Math.floor((Date.now() - timestamp) / 60000);
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
@@ -222,6 +305,31 @@ export function CommentSyncDialog({
             Configure how to sync comments for @{accountUsername}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Pending Sync Banner */}
+        {pendingSync && (
+          <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-4 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+              <Loader2 className="size-4 animate-spin" />
+              Comment sync in progress
+            </div>
+            <p className="text-sm text-muted-foreground">
+              A comment sync for {pendingSync.postCount} posts ({pendingSync.mode.replace("_", " ")})
+              was started {formatTimeAgo(pendingSync.startedAt)}. It may take several minutes to complete.
+            </p>
+            <div className="flex gap-2 mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDismissPending}
+                className="text-xs"
+              >
+                <CheckCircle2 className="size-3 mr-1" />
+                Mark as Complete
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-6 py-4">
           {/* Sync Mode Selection */}

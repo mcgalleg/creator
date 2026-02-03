@@ -1,13 +1,12 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
-import { MessageSquare, LayoutDashboard, Sparkles, Lock } from 'lucide-react';
-import { ChatPanel } from './chat-panel';
+import { MessageSquare, LayoutDashboard, Sparkles, Lock, Loader2 } from 'lucide-react';
 import { SplitPaneLayout } from './split-pane-layout';
 import { ViewTabs } from './view-tabs';
 import { DefaultDashboard } from './default-dashboard';
-import { CanvasView } from './canvas-view';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,33 @@ import { usePinToCanvasOptional, PinToCanvasProvider } from '@/contexts/pin-to-c
 import { useFeatures } from '@/contexts/feature-context';
 import { FeatureGate } from '@/components/feature-gate';
 import { UpgradePrompt } from '@/components/upgrade-prompt';
+
+// Dynamically import heavy components to speed up dev compilation
+// CanvasView imports React Flow (~2MB)
+const CanvasView = dynamic(
+  () => import('./canvas-view').then((mod) => mod.CanvasView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    ),
+  }
+);
+
+// ChatPanel imports AI SDK
+const ChatPanel = dynamic(
+  () => import('./chat-panel').then((mod) => mod.ChatPanel),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    ),
+  }
+);
 
 interface ResponsiveLayoutProps {
   accounts: Array<{ id: number; username: string }>;

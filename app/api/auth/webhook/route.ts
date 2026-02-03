@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
   const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SIGNING_SECRET;
@@ -67,19 +68,65 @@ export async function POST(req: Request) {
       (email) => email.id === evt.data.primary_email_address_id
     );
 
-    // Build full name from first and last name
+    const email = primaryEmail?.email_address ?? "";
     const name = [first_name, last_name].filter(Boolean).join(" ") || null;
 
-    // Create user in database with signup bonus credits
-    await db.insert(users).values({
-      id,
-      email: primaryEmail?.email_address ?? "",
-      name,
-      imageUrl: image_url ?? null,
-      creditBalance: 100, // Signup bonus
-    });
+    // Upsert user: if email exists, update the Clerk ID (user re-registered)
+    // This handles both duplicate webhooks and re-registered users
+    await db.insert(users)
+      .values({
+        id,
+        email,
+        name,
+        imageUrl: image_url ?? null,
+        creditBalance: 100, // Signup bonus for new users
+      })
+      .onConflictDoUpdate({
+        target: users.email,
+        set: {
+          id, // Update to new Clerk ID if user re-registered
+          name,
+          imageUrl: image_url ?? null,
+          updatedAt: new Date(),
+          // Note: Don't reset creditBalance - preserve existing balance
+        },
+      });
 
-    console.log(`Created user ${id} with 100 signup bonus credits`);
+    console.log(`Upserted user ${id} (email: ${email})`);
+  }
+
+  // Handle user.updated event
+  if (evt.type === "user.updated") {
+    const { id, email_addresses, first_name, last_name, image_url } = evt.data;
+
+    const primaryEmail = email_addresses?.find(
+      (email) => email.id === evt.data.primary_email_address_id
+    );
+
+    const email = primaryEmail?.email_address ?? "";
+    const name = [first_name, last_name].filter(Boolean).join(" ") || null;
+
+    // Update user by Clerk ID
+    await db.update(users)
+      .set({
+        email,
+        name,
+        imageUrl: image_url ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id));
+
+    console.log(`Updated user ${id}`);
+  }
+
+  // Handle user.deleted event
+  if (evt.type === "user.deleted") {
+    const { id } = evt.data;
+
+    if (id) {
+      await db.delete(users).where(eq(users.id, id));
+      console.log(`Deleted user ${id}`);
+    }
   }
 
   return new Response("Webhook received", { status: 200 });

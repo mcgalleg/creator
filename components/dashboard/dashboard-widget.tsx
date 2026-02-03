@@ -1,8 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 // Import from index to trigger widget registration
@@ -28,7 +26,6 @@ interface DashboardWidgetProps {
   isEditing: boolean;
   onDelete?: (widgetId: string) => void;
   onConfigChange?: (widgetId: string, config: Record<string, unknown>) => void;
-  style?: React.CSSProperties;
 }
 
 /**
@@ -123,39 +120,16 @@ export function DashboardWidget({
   isEditing,
   onDelete,
   onConfigChange,
-  style,
 }: DashboardWidgetProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
-    id: widget.id,
-    disabled: !isEditing,
-  });
-
   const widgetDef = widgetRegistry.get(widget.widgetType);
-
-  const combinedStyle: React.CSSProperties = {
-    ...style,
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 1000 : 1,
-  };
 
   // Handle missing widget definition
   if (!widgetDef) {
     return (
       <div
-        ref={setNodeRef}
-        style={combinedStyle}
         className={cn(
-          "relative rounded-lg border bg-card",
-          isDragging && "shadow-lg"
+          "relative rounded-lg border bg-card h-full",
+          isEditing && "ring-1 ring-border"
         )}
       >
         <Card className="h-full">
@@ -172,8 +146,6 @@ export function DashboardWidget({
         </Card>
         {isEditing && (
           <WidgetEditOverlay
-            attributes={attributes}
-            listeners={listeners}
             onDelete={() => onDelete?.(widget.id)}
           />
         )}
@@ -202,11 +174,8 @@ export function DashboardWidget({
 
   return (
     <div
-      ref={setNodeRef}
-      style={combinedStyle}
       className={cn(
-        "relative rounded-lg",
-        isDragging && "shadow-lg ring-2 ring-primary",
+        "relative rounded-lg h-full",
         isEditing && "ring-1 ring-border"
       )}
     >
@@ -216,8 +185,6 @@ export function DashboardWidget({
       {isEditing && (
         <WidgetEditOverlay
           widgetName={widgetDef.name}
-          attributes={attributes}
-          listeners={listeners}
           onDelete={() => onDelete?.(widget.id)}
           onSettings={() => {
             // TODO: Open widget settings dialog
@@ -230,29 +197,23 @@ export function DashboardWidget({
 
 interface WidgetEditOverlayProps {
   widgetName?: string;
-  attributes: ReturnType<typeof useSortable>["attributes"];
-  listeners: ReturnType<typeof useSortable>["listeners"];
   onDelete?: () => void;
   onSettings?: () => void;
 }
 
 function WidgetEditOverlay({
   widgetName,
-  attributes,
-  listeners,
   onDelete,
   onSettings,
 }: WidgetEditOverlayProps) {
   return (
     <TooltipProvider>
       <div className="absolute inset-0 pointer-events-none">
-        {/* Drag Handle */}
+        {/* Drag Handle Indicator - visual only, actual dragging is on the grid cell */}
         <div className="absolute top-2 left-2 pointer-events-auto">
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
-                {...attributes}
-                {...listeners}
+              <div
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-md",
                   "bg-background/80 backdrop-blur-sm border shadow-sm",
@@ -263,7 +224,7 @@ function WidgetEditOverlay({
                 aria-label={`Drag ${widgetName ?? "widget"}`}
               >
                 <GripVertical className="h-4 w-4" />
-              </button>
+              </div>
             </TooltipTrigger>
             <TooltipContent side="bottom">
               <p>Drag to reorder</p>

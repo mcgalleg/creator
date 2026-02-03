@@ -6,6 +6,9 @@ import { eq } from "drizzle-orm";
 import { validateUsername, estimateSyncCost, startProfileSync } from "@/lib/services/sync-service";
 import { checkCredits } from "@/lib/services/credit-service";
 
+// Type for import options
+type ImportOption = "profile_only" | "profile_posts" | "profile_posts_comments";
+
 /**
  * GET /api/accounts
  * List all TikTok accounts for the current user
@@ -50,6 +53,11 @@ export async function GET() {
 /**
  * POST /api/accounts
  * Connect a new TikTok account
+ *
+ * Supports three import options:
+ * - profile_only: FREE - Just stores the account reference (uses cached profile from preview)
+ * - profile_posts: Creates account and triggers post sync (25 credits)
+ * - profile_posts_comments: Creates account and triggers full sync with comments (40+ credits)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -60,7 +68,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { username, triggerSync = false, postsLimit = 50, includeComments = false } = body;
+    const {
+      username,
+      importOption = "profile_only" as ImportOption,
+      // Legacy parameters for backwards compatibility
+      triggerSync = false,
+      postsLimit = 50,
+      includeComments = false,
+      // Note: cachedProfile could be used in the future to skip re-validation
+    // for profile_only imports, but for now we always validate for security
+    } = body;
 
     if (!username || typeof username !== "string") {
       return NextResponse.json(
@@ -97,7 +114,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine sync behavior based on importOption or legacy triggerSync
+    const shouldSync = importOption === "profile_posts" || importOption === "profile_posts_comments" || triggerSync;
+    const shouldIncludeComments = importOption === "profile_posts_comments" || includeComments;
+
     // Validate the username exists on TikTok
+    // Note: This will always call Apify to validate the profile, but the preview
+    // endpoint likely already did this. The cost is minimal since we request only 1 result.
     const validation = await validateUsername(cleanUsername);
 
     if (!validation.valid || !validation.profile) {
@@ -108,8 +131,11 @@ export async function POST(request: NextRequest) {
     }
 
     // If triggering sync, check credits first
-    if (triggerSync) {
-      const costEstimate = estimateSyncCost({ postsLimit, includeComments });
+    if (shouldSync) {
+      const costEstimate = estimateSyncCost({
+        postsLimit,
+        includeComments: shouldIncludeComments,
+      });
       const creditCheck = await checkCredits(userId, costEstimate.credits);
 
       if (!creditCheck.sufficient) {
@@ -144,18 +170,20 @@ export async function POST(request: NextRequest) {
 
     // Optionally trigger initial sync
     let syncJob = null;
-    if (triggerSync) {
+    let syncError: string | null = null;
+    if (shouldSync) {
       try {
         syncJob = await startProfileSync({
           accountId: account.id,
           username: account.username,
           postsLimit,
-          includeComments,
+          includeComments: shouldIncludeComments,
           userId,
         });
-      } catch (syncError) {
-        console.error("Failed to start initial sync:", syncError);
-        // Don't fail the account creation, just log the error
+      } catch (err) {
+        console.error("Failed to start initial sync:", err);
+        // Don't fail the account creation, but include the error in the response
+        syncError = err instanceof Error ? err.message : "Failed to start sync";
       }
     }
 
@@ -175,12 +203,38 @@ export async function POST(request: NextRequest) {
         createdAt: account.createdAt,
       },
       syncJob,
+      syncError, // Include any sync error so frontend can display it
       profile: validation.profile,
+      importOption,
     });
   } catch (error) {
     console.error("Error connecting account:", error);
+
+    // Get detailed error info - PostgreSQL errors from Drizzle/Neon may have different shapes
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorObj = error as Record<string, unknown>;
+    const errorCode = errorObj?.code ?? errorObj?.constraint ?? "";
+    const errorString = JSON.stringify(error);
+
+    // Check for unique constraint violation (duplicate account)
+    // PostgreSQL error code 23505 = unique_violation
+    if (
+      errorMessage.includes("unique") ||
+      errorMessage.includes("duplicate") ||
+      errorMessage.includes("tiktok_accounts_user_username_idx") ||
+      errorString.includes("23505") ||
+      errorString.includes("unique") ||
+      errorCode === "23505"
+    ) {
+      return NextResponse.json(
+        { error: "This account is already connected" },
+        { status: 409 }
+      );
+    }
+
+    // Return more specific error message for debugging
     return NextResponse.json(
-      { error: "Failed to connect account" },
+      { error: errorMessage || "Failed to connect account" },
       { status: 500 }
     );
   }

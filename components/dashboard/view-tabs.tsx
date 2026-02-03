@@ -1,12 +1,25 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Sparkles, Lock } from "lucide-react";
+import { LayoutDashboard, Sparkles, Lock, Loader2 } from "lucide-react";
 import { DynamicDashboard } from "./dynamic-dashboard";
-import { CanvasView } from "./canvas-view";
 import { useFeatures } from "@/contexts/feature-context";
 import { FeatureGate } from "@/components/feature-gate";
+
+// Dynamically import CanvasView to avoid loading React Flow until needed
+const CanvasView = dynamic(
+  () => import("./canvas-view").then((mod) => mod.CanvasView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    ),
+  }
+);
 
 interface ViewTabsProps {
   accounts: Array<{ id: number; username: string }>;

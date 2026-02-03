@@ -20,13 +20,15 @@ const getApifyClient = () => {
 };
 
 // Constants for credit calculations
+// Profile sync is FREE - users only pay for posts and comments they receive
 const CREDITS = {
-  PROFILE_SYNC_BASE: 25, // Profile + basic info
-  POSTS_PER_50: 25, // 25 credits per 50 posts
-  COMMENTS_PER_100: 15, // 15 credits per 100 comments
-  ACTOR_START_FEE: 6, // ~$0.006 converted to credits
-  PER_RESULT_FEE: 4, // ~$0.0037 converted to credits
-  PER_COMMENT_FEE: 1, // ~$0.00125 converted to credits
+  PROFILE_SYNC_BASE: 0, // Profile sync is FREE
+  PER_POST: 1, // 1 credit per post (granular pricing)
+  PER_COMMENT: 0.15, // 0.15 credits per comment
+  ACTOR_START_FEE: 6, // ~$0.006 converted to credits (internal cost tracking)
+  // Legacy batch constants (kept for reference, not used in calculations)
+  POSTS_PER_50: 25, // Deprecated: was 25 credits per 50 posts
+  COMMENTS_PER_100: 15, // Deprecated: was 15 credits per 100 comments
 } as const;
 
 // Types
@@ -36,6 +38,9 @@ export interface SyncOptions {
   postsLimit?: number;
   includeComments?: boolean;
   commentsLimit?: number;
+  sorting?: "latest" | "popular" | "oldest";
+  oldestPostDate?: string;  // ISO date string
+  newestPostDate?: string;  // ISO date string
 }
 
 export interface CommentSyncConfig {
@@ -92,6 +97,11 @@ export interface ProcessedSyncResults {
   commentsCount: number;
   creditsUsed: number;
   profileUpdated: boolean;
+  // Visibility into Apify results
+  itemsReturnedByApify: number;
+  itemsProcessed: number;
+  itemsSkipped: number;
+  skippedReasons?: string[];
 }
 
 // TikTok data types from Apify
@@ -143,6 +153,7 @@ interface TikTokCommentData {
 
 /**
  * Estimate the cost in credits for a sync operation
+ * Uses per-item pricing: users only pay for what they receive
  */
 export function estimateSyncCost(options: {
   postsLimit?: number;
@@ -153,21 +164,21 @@ export function estimateSyncCost(options: {
   const includeComments = options.includeComments ?? false;
   const commentsLimit = options.commentsLimit ?? 0;
 
-  // Base cost for profile sync
+  // Profile sync is FREE
   const profileCost = CREDITS.PROFILE_SYNC_BASE;
 
-  // Posts cost (based on number of posts)
-  const postsCost = Math.ceil(postsLimit / 50) * CREDITS.POSTS_PER_50;
+  // Posts cost: per-post pricing
+  const postsCost = Math.round(postsLimit * CREDITS.PER_POST);
 
-  // Comments cost (if included)
+  // Comments cost: per-comment pricing
   let commentsCost = 0;
   if (includeComments && commentsLimit > 0) {
-    commentsCost = Math.ceil(commentsLimit / 100) * CREDITS.COMMENTS_PER_100;
+    commentsCost = Math.round(commentsLimit * CREDITS.PER_COMMENT);
   }
 
   const totalCredits = profileCost + postsCost + commentsCost;
 
-  const descriptionParts = [`Profile sync (${profileCost} credits)`, `${postsLimit} posts (~${postsCost} credits)`];
+  const descriptionParts = [`Profile sync (free)`, `${postsLimit} posts (~${postsCost} credits)`];
   if (includeComments && commentsLimit > 0) {
     descriptionParts.push(`${commentsLimit} comments (~${commentsCost} credits)`);
   }
@@ -185,6 +196,7 @@ export function estimateSyncCost(options: {
 
 /**
  * Estimate the cost in credits for a comment-only sync operation
+ * Uses per-comment pricing: users only pay for what they receive
  */
 export function estimateCommentSyncCost(options: {
   postCount: number;
@@ -196,19 +208,17 @@ export function estimateCommentSyncCost(options: {
   // Calculate total comments to sync
   const estimatedComments = totalComments ?? (postCount * commentsPerPost);
 
-  // Comments cost (based on number of comments)
-  // Each post also incurs a small actor start fee
-  const commentsCost = Math.ceil(estimatedComments / 100) * CREDITS.COMMENTS_PER_100;
-  const actorFees = postCount * CREDITS.ACTOR_START_FEE;
+  // Comments cost: per-comment pricing
+  const commentsCost = Math.round(estimatedComments * CREDITS.PER_COMMENT);
 
-  const totalCredits = commentsCost + actorFees;
+  const totalCredits = commentsCost;
 
   return {
     credits: totalCredits,
     description: `Comments for ${postCount} posts (~${estimatedComments} comments, ${totalCredits} credits)`,
     breakdown: {
       profile: 0,
-      posts: actorFees, // Actor fees grouped under posts
+      posts: 0,
       comments: commentsCost,
     },
   };
@@ -275,7 +285,7 @@ export async function validateUsername(username: string): Promise<ValidationResu
  * Start a profile sync job
  */
 export async function startProfileSync(options: SyncOptions & { userId: string }): Promise<SyncJobResult> {
-  const { accountId, username, postsLimit = 50, includeComments = false, commentsLimit = 0, userId } = options;
+  const { accountId, username, postsLimit = 50, includeComments = false, commentsLimit = 0, userId, sorting = "latest", oldestPostDate, newestPostDate } = options;
 
   // Estimate credits for this sync
   const costEstimate = estimateSyncCost({ postsLimit, includeComments, commentsLimit });
@@ -300,8 +310,16 @@ export async function startProfileSync(options: SyncOptions & { userId: string }
       profiles: [username.replace("@", "")],
       resultsPerPage: postsLimit,
       profileScrapeSections: ["videos"],
-      profileSorting: "latest",
+      profileSorting: sorting,
     };
+
+    // Add date filters if provided
+    if (oldestPostDate) {
+      actorInput.oldestPostDateUnified = oldestPostDate;
+    }
+    if (newestPostDate) {
+      actorInput.newestPostDate = newestPostDate;
+    }
 
     // Add comments if requested
     if (includeComments && commentsLimit > 0) {
@@ -516,9 +534,8 @@ async function getPostsForCommentSync(
 
       const commentsPerPost = config.maxPerPost ?? 100;
 
-      // Calculate how many posts we can afford
-      // Cost per post = (commentsPerPost / 100) * CREDITS.COMMENTS_PER_100 + CREDITS.ACTOR_START_FEE
-      const costPerPost = Math.ceil(commentsPerPost / 100) * CREDITS.COMMENTS_PER_100 + CREDITS.ACTOR_START_FEE;
+      // Calculate how many posts we can afford using per-comment pricing
+      const costPerPost = commentsPerPost * CREDITS.PER_COMMENT;
       const maxPosts = Math.floor(config.creditBudget / costPerPost);
 
       if (maxPosts <= 0) {
@@ -583,6 +600,12 @@ export async function processSyncResults(jobId: number, runId: string): Promise<
     throw new Error(`Sync job ${jobId} not found`);
   }
 
+  // Track items for visibility
+  let itemsReturnedByApify = 0;
+  let itemsProcessed = 0;
+  let itemsSkipped = 0;
+  const skippedReasons: string[] = [];
+
   try {
     // Get the run details to get dataset ID
     const run = await client.run(runId).get();
@@ -592,9 +615,14 @@ export async function processSyncResults(jobId: number, runId: string): Promise<
 
     // Fetch all items from the dataset
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    itemsReturnedByApify = items?.length ?? 0;
+
+    // Log what Apify returned vs what was estimated
+    console.log(`[Sync Job ${jobId}] Apify returned ${itemsReturnedByApify} items (estimated credits: ${job.creditsEstimated})`);
 
     if (!items || items.length === 0) {
-      throw new Error("No data returned from sync");
+      console.warn(`[Sync Job ${jobId}] WARNING: Apify returned 0 items. Run ID: ${runId}`);
+      throw new Error("No data returned from sync - Apify returned 0 items");
     }
 
     const typedItems = items as unknown as TikTokPostData[];
@@ -641,7 +669,12 @@ export async function processSyncResults(jobId: number, runId: string): Promise<
     let commentsCount = 0;
 
     for (const item of typedItems) {
-      if (!item.id) continue;
+      if (!item.id) {
+        itemsSkipped++;
+        skippedReasons.push(`Item missing 'id' field`);
+        continue;
+      }
+      itemsProcessed++;
 
       // Upsert the post
       const existingPost = await db
@@ -724,8 +757,21 @@ export async function processSyncResults(jobId: number, runId: string): Promise<
       }
     }
 
-    // Calculate actual credits used
+    // Calculate actual credits used - per-item pricing
     const actualCredits = calculateActualCredits(postsCount, commentsCount);
+
+    // Log summary for visibility
+    console.log(`[Sync Job ${jobId}] Summary:
+      - Items from Apify: ${itemsReturnedByApify}
+      - Items processed: ${itemsProcessed}
+      - Items skipped: ${itemsSkipped}
+      - Posts saved: ${postsCount}
+      - Comments saved: ${commentsCount}
+      - Credits charged: ${actualCredits} (estimated: ${job.creditsEstimated})`);
+
+    if (itemsSkipped > 0) {
+      console.warn(`[Sync Job ${jobId}] Skipped ${itemsSkipped} items. Reasons: ${skippedReasons.slice(0, 5).join(", ")}${skippedReasons.length > 5 ? "..." : ""}`);
+    }
 
     // Update sync job with results
     await db
@@ -739,7 +785,7 @@ export async function processSyncResults(jobId: number, runId: string): Promise<
       })
       .where(eq(syncJobs.id, jobId));
 
-    // Deduct credits from user balance
+    // Deduct credits from user balance (only charge for what they received)
     await deductCredits(
       job.userId,
       actualCredits,
@@ -752,6 +798,10 @@ export async function processSyncResults(jobId: number, runId: string): Promise<
       commentsCount,
       creditsUsed: actualCredits,
       profileUpdated,
+      itemsReturnedByApify,
+      itemsProcessed,
+      itemsSkipped,
+      skippedReasons: skippedReasons.length > 0 ? skippedReasons.slice(0, 10) : undefined,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error processing results";
@@ -772,17 +822,18 @@ export async function processSyncResults(jobId: number, runId: string): Promise<
 
 /**
  * Calculate actual credits used based on results
+ * Uses per-item pricing: users only pay for what they actually received
  */
 function calculateActualCredits(postsCount: number, commentsCount: number): number {
-  // Base profile cost
+  // Profile sync is FREE
   let credits = CREDITS.PROFILE_SYNC_BASE;
 
-  // Add cost for posts
-  credits += Math.ceil(postsCount / 50) * CREDITS.POSTS_PER_50;
+  // Per-post pricing
+  credits += postsCount * CREDITS.PER_POST;
 
-  // Add cost for comments
+  // Per-comment pricing
   if (commentsCount > 0) {
-    credits += Math.ceil(commentsCount / 100) * CREDITS.COMMENTS_PER_100;
+    credits += Math.round(commentsCount * CREDITS.PER_COMMENT);
   }
 
   return credits;
@@ -838,7 +889,17 @@ export async function getSyncJobStatus(jobId: number): Promise<{
         [job] = await db.select().from(syncJobs).where(eq(syncJobs.id, jobId));
       } catch (error) {
         console.error("Error processing sync results:", error);
-        // processSyncResults already updates job status to failed on error
+        const errorMessage = error instanceof Error ? error.message : "Unknown processing error";
+        // Ensure job status is updated to failed with the error message
+        await db
+          .update(syncJobs)
+          .set({
+            status: "failed",
+            error: errorMessage,
+            completedAt: new Date(),
+          })
+          .where(eq(syncJobs.id, jobId));
+        // Refresh job from database after processing
         [job] = await db.select().from(syncJobs).where(eq(syncJobs.id, jobId));
       }
     } else if (["FAILED", "ABORTED", "TIMED-OUT"].includes(apifyStatus.status)) {

@@ -15,7 +15,7 @@ import {
   Bot,
   Zap,
 } from "lucide-react";
-import { PixelBlastBg } from "@/components/backgrounds/pixel-blast-bg";
+import { LazyPixelBlastBg } from "@/components/backgrounds/lazy-pixel-blast-bg";
 
 export default function Home() {
   return (
@@ -52,7 +52,7 @@ export default function Home() {
         <section className="relative container mx-auto max-w-6xl px-4 py-24 text-center md:py-32">
           {/* PixelBlast as absolute background */}
           <div className="absolute inset-0 z-0 overflow-hidden">
-            <PixelBlastBg
+            <LazyPixelBlastBg
               color="#F59E0B"
               className="h-full w-full"
             />

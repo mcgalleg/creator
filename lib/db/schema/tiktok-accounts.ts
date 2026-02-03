@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, serial, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, serial, boolean, uniqueIndex } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
 export const tiktokAccounts = pgTable("tiktok_accounts", {
@@ -16,4 +16,7 @@ export const tiktokAccounts = pgTable("tiktok_accounts", {
   lastSyncedAt: timestamp("last_synced_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  // Prevent duplicate accounts for the same user
+  uniqueIndex("tiktok_accounts_user_username_idx").on(table.userId, table.username),
+]);

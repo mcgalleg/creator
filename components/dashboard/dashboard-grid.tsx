@@ -16,9 +16,9 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  rectSortingStrategy,
+  useSortable,
 } from "@dnd-kit/sortable";
-import { restrictToParentElement } from "@dnd-kit/modifiers";
+import { CSS } from "@dnd-kit/utilities";
 import { Settings2, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BreakpointLayouts, WidgetPosition } from "@/lib/db/schema/dashboard-layouts";
@@ -49,6 +49,53 @@ const GRID_CONFIG: Record<Breakpoint, { columns: number; gap: number; rowHeight:
   md: { columns: 6, gap: 12, rowHeight: 80 },
   sm: { columns: 6, gap: 8, rowHeight: 60 },
 };
+
+// Sortable wrapper for grid items - this ensures drag transforms are applied to the grid cell
+interface SortableGridItemProps {
+  id: string;
+  disabled: boolean;
+  gridColumn: number;
+  gridRow: number;
+  minHeight: number;
+  children: React.ReactNode;
+}
+
+function SortableGridItem({
+  id,
+  disabled,
+  gridColumn,
+  gridRow,
+  minHeight,
+  children,
+}: SortableGridItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id,
+    disabled,
+  });
+
+  const style: React.CSSProperties = {
+    gridColumn: `span ${gridColumn}`,
+    gridRow: `span ${gridRow}`,
+    minHeight,
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {children}
+    </div>
+  );
+}
 
 export function DashboardGrid({
   layout,
@@ -167,14 +214,12 @@ export function DashboardGrid({
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        modifiers={[restrictToParentElement]}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
         <SortableContext
           items={currentLayout.map((w) => w.id)}
-          strategy={rectSortingStrategy}
         >
           <div
             className="relative grid"
@@ -185,13 +230,13 @@ export function DashboardGrid({
             }}
           >
             {currentLayout.map((widget) => (
-              <div
+              <SortableGridItem
                 key={widget.id}
-                style={{
-                  gridColumn: `span ${widget.w}`,
-                  gridRow: `span ${widget.h}`,
-                  minHeight: widget.h * gridConfig.rowHeight,
-                }}
+                id={widget.id}
+                disabled={!isEditing}
+                gridColumn={widget.w}
+                gridRow={widget.h}
+                minHeight={widget.h * gridConfig.rowHeight}
               >
                 <DashboardWidget
                   widget={widget}
@@ -204,7 +249,7 @@ export function DashboardGrid({
                   onDelete={onWidgetDelete}
                   onConfigChange={onWidgetConfigChange}
                 />
-              </div>
+              </SortableGridItem>
             ))}
           </div>
         </SortableContext>

@@ -34,10 +34,13 @@ export function SyncStatus({ job, accountUsername }: SyncStatusProps) {
     // Only show toast when status changes
     if (prevStatus && prevStatus !== currentStatus) {
       if (currentStatus === "completed") {
-        toast.success("Sync completed successfully!", {
+        const isCommentSync = job.type === "comments";
+        toast.success(isCommentSync ? "Comment sync completed!" : "Sync completed successfully!", {
           description: accountUsername
-            ? `@${accountUsername} data has been updated.`
-            : `Synced ${job.postsCount ?? 0} posts.`,
+            ? `@${accountUsername} ${isCommentSync ? "comments have" : "data has"} been updated.`
+            : isCommentSync
+              ? `Synced ${job.commentsCount ?? 0} comments.`
+              : `Synced ${job.postsCount ?? 0} posts.`,
         });
       } else if (currentStatus === "failed") {
         toast.error("Sync failed", {
@@ -100,6 +103,9 @@ export function SyncStatus({ job, accountUsername }: SyncStatusProps) {
 
   const getProgressDescription = () => {
     if (job.status === "running") {
+      if (job.type === "comments") {
+        return "Fetching comments for selected posts...";
+      }
       if (job.type === "full") {
         return "Fetching profile, posts, and comments...";
       }
@@ -133,7 +139,7 @@ export function SyncStatus({ job, accountUsername }: SyncStatusProps) {
             <CardTitle className="text-base">{getStatusText()}</CardTitle>
           </div>
           <Badge variant="secondary">
-            {job.type === "full" ? "Full Sync" : "Posts Sync"}
+            {job.type === "comments" ? "Comment Sync" : job.type === "full" ? "Full Sync" : "Posts Sync"}
           </Badge>
         </div>
         {accountUsername && (
@@ -172,7 +178,7 @@ export function SyncStatus({ job, accountUsername }: SyncStatusProps) {
           </div>
 
           {/* Comments Count */}
-          {job.type === "full" && (
+          {(job.type === "full" || job.type === "comments") && (
             <div className="flex items-center gap-2">
               <div className="size-8 rounded-full bg-muted flex items-center justify-center">
                 <MessageSquare className="size-4 text-muted-foreground" />
