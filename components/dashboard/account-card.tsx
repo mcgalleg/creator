@@ -273,17 +273,7 @@ export function AccountCard({
               <Skeleton className="h-4 w-20" />
             ) : (
               <span className="text-sm text-muted-foreground tabular-nums whitespace-nowrap">
-                {postsSyncing ? (
-                  <span className="flex items-center gap-1.5">
-                    <Loader2 className="size-3 animate-spin" />
-                    Importing...
-                  </span>
-                ) : (
-                  <>
-                    {formatNumber(syncedPosts)}/{formatNumber(totalPosts)}{" "}
-                    synced
-                  </>
-                )}
+                {formatNumber(syncedPosts)}/{formatNumber(totalPosts)} synced
               </span>
             )}
             <Button
@@ -293,10 +283,7 @@ export function AccountCard({
               disabled={isSyncing || isDisconnecting}
             >
               {postsSyncing ? (
-                <>
-                  <Loader2 className="size-3 animate-spin" />
-                  Importing
-                </>
+                "Importing"
               ) : syncedPosts > 0 ? (
                 <>
                   <Download className="size-3" />
@@ -336,14 +323,7 @@ export function AccountCard({
               </span>
             ) : (
               <span className="text-sm text-muted-foreground tabular-nums whitespace-nowrap">
-                {commentsSyncing ? (
-                  <span className="flex items-center gap-1.5">
-                    <Loader2 className="size-3 animate-spin" />
-                    Syncing...
-                  </span>
-                ) : (
-                  <>{formatNumber(syncedComments)} synced</>
-                )}
+                {formatNumber(syncedComments)} synced
               </span>
             )}
             <Button
@@ -353,10 +333,7 @@ export function AccountCard({
               disabled={isSyncing || isDisconnecting || syncedPosts === 0}
             >
               {commentsSyncing ? (
-                <>
-                  <Loader2 className="size-3 animate-spin" />
-                  Syncing
-                </>
+                "Syncing"
               ) : (
                 <>
                   <MessageSquare className="size-3" />
