@@ -20,9 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   MessageCircle,
   TrendingUp,
@@ -30,22 +28,13 @@ import {
   Wallet,
   AlertCircle,
   Loader2,
+  ListChecks,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { SyncJob } from "@/hooks/use-accounts";
+import { PostSelectionSheet } from "./post-selection-sheet";
 
 type SyncMode = "selection" | "top_performers" | "date_range" | "budget";
-
-interface Post {
-  id: number;
-  tiktokId: string;
-  description: string;
-  likes: number;
-  comments: number;
-  shares: number;
-  plays: number;
-  postedAt: string;
-}
 
 interface CommentSyncDialogProps {
   isOpen: boolean;
@@ -76,22 +65,13 @@ export function CommentSyncDialog({
   const [creditBudget, setCreditBudget] = useState(100);
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
-  const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
+  const [selectedPostIds, setSelectedPostIds] = useState<Set<string>>(new Set());
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loadingPosts, setLoadingPosts] = useState(false);
   const [costEstimate, setCostEstimate] = useState<CostEstimate | null>(null);
   const [syncing, setSyncing] = useState(false);
 
   const hasActiveCommentSync = (activeCommentJobs?.length ?? 0) > 0;
-
-  // Fetch posts when in selection mode
-  useEffect(() => {
-    if (isOpen && mode === "selection" && posts.length === 0) {
-      fetchPosts();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only fetch on mode change to selection
-  }, [isOpen, mode, posts.length]);
 
   // Calculate cost estimate whenever config changes
   useEffect(() => {
@@ -100,27 +80,12 @@ export function CommentSyncDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Config values are the dependencies we care about
   }, [isOpen, mode, topCount, maxPerPost, creditBudget, selectedPostIds, dateStart, dateEnd]);
 
-  const fetchPosts = async () => {
-    setLoadingPosts(true);
-    try {
-      const response = await fetch(`/api/dashboard/recent-posts?accountId=${accountId}&limit=50`);
-      const data = await response.json();
-      if (response.ok && data.posts) {
-        setPosts(data.posts);
-      }
-    } catch (error) {
-      console.error("Failed to fetch posts:", error);
-    } finally {
-      setLoadingPosts(false);
-    }
-  };
-
   const calculateEstimate = () => {
     let postCount = 0;
 
     switch (mode) {
       case "selection":
-        postCount = selectedPostIds.length;
+        postCount = selectedPostIds.size;
         break;
       case "top_performers":
         postCount = topCount;
@@ -163,7 +128,7 @@ export function CommentSyncDialog({
 
       switch (mode) {
         case "selection":
-          config.selectedPostIds = selectedPostIds;
+          config.selectedPostIds = Array.from(selectedPostIds);
           break;
         case "top_performers":
           config.topCount = topCount;
@@ -206,14 +171,6 @@ export function CommentSyncDialog({
     }
   };
 
-  const togglePostSelection = (tiktokId: string) => {
-    setSelectedPostIds((prev) =>
-      prev.includes(tiktokId)
-        ? prev.filter((id) => id !== tiktokId)
-        : [...prev, tiktokId]
-    );
-  };
-
   const formatNumber = (num: number): string => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
@@ -221,249 +178,245 @@ export function CommentSyncDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MessageCircle className="size-5" />
-            Sync Comments
-          </DialogTitle>
-          <DialogDescription>
-            Configure how to sync comments for @{accountUsername}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="size-5" />
+              Sync Comments
+            </DialogTitle>
+            <DialogDescription>
+              Configure how to sync comments for @{accountUsername}
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* Active Sync Banner */}
-        {hasActiveCommentSync && (
-          <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-4 space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400">
-              <Loader2 className="size-4 animate-spin" />
-              Comment sync in progress
-            </div>
-            <p className="text-sm text-muted-foreground">
-              A comment sync is currently running. It may take several minutes to complete.
-            </p>
-          </div>
-        )}
-
-        <div className="space-y-6 py-4">
-          {/* Sync Mode Selection */}
-          <RadioGroup
-            value={mode}
-            onValueChange={(value) => setMode(value as SyncMode)}
-            className="space-y-3"
-          >
-            <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-              <RadioGroupItem value="top_performers" id="top_performers" className="mt-1" />
-              <div className="flex-1">
-                <Label htmlFor="top_performers" className="flex items-center gap-2 cursor-pointer">
-                  <TrendingUp className="size-4 text-green-500" />
-                  Top Performers
-                </Label>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Sync comments from your highest engagement posts
-                </p>
-                {mode === "top_performers" && (
-                  <div className="mt-3 flex items-center gap-2">
-                    <Label className="text-sm">Top</Label>
-                    <Select
-                      value={topCount.toString()}
-                      onValueChange={(v) => setTopCount(parseInt(v))}
-                    >
-                      <SelectTrigger className="w-20 h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[5, 10, 15, 20, 25, 50].map((n) => (
-                          <SelectItem key={n} value={n.toString()}>
-                            {n}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <span className="text-sm text-muted-foreground">posts</span>
-                  </div>
-                )}
+          {/* Active Sync Banner */}
+          {hasActiveCommentSync && (
+            <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+                <Loader2 className="size-4 animate-spin" />
+                Comment sync in progress
               </div>
-            </div>
-
-            <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-              <RadioGroupItem value="selection" id="selection" className="mt-1" />
-              <div className="flex-1">
-                <Label htmlFor="selection" className="flex items-center gap-2 cursor-pointer">
-                  <MessageCircle className="size-4 text-blue-500" />
-                  Select Posts
-                </Label>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Choose specific posts to sync comments for
-                </p>
-                {mode === "selection" && (
-                  <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
-                    {loadingPosts ? (
-                      <div className="space-y-2">
-                        {[1, 2, 3].map((i) => (
-                          <Skeleton key={i} className="h-10 w-full" />
-                        ))}
-                      </div>
-                    ) : posts.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No posts available</p>
-                    ) : (
-                      posts.map((post) => (
-                        <div
-                          key={post.tiktokId}
-                          className="flex items-center gap-2 p-2 rounded border hover:bg-muted/50"
-                        >
-                          <Checkbox
-                            id={post.tiktokId}
-                            checked={selectedPostIds.includes(post.tiktokId)}
-                            onCheckedChange={() => togglePostSelection(post.tiktokId)}
-                          />
-                          <Label
-                            htmlFor={post.tiktokId}
-                            className="flex-1 text-sm cursor-pointer truncate"
-                          >
-                            {post.description || "No description"}
-                          </Label>
-                          <Badge variant="secondary" className="text-xs">
-                            {formatNumber(post.comments)} comments
-                          </Badge>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-              <RadioGroupItem value="date_range" id="date_range" className="mt-1" />
-              <div className="flex-1">
-                <Label htmlFor="date_range" className="flex items-center gap-2 cursor-pointer">
-                  <Calendar className="size-4 text-purple-500" />
-                  Date Range
-                </Label>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Sync comments for posts within a date range
-                </p>
-                {mode === "date_range" && (
-                  <div className="mt-3 flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm w-12">From</Label>
-                      <Input
-                        type="date"
-                        value={dateStart}
-                        onChange={(e) => setDateStart(e.target.value)}
-                        className="h-8"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm w-12">To</Label>
-                      <Input
-                        type="date"
-                        value={dateEnd}
-                        onChange={(e) => setDateEnd(e.target.value)}
-                        className="h-8"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-              <RadioGroupItem value="budget" id="budget" className="mt-1" />
-              <div className="flex-1">
-                <Label htmlFor="budget" className="flex items-center gap-2 cursor-pointer">
-                  <Wallet className="size-4 text-amber-500" />
-                  Budget Mode
-                </Label>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Set a credit limit and prioritize high-engagement posts
-                </p>
-                {mode === "budget" && (
-                  <div className="mt-3 flex items-center gap-2">
-                    <Label className="text-sm">Max</Label>
-                    <Input
-                      type="number"
-                      value={creditBudget}
-                      onChange={(e) => setCreditBudget(parseInt(e.target.value) || 0)}
-                      className="w-24 h-8"
-                      min={15}
-                    />
-                    <span className="text-sm text-muted-foreground">credits</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </RadioGroup>
-
-          {/* Max Comments Per Post */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Max comments per post</Label>
-            <Select
-              value={maxPerPost.toString()}
-              onValueChange={(v) => setMaxPerPost(parseInt(v))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[50, 100, 200, 500].map((n) => (
-                  <SelectItem key={n} value={n.toString()}>
-                    {n} comments
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Cost Estimate */}
-          {costEstimate && (
-            <div className="rounded-lg bg-muted p-4 space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Posts to sync</span>
-                <span className="font-medium">{costEstimate.postCount}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Est. comments</span>
-                <span className="font-medium">~{formatNumber(costEstimate.estimatedComments)}</span>
-              </div>
-              <div className="border-t pt-2 flex items-center justify-between">
-                <span className="font-medium">Estimated Cost</span>
-                <Badge variant="secondary" className="text-base">
-                  {costEstimate.credits} credits
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground flex items-start gap-1">
-                <AlertCircle className="size-3 mt-0.5 shrink-0" />
-                15 credits per 100 comments. Actual cost may vary based on comment availability.
+              <p className="text-sm text-muted-foreground">
+                A comment sync is currently running. It may take several minutes to complete.
               </p>
             </div>
           )}
-        </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={syncing}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSync}
-            disabled={syncing || !costEstimate || costEstimate.postCount === 0 || hasActiveCommentSync}
-          >
-            {syncing ? (
-              <>
-                <Loader2 className="size-4 mr-2 animate-spin" />
-                Starting...
-              </>
-            ) : (
-              <>
-                <MessageCircle className="size-4 mr-2" />
-                Sync Comments
-              </>
+          <div className="space-y-6 py-4">
+            {/* Sync Mode Selection */}
+            <RadioGroup
+              value={mode}
+              onValueChange={(value) => setMode(value as SyncMode)}
+              className="space-y-3"
+            >
+              <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+                <RadioGroupItem value="top_performers" id="top_performers" className="mt-1" />
+                <div className="flex-1">
+                  <Label htmlFor="top_performers" className="flex items-center gap-2 cursor-pointer">
+                    <TrendingUp className="size-4 text-green-500" />
+                    Top Performers
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Sync comments from your highest engagement posts
+                  </p>
+                  {mode === "top_performers" && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <Label className="text-sm">Top</Label>
+                      <Select
+                        value={topCount.toString()}
+                        onValueChange={(v) => setTopCount(parseInt(v))}
+                      >
+                        <SelectTrigger className="w-20 h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[5, 10, 15, 20, 25, 50].map((n) => (
+                            <SelectItem key={n} value={n.toString()}>
+                              {n}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-sm text-muted-foreground">posts</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+                <RadioGroupItem value="selection" id="selection" className="mt-1" />
+                <div className="flex-1">
+                  <Label htmlFor="selection" className="flex items-center gap-2 cursor-pointer">
+                    <ListChecks className="size-4 text-blue-500" />
+                    Select Posts
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Choose specific posts to sync comments for
+                  </p>
+                  {mode === "selection" && (
+                    <div className="mt-3 space-y-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPickerOpen(true)}
+                      >
+                        Choose Posts
+                        {selectedPostIds.size > 0 && (
+                          <Badge variant="secondary" className="ml-2">
+                            {selectedPostIds.size} selected
+                          </Badge>
+                        )}
+                      </Button>
+                      {selectedPostIds.size > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {selectedPostIds.size} post{selectedPostIds.size !== 1 ? "s" : ""} selected for comment sync
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+                <RadioGroupItem value="date_range" id="date_range" className="mt-1" />
+                <div className="flex-1">
+                  <Label htmlFor="date_range" className="flex items-center gap-2 cursor-pointer">
+                    <Calendar className="size-4 text-purple-500" />
+                    Date Range
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Sync comments for posts within a date range
+                  </p>
+                  {mode === "date_range" && (
+                    <div className="mt-3 flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm w-12">From</Label>
+                        <Input
+                          type="date"
+                          value={dateStart}
+                          onChange={(e) => setDateStart(e.target.value)}
+                          className="h-8"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm w-12">To</Label>
+                        <Input
+                          type="date"
+                          value={dateEnd}
+                          onChange={(e) => setDateEnd(e.target.value)}
+                          className="h-8"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+                <RadioGroupItem value="budget" id="budget" className="mt-1" />
+                <div className="flex-1">
+                  <Label htmlFor="budget" className="flex items-center gap-2 cursor-pointer">
+                    <Wallet className="size-4 text-amber-500" />
+                    Budget Mode
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Set a credit limit and prioritize high-engagement posts
+                  </p>
+                  {mode === "budget" && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <Label className="text-sm">Max</Label>
+                      <Input
+                        type="number"
+                        value={creditBudget}
+                        onChange={(e) => setCreditBudget(parseInt(e.target.value) || 0)}
+                        className="w-24 h-8"
+                        min={15}
+                      />
+                      <span className="text-sm text-muted-foreground">credits</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </RadioGroup>
+
+            {/* Max Comments Per Post */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Max comments per post</Label>
+              <Select
+                value={maxPerPost.toString()}
+                onValueChange={(v) => setMaxPerPost(parseInt(v))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[50, 100, 200, 500].map((n) => (
+                    <SelectItem key={n} value={n.toString()}>
+                      {n} comments
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Cost Estimate */}
+            {costEstimate && (
+              <div className="rounded-lg bg-muted p-4 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Posts to sync</span>
+                  <span className="font-medium">{costEstimate.postCount}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Est. comments</span>
+                  <span className="font-medium">~{formatNumber(costEstimate.estimatedComments)}</span>
+                </div>
+                <div className="border-t pt-2 flex items-center justify-between">
+                  <span className="font-medium">Estimated Cost</span>
+                  <Badge variant="secondary" className="text-base">
+                    {costEstimate.credits} credits
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground flex items-start gap-1">
+                  <AlertCircle className="size-3 mt-0.5 shrink-0" />
+                  15 credits per 100 comments. Actual cost may vary based on comment availability.
+                </p>
+              </div>
             )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose} disabled={syncing}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSync}
+              disabled={syncing || !costEstimate || costEstimate.postCount === 0 || hasActiveCommentSync}
+            >
+              {syncing ? (
+                <>
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  Starting...
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="size-4 mr-2" />
+                  Sync Comments
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <PostSelectionSheet
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        accountId={accountId}
+        selectedTiktokIds={selectedPostIds}
+        onConfirm={setSelectedPostIds}
+      />
+    </>
   );
 }

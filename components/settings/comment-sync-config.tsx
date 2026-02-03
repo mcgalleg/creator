@@ -22,8 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { PostPickerModal, type Post } from "./post-picker-modal";
+import { PostSelectionSheet } from "@/components/dashboard/post-selection-sheet";
 import {
   MessageCircle,
   ListChecks,
@@ -49,12 +48,16 @@ function calculateCreditCost(comments: number): number {
   return Math.ceil(comments / 100) * CREDITS_PER_100_COMMENTS;
 }
 
-export function CommentSyncConfig() {
+interface CommentSyncConfigProps {
+  accountId: number;
+}
+
+export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
   // Sync mode state
   const [syncMode, setSyncMode] = React.useState<SyncMode>("selection");
 
   // Selection mode state
-  const [selectedPostIds, setSelectedPostIds] = React.useState<number[]>([]);
+  const [selectedPostIds, setSelectedPostIds] = React.useState<Set<string>>(new Set());
   const [isPickerOpen, setIsPickerOpen] = React.useState(false);
 
   // Top performers mode state
@@ -68,100 +71,35 @@ export function CommentSyncConfig() {
   // Budget mode state
   const [creditBudget, setCreditBudget] = React.useState<string>("100");
 
-  // Posts data
-  const [posts, setPosts] = React.useState<Post[]>([]);
-  const [isLoadingPosts, setIsLoadingPosts] = React.useState(true);
   const [isSyncing, setIsSyncing] = React.useState(false);
 
-  // Fetch posts on mount
-  React.useEffect(() => {
-    async function fetchPosts() {
-      try {
-        const response = await fetch("/api/dashboard/recent-posts?limit=100");
-        if (response.ok) {
-          const data = await response.json();
-          setPosts(data.posts || []);
-        }
-      } catch (error) {
-        console.error("Failed to fetch posts:", error);
-      } finally {
-        setIsLoadingPosts(false);
-      }
-    }
-
-    fetchPosts();
-  }, []);
-
   // Calculate cost estimate based on sync mode
+  const maxComments = parseInt(maxCommentsPerPost) || 100;
   const costEstimate = React.useMemo((): CostEstimate => {
     let postsCount = 0;
     let estimatedComments = 0;
 
     switch (syncMode) {
       case "selection": {
-        const selectedPosts = posts.filter((p) => selectedPostIds.includes(p.id));
-        postsCount = selectedPosts.length;
-        estimatedComments = selectedPosts.reduce((sum, p) => sum + p.comments, 0);
+        postsCount = selectedPostIds.size;
+        estimatedComments = postsCount * maxComments;
         break;
       }
       case "top-performers": {
-        const topCount = parseInt(topN) || 10;
-        const sortedPosts = [...posts]
-          .sort((a, b) => {
-            const aEngagement = a.likes + a.comments + a.shares;
-            const bEngagement = b.likes + b.comments + b.shares;
-            return bEngagement - aEngagement;
-          })
-          .slice(0, topCount);
-        postsCount = sortedPosts.length;
-        estimatedComments = sortedPosts.reduce((sum, p) => sum + p.comments, 0);
+        postsCount = parseInt(topN) || 10;
+        estimatedComments = postsCount * maxComments;
         break;
       }
       case "date-range": {
-        const start = startDate ? new Date(startDate) : null;
-        const end = endDate ? new Date(endDate) : null;
-        const maxComments = parseInt(maxCommentsPerPost) || 100;
-
-        const filteredPosts = posts.filter((p) => {
-          if (!p.postedAt) return false;
-          const postDate = new Date(p.postedAt);
-          if (start && postDate < start) return false;
-          if (end && postDate > end) return false;
-          return true;
-        });
-
-        postsCount = filteredPosts.length;
-        estimatedComments = filteredPosts.reduce(
-          (sum, p) => sum + Math.min(p.comments, maxComments),
-          0
-        );
+        // Estimate — exact count requires server data
+        postsCount = 10;
+        estimatedComments = postsCount * maxComments;
         break;
       }
       case "budget": {
         const budget = parseInt(creditBudget) || 0;
-        const maxComments = Math.floor((budget / CREDITS_PER_100_COMMENTS) * 100);
-
-        // Prioritize posts by engagement
-        const sortedPosts = [...posts].sort((a, b) => {
-          const aEngagement = a.likes + a.comments + a.shares;
-          const bEngagement = b.likes + b.comments + b.shares;
-          return bEngagement - aEngagement;
-        });
-
-        let remainingComments = maxComments;
-        let count = 0;
-        let totalComments = 0;
-
-        for (const post of sortedPosts) {
-          if (remainingComments <= 0) break;
-          const commentsToFetch = Math.min(post.comments, remainingComments);
-          remainingComments -= commentsToFetch;
-          totalComments += commentsToFetch;
-          count++;
-        }
-
-        postsCount = count;
-        estimatedComments = totalComments;
+        estimatedComments = Math.floor((budget / CREDITS_PER_100_COMMENTS) * 100);
+        postsCount = Math.ceil(estimatedComments / maxComments);
         break;
       }
     }
@@ -171,7 +109,7 @@ export function CommentSyncConfig() {
       estimatedComments,
       creditCost: calculateCreditCost(estimatedComments),
     };
-  }, [syncMode, posts, selectedPostIds, topN, startDate, endDate, maxCommentsPerPost, creditBudget]);
+  }, [syncMode, selectedPostIds, topN, maxComments, creditBudget]);
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -184,10 +122,6 @@ export function CommentSyncConfig() {
     } finally {
       setIsSyncing(false);
     }
-  };
-
-  const handlePickerConfirm = () => {
-    setIsPickerOpen(false);
   };
 
   const canSync =
@@ -236,22 +170,12 @@ export function CommentSyncConfig() {
                       variant="outline"
                       size="sm"
                       onClick={() => setIsPickerOpen(true)}
-                      disabled={isLoadingPosts}
                     >
-                      {isLoadingPosts ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Loading posts...
-                        </>
-                      ) : (
-                        <>
-                          Select Posts
-                          {selectedPostIds.length > 0 && (
-                            <Badge variant="secondary" className="ml-2">
-                              {selectedPostIds.length} selected
-                            </Badge>
-                          )}
-                        </>
+                      Select Posts
+                      {selectedPostIds.size > 0 && (
+                        <Badge variant="secondary" className="ml-2">
+                          {selectedPostIds.size} selected
+                        </Badge>
                       )}
                     </Button>
                   </div>
@@ -415,32 +339,24 @@ export function CommentSyncConfig() {
               Cost Estimation
             </h4>
 
-            {isLoadingPosts ? (
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-48" />
-                <Skeleton className="h-4 w-36" />
-                <Skeleton className="h-4 w-40" />
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Posts</p>
+                <p className="text-lg font-semibold">{costEstimate.postsCount}</p>
               </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Posts</p>
-                  <p className="text-lg font-semibold">{costEstimate.postsCount}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Est. Comments</p>
-                  <p className="text-lg font-semibold">
-                    {costEstimate.estimatedComments.toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Credit Cost</p>
-                  <p className="text-lg font-semibold text-primary">
-                    {costEstimate.creditCost.toLocaleString()}
-                  </p>
-                </div>
+              <div>
+                <p className="text-muted-foreground">Est. Comments</p>
+                <p className="text-lg font-semibold">
+                  {costEstimate.estimatedComments.toLocaleString()}
+                </p>
               </div>
-            )}
+              <div>
+                <p className="text-muted-foreground">Credit Cost</p>
+                <p className="text-lg font-semibold text-primary">
+                  {costEstimate.creditCost.toLocaleString()}
+                </p>
+              </div>
+            </div>
 
             <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
               <AlertCircle className="h-3 w-3" />
@@ -475,14 +391,12 @@ export function CommentSyncConfig() {
         </CardFooter>
       </Card>
 
-      <PostPickerModal
+      <PostSelectionSheet
         open={isPickerOpen}
         onOpenChange={setIsPickerOpen}
-        posts={posts}
-        selectedPostIds={selectedPostIds}
-        onSelectionChange={setSelectedPostIds}
-        onConfirm={handlePickerConfirm}
-        isLoading={isLoadingPosts}
+        accountId={accountId}
+        selectedTiktokIds={selectedPostIds}
+        onConfirm={setSelectedPostIds}
       />
     </>
   );

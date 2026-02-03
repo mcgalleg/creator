@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { posts, tiktokAccounts } from "@/lib/db/schema";
-import { eq, and, desc, count, gte, sql } from "drizzle-orm";
+import { eq, and, desc, asc, count, gte, sql, ilike } from "drizzle-orm";
 
 type Period = "7d" | "30d" | "90d";
 
@@ -23,6 +23,9 @@ function getStartDate(period: Period): Date {
  * - offset (optional): pagination offset (default: 0)
  * - allPosts (optional): when "true" and accountId is provided, returns ALL posts
  *   for the account without date filtering, ordered by engagement descending
+ * - search (optional): filter posts by description (case-insensitive)
+ * - sortBy (optional): column to sort by - "plays", "likes", "comments", "shares", "saves", "postedAt", "engagementRate"
+ * - sortDir (optional): sort direction - "asc" or "desc" (default: "desc")
  */
 export async function GET(request: NextRequest) {
   try {
@@ -38,6 +41,9 @@ export async function GET(request: NextRequest) {
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
     const allPostsParam = searchParams.get("allPosts");
+    const searchParam = searchParams.get("search");
+    const sortByParam = searchParams.get("sortBy");
+    const sortDirParam = searchParams.get("sortDir");
 
     // Validate accountId
     if (!accountIdParam) {
@@ -100,13 +106,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build the where clause: skip date filter when allPosts=true
-    const whereClause = showAllPosts
-      ? eq(posts.accountId, accountId)
-      : and(
-          eq(posts.accountId, accountId),
-          gte(posts.postedAt, startDate)
-        );
+    // Build the where clause from an array of conditions
+    const conditions = [eq(posts.accountId, accountId)];
+
+    if (!showAllPosts) {
+      conditions.push(gte(posts.postedAt, startDate));
+    }
+
+    if (searchParam && searchParam.trim()) {
+      conditions.push(ilike(posts.description, `%${searchParam.trim()}%`));
+    }
+
+    const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
 
     // Get total count for pagination
     const [totalResult] = await db
@@ -116,11 +127,33 @@ export async function GET(request: NextRequest) {
 
     const total = totalResult?.count ?? 0;
 
-    // Order by engagement (likes + comments + shares + saves) desc when showing all posts,
-    // otherwise order by postedAt desc for the default recent-posts behavior
-    const orderClause = showAllPosts
-      ? desc(sql`COALESCE(${posts.likes}, 0) + COALESCE(${posts.comments}, 0) + COALESCE(${posts.shares}, 0) + COALESCE(${posts.saves}, 0)`)
-      : desc(posts.postedAt);
+    // Determine sort direction
+    const dirFn = sortDirParam === "asc" ? asc : desc;
+
+    // Determine sort column
+    const validSortColumns = ["plays", "likes", "comments", "shares", "saves", "postedAt", "engagementRate"] as const;
+    const sortBy = sortByParam && validSortColumns.includes(sortByParam as typeof validSortColumns[number])
+      ? (sortByParam as typeof validSortColumns[number])
+      : null;
+
+    let orderClause;
+    if (sortBy) {
+      const engagementExpr = sql`COALESCE(${posts.likes}, 0) + COALESCE(${posts.comments}, 0) + COALESCE(${posts.shares}, 0) + COALESCE(${posts.saves}, 0)`;
+      const sortExpr = {
+        plays: posts.plays,
+        likes: posts.likes,
+        comments: posts.comments,
+        shares: posts.shares,
+        saves: posts.saves,
+        postedAt: posts.postedAt,
+        engagementRate: sql`CASE WHEN COALESCE(${posts.plays}, 0) > 0 THEN (${engagementExpr})::float / ${posts.plays} ELSE 0 END`,
+      }[sortBy];
+      orderClause = dirFn(sortExpr);
+    } else if (showAllPosts) {
+      orderClause = desc(sql`COALESCE(${posts.likes}, 0) + COALESCE(${posts.comments}, 0) + COALESCE(${posts.shares}, 0) + COALESCE(${posts.saves}, 0)`);
+    } else {
+      orderClause = desc(posts.postedAt);
+    }
 
     // Get posts with pagination
     const recentPosts = await db
