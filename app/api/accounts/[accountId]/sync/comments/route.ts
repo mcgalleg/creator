@@ -5,7 +5,7 @@ import { tiktokAccounts, syncJobs } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import {
   startSync,
-  estimateCommentSyncCost,
+  calculateEstimate,
 } from "@/lib/services/sync-service";
 import type { SyncConfigSchema } from "@/lib/db/schema/sync-jobs";
 import { checkCredits } from "@/lib/services/credit-service";
@@ -131,32 +131,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         break;
     }
 
-    // Estimate credits based on config
-    let estimatedPostCount: number;
-    switch (mode) {
-      case "selection":
-        estimatedPostCount = selectedPostIds.length;
-        break;
-      case "top_performers":
-        estimatedPostCount = topCount ?? 10;
-        break;
-      case "date_range":
-        estimatedPostCount = 20;
-        break;
-      case "budget": {
-        const commentsPerPost = syncConfig.maxCommentsPerPost ?? 100;
-        const costPerPost = commentsPerPost * 0.15;
-        estimatedPostCount = Math.floor(creditBudget / costPerPost);
-        break;
-      }
-      default:
-        estimatedPostCount = 10;
-    }
-
-    const costEstimate = estimateCommentSyncCost({
-      postCount: estimatedPostCount,
-      commentsPerPost: syncConfig.maxCommentsPerPost ?? 100,
-    });
+    // Estimate credits using the shared estimation logic (queries actual comment counts from DB)
+    const costEstimate = await calculateEstimate("comments", syncConfig, accountIdNum);
 
     // For budget mode, cap at the specified budget
     const creditsToCheck = mode === "budget"
@@ -193,7 +169,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       description: costEstimate.description,
       config: {
         mode,
-        postCount: estimatedPostCount,
         maxPerPost: syncConfig.maxCommentsPerPost,
       },
     });

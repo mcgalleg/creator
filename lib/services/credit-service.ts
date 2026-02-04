@@ -1,29 +1,9 @@
 import { db } from "@/lib/db";
 import { users, creditTransactions } from "@/lib/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
-
-// Credit Pricing (1 credit = $0.01)
-export const CREDIT_PRICING = {
-  basic_sync: {
-    credits: 25,
-    description: "Basic sync (profile + 50 posts)",
-  },
-  standard_sync: {
-    credits: 50,
-    description: "Standard sync (profile + 100 posts)",
-  },
-  comments: {
-    credits: 15,
-    description: "Comments (per 100)",
-  },
-  full_sync: {
-    credits: 125,
-    description: "Full sync (profile + 100 posts + 500 comments)",
-  },
-} as const;
+import { CREDIT_PRICING_DISPLAY } from "@/lib/credits";
 
 export type CreditTransactionType =
-  | "sync_profile"
   | "sync_posts"
   | "sync_comments"
   | "credit_hold"
@@ -65,55 +45,7 @@ export async function checkCredits(
 }
 
 /**
- * Deduct credits from user balance
- * Throws error if insufficient credits
- */
-export async function deductCredits(
-  userId: string,
-  amount: number,
-  type: "sync_profile" | "sync_posts" | "sync_comments",
-  description: string
-): Promise<number> {
-  // No-op for zero or negative amounts
-  if (!amount || amount <= 0) {
-    return getUserCredits(userId);
-  }
-
-  // Check sufficient balance
-  const { sufficient, balance } = await checkCredits(userId, amount);
-  if (!sufficient) {
-    throw new Error(
-      `Insufficient credits. Balance: ${balance}, Required: ${amount}`
-    );
-  }
-
-  // Update user balance (decrement)
-  const updateResult = await db
-    .update(users)
-    .set({
-      creditBalance: sql`${users.creditBalance} - ${amount}`,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId))
-    .returning({ creditBalance: users.creditBalance });
-
-  if (updateResult.length === 0) {
-    throw new Error("Failed to update user balance");
-  }
-
-  // Insert credit transaction record with negative amount
-  await db.insert(creditTransactions).values({
-    userId,
-    amount: -amount, // Negative for deductions
-    type,
-    description,
-  });
-
-  return updateResult[0].creditBalance;
-}
-
-/**
- * Add credits to user balance
+ * Add credits to user balance (used by purchase flow)
  */
 export async function addCredits(
   userId: string,
@@ -337,5 +269,5 @@ export async function getCreditHistory(
  * Get credit pricing table for display in UI
  */
 export function getCreditPricing() {
-  return CREDIT_PRICING;
+  return CREDIT_PRICING_DISPLAY;
 }

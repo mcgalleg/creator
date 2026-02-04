@@ -1,0 +1,41 @@
+// ─── Credit Rates (single source of truth) ──────────────────────────────────
+
+export const CREDIT_RATES = {
+  PER_POST: 1,
+  PER_COMMENT: 0.15,
+  PROFILE_SYNC: 0,
+} as const;
+
+// ─── Calculation Helpers ─────────────────────────────────────────────────────
+// All helpers use Math.round(n * rate) — the per-item method that matches
+// how the backend charges users during sync finalization.
+
+export function calculateCommentCredits(count: number): number {
+  return Math.max(0, Math.round(count * CREDIT_RATES.PER_COMMENT));
+}
+
+export function calculatePostCredits(count: number): number {
+  return Math.max(0, Math.round(count * CREDIT_RATES.PER_POST));
+}
+
+export function calculateSyncCredits(posts: number, comments: number): number {
+  return calculatePostCredits(posts) + calculateCommentCredits(comments);
+}
+
+// ─── Pricing Display ─────────────────────────────────────────────────────────
+// Per-item rates for UI display
+
+export const CREDIT_PRICING_DISPLAY = {
+  posts: {
+    rate: CREDIT_RATES.PER_POST,
+    description: "Per post imported",
+  },
+  comments: {
+    rate: CREDIT_RATES.PER_COMMENT,
+    description: "Per comment synced",
+  },
+  profile: {
+    rate: CREDIT_RATES.PROFILE_SYNC,
+    description: "Profile sync (free)",
+  },
+} as const;

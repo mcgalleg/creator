@@ -14,6 +14,12 @@ import {
   refundHold,
 } from "@/lib/services/credit-service";
 import { eq, desc, and, gte, lte, inArray, sql } from "drizzle-orm";
+import {
+  CREDIT_RATES,
+  calculateCommentCredits,
+  calculatePostCredits,
+  calculateSyncCredits,
+} from "@/lib/credits";
 
 // ─── Apify Client ────────────────────────────────────────────────────────────
 
@@ -26,11 +32,6 @@ const getApifyClient = () => {
 };
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-
-const CREDITS = {
-  PER_POST: 1,
-  PER_COMMENT: 0.15,
-} as const;
 
 const SYNC_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -148,11 +149,11 @@ export function estimateSyncCost(options: {
   commentsLimit?: number;
 }): CostEstimate {
   const postsLimit = Math.max(0, options.postsLimit ?? 50);
-  const postsCost = Math.max(0, Math.round(postsLimit * CREDITS.PER_POST));
+  const postsCost = calculatePostCredits(postsLimit);
 
   let commentsCost = 0;
   if (options.includeComments && options.commentsLimit && options.commentsLimit > 0) {
-    commentsCost = Math.max(0, Math.round(options.commentsLimit * CREDITS.PER_COMMENT));
+    commentsCost = calculateCommentCredits(options.commentsLimit);
   }
 
   const totalCredits = postsCost + commentsCost;
@@ -178,7 +179,7 @@ export function estimateCommentSyncCost(options: {
 }): CostEstimate {
   const { postCount, commentsPerPost = 100, totalComments } = options;
   const estimatedComments = Math.max(0, totalComments ?? postCount * commentsPerPost);
-  const commentsCost = Math.max(0, Math.round(estimatedComments * CREDITS.PER_COMMENT));
+  const commentsCost = calculateCommentCredits(estimatedComments);
 
   return {
     credits: commentsCost,
@@ -262,7 +263,7 @@ export async function startSync(input: StartSyncInput): Promise<StartSyncResult>
   }
 
   // 1. Estimate and hold credits
-  const estimate = calculateEstimate(type, config);
+  const estimate = await calculateEstimate(type, config, accountId);
   const creditsToHold = estimate.credits;
 
   await holdCredits(
@@ -337,17 +338,92 @@ export async function startSync(input: StartSyncInput): Promise<StartSyncResult>
 }
 
 /**
- * Calculate cost estimate based on sync type and config
+ * Calculate cost estimate based on sync type and config.
+ * For comment syncs, queries actual comment counts from the DB
+ * so credit holds match realistic usage instead of worst-case.
  */
-function calculateEstimate(
+export async function calculateEstimate(
   type: "posts" | "comments" | "full",
-  config: SyncConfigSchema
-): CostEstimate {
+  config: SyncConfigSchema,
+  accountId: number
+): Promise<CostEstimate> {
   if (type === "comments") {
-    const postCount = config.selectedPostIds?.length ?? config.topCount ?? 10;
+    const maxCommentsPerPost = config.maxCommentsPerPost ?? 100;
+    let postCount: number;
+    let totalComments: number | undefined;
+
+    const mode = config.commentMode ?? "top_performers";
+
+    switch (mode) {
+      case "selection": {
+        postCount = config.selectedPostIds?.length ?? 0;
+        if (config.selectedPostIds && config.selectedPostIds.length > 0) {
+          const selectedPosts = await db
+            .select({ comments: posts.comments })
+            .from(posts)
+            .where(
+              and(
+                eq(posts.accountId, accountId),
+                inArray(posts.tiktokId, config.selectedPostIds)
+              )
+            );
+          totalComments = selectedPosts.reduce(
+            (sum, p) => sum + Math.min(p.comments ?? 0, maxCommentsPerPost),
+            0
+          );
+        }
+        break;
+      }
+      case "top_performers": {
+        const topN = config.topCount ?? 10;
+        postCount = topN;
+        const topPosts = await db
+          .select({ comments: posts.comments })
+          .from(posts)
+          .where(eq(posts.accountId, accountId))
+          .orderBy(desc(sql`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`))
+          .limit(topN);
+        totalComments = topPosts.reduce(
+          (sum, p) => sum + Math.min(p.comments ?? 0, maxCommentsPerPost),
+          0
+        );
+        break;
+      }
+      case "date_range": {
+        if (config.dateRange) {
+          const rangePosts = await db
+            .select({ comments: posts.comments })
+            .from(posts)
+            .where(
+              and(
+                eq(posts.accountId, accountId),
+                gte(posts.postedAt, new Date(config.dateRange.start)),
+                lte(posts.postedAt, new Date(config.dateRange.end))
+              )
+            );
+          postCount = rangePosts.length;
+          totalComments = rangePosts.reduce(
+            (sum, p) => sum + Math.min(p.comments ?? 0, maxCommentsPerPost),
+            0
+          );
+        } else {
+          postCount = 10;
+        }
+        break;
+      }
+      case "budget": {
+        const costPerPost = maxCommentsPerPost * CREDIT_RATES.PER_COMMENT;
+        postCount = Math.floor((config.creditBudget ?? 0) / costPerPost);
+        break;
+      }
+      default:
+        postCount = config.topCount ?? 10;
+    }
+
     return estimateCommentSyncCost({
       postCount,
-      commentsPerPost: config.maxCommentsPerPost ?? 100,
+      commentsPerPost: maxCommentsPerPost,
+      totalComments,
     });
   }
 
@@ -765,11 +841,7 @@ async function finalizeAndComplete(
  * Calculate actual credits based on what was received
  */
 function calculateActualCredits(postsCount: number, commentsCount: number): number {
-  let credits = Math.max(0, postsCount) * CREDITS.PER_POST;
-  if (commentsCount > 0) {
-    credits += Math.round(commentsCount * CREDITS.PER_COMMENT);
-  }
-  return Math.max(0, credits);
+  return calculateSyncCredits(postsCount, commentsCount);
 }
 
 // ─── Post Selection for Comment Sync ─────────────────────────────────────────
@@ -832,7 +904,7 @@ async function getPostsForCommentSync(
         throw new Error("creditBudget required for budget mode");
       }
       const commentsPerPost = config.maxCommentsPerPost ?? 100;
-      const costPerPost = commentsPerPost * CREDITS.PER_COMMENT;
+      const costPerPost = commentsPerPost * CREDIT_RATES.PER_COMMENT;
       const maxPosts = Math.floor(config.creditBudget / costPerPost);
 
       if (maxPosts <= 0) {

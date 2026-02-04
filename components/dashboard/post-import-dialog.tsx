@@ -60,12 +60,11 @@ export interface PostImportDialogProps {
   isImporting?: boolean;
 }
 
-// Cost constants - per-item pricing
-const CREDITS = {
-  PROFILE_SYNC_BASE: 0, // Profile sync is FREE
-  PER_POST: 1, // 1 credit per post
-  PER_COMMENT: 0.15, // 0.15 credits per comment
-};
+import {
+  CREDIT_RATES,
+  calculateCommentCredits,
+  calculatePostCredits,
+} from "@/lib/credits";
 
 interface CostEstimate {
   totalCredits: number;
@@ -176,14 +175,14 @@ export function PostImportDialog({
         break;
       case "budget":
         // Calculate max posts from budget using per-item pricing
-        const budgetBaseCost = CREDITS.PROFILE_SYNC_BASE; // FREE
+        const budgetBaseCost = CREDIT_RATES.PROFILE_SYNC;
         const remainingBudget = creditBudget - budgetBaseCost;
         if (remainingBudget <= 0) {
           postsToImport = 0;
         } else {
-          const costPerPost = CREDITS.PER_POST;
+          const costPerPost = CREDIT_RATES.PER_POST;
           const commentsCostPerPost = includeComments
-            ? commentsPerPost * CREDITS.PER_COMMENT
+            ? commentsPerPost * CREDIT_RATES.PER_COMMENT
             : 0;
           const totalCostPerPost = costPerPost + commentsCostPerPost;
           postsToImport = Math.floor(remainingBudget / totalCostPerPost);
@@ -194,11 +193,11 @@ export function PostImportDialog({
         break;
     }
 
-    const baseCost = CREDITS.PROFILE_SYNC_BASE; // FREE
-    const postsCost = Math.round(postsToImport * CREDITS.PER_POST);
+    const baseCost = CREDIT_RATES.PROFILE_SYNC;
+    const postsCost = calculatePostCredits(postsToImport);
     const estimatedComments = includeComments ? postsToImport * commentsPerPost : 0;
     const commentsCost = includeComments
-      ? Math.round(estimatedComments * CREDITS.PER_COMMENT)
+      ? calculateCommentCredits(estimatedComments)
       : 0;
     const totalCredits = baseCost + postsCost + commentsCost;
 
@@ -506,7 +505,7 @@ export function PostImportDialog({
                   <span className="text-green-600">FREE</span>
                 </div>
                 <div className="flex items-center justify-between text-muted-foreground">
-                  <span>Posts ({costEstimate.postsToImport} × 1 credit)</span>
+                  <span>Posts ({costEstimate.postsToImport} × {CREDIT_RATES.PER_POST} credit)</span>
                   <span>{costEstimate.postsCost} credits</span>
                 </div>
                 {includeComments && (

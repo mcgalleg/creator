@@ -33,6 +33,7 @@ import {
 import { toast } from "sonner";
 import type { SyncJob } from "@/hooks/use-accounts";
 import { PostSelectionSheet } from "./post-selection-sheet";
+import { CREDIT_RATES, calculateCommentCredits } from "@/lib/credits";
 
 type SyncMode = "selection" | "top_performers" | "date_range" | "budget";
 
@@ -66,6 +67,7 @@ export function CommentSyncDialog({
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
   const [selectedPostIds, setSelectedPostIds] = useState<Set<string>>(new Set());
+  const [selectedPostComments, setSelectedPostComments] = useState<Map<string, number>>(new Map());
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const [costEstimate, setCostEstimate] = useState<CostEstimate | null>(null);
@@ -78,33 +80,39 @@ export function CommentSyncDialog({
     if (!isOpen) return;
     calculateEstimate();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Config values are the dependencies we care about
-  }, [isOpen, mode, topCount, maxPerPost, creditBudget, selectedPostIds, dateStart, dateEnd]);
+  }, [isOpen, mode, topCount, maxPerPost, creditBudget, selectedPostIds, selectedPostComments, dateStart, dateEnd]);
 
   const calculateEstimate = () => {
     let postCount = 0;
+    let estimatedComments = 0;
 
     switch (mode) {
       case "selection":
         postCount = selectedPostIds.size;
+        // Use actual comment counts, capped at maxPerPost
+        for (const tiktokId of selectedPostIds) {
+          const actual = selectedPostComments.get(tiktokId) ?? 0;
+          estimatedComments += Math.min(actual, maxPerPost);
+        }
         break;
       case "top_performers":
         postCount = topCount;
+        estimatedComments = postCount * maxPerPost;
         break;
       case "date_range":
         // Estimate based on average posts per day
         postCount = Math.min(50, 10); // Default estimate
+        estimatedComments = postCount * maxPerPost;
         break;
       case "budget":
         // Calculate max posts from budget
-        const costPerPost = Math.ceil(maxPerPost / 100) * 15 + 6;
-        postCount = Math.floor(creditBudget / costPerPost);
+        const costPerPost = calculateCommentCredits(maxPerPost);
+        postCount = costPerPost > 0 ? Math.floor(creditBudget / costPerPost) : 0;
+        estimatedComments = postCount * maxPerPost;
         break;
     }
 
-    const estimatedComments = postCount * maxPerPost;
-    const commentsCost = Math.ceil(estimatedComments / 100) * 15;
-    const actorFees = postCount * 6;
-    const credits = commentsCost + actorFees;
+    const credits = calculateCommentCredits(estimatedComments);
 
     setCostEstimate({
       credits: mode === "budget" ? Math.min(credits, creditBudget) : credits,
@@ -380,7 +388,7 @@ export function CommentSyncDialog({
                 </div>
                 <p className="text-xs text-muted-foreground flex items-start gap-1">
                   <AlertCircle className="size-3 mt-0.5 shrink-0" />
-                  15 credits per 100 comments. Actual cost may vary based on comment availability.
+                  {CREDIT_RATES.PER_COMMENT} credits per comment. Actual cost may vary based on comment availability.
                 </p>
               </div>
             )}
@@ -415,7 +423,10 @@ export function CommentSyncDialog({
         onOpenChange={setPickerOpen}
         accountId={accountId}
         selectedTiktokIds={selectedPostIds}
-        onConfirm={setSelectedPostIds}
+        onConfirm={(ids, commentCounts) => {
+          setSelectedPostIds(ids);
+          setSelectedPostComments(commentCounts);
+        }}
       />
     </>
   );

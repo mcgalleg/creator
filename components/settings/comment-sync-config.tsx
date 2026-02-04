@@ -33,6 +33,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
+import { CREDIT_RATES, calculateCommentCredits } from "@/lib/credits";
 
 type SyncMode = "selection" | "top-performers" | "date-range" | "budget";
 
@@ -40,12 +41,6 @@ interface CostEstimate {
   postsCount: number;
   estimatedComments: number;
   creditCost: number;
-}
-
-const CREDITS_PER_100_COMMENTS = 15;
-
-function calculateCreditCost(comments: number): number {
-  return Math.ceil(comments / 100) * CREDITS_PER_100_COMMENTS;
 }
 
 interface CommentSyncConfigProps {
@@ -58,6 +53,7 @@ export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
 
   // Selection mode state
   const [selectedPostIds, setSelectedPostIds] = React.useState<Set<string>>(new Set());
+  const [selectedPostComments, setSelectedPostComments] = React.useState<Map<string, number>>(new Map());
   const [isPickerOpen, setIsPickerOpen] = React.useState(false);
 
   // Top performers mode state
@@ -82,7 +78,11 @@ export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
     switch (syncMode) {
       case "selection": {
         postsCount = selectedPostIds.size;
-        estimatedComments = postsCount * maxComments;
+        // Use actual comment counts, capped at maxComments per post
+        for (const tiktokId of selectedPostIds) {
+          const actual = selectedPostComments.get(tiktokId) ?? 0;
+          estimatedComments += Math.min(actual, maxComments);
+        }
         break;
       }
       case "top-performers": {
@@ -98,7 +98,7 @@ export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
       }
       case "budget": {
         const budget = parseInt(creditBudget) || 0;
-        estimatedComments = Math.floor((budget / CREDITS_PER_100_COMMENTS) * 100);
+        estimatedComments = Math.floor(budget / CREDIT_RATES.PER_COMMENT);
         postsCount = Math.ceil(estimatedComments / maxComments);
         break;
       }
@@ -107,9 +107,9 @@ export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
     return {
       postsCount,
       estimatedComments,
-      creditCost: calculateCreditCost(estimatedComments),
+      creditCost: calculateCommentCredits(estimatedComments),
     };
-  }, [syncMode, selectedPostIds, topN, maxComments, creditBudget]);
+  }, [syncMode, selectedPostIds, selectedPostComments, topN, maxComments, creditBudget]);
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -360,7 +360,7 @@ export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
 
             <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
               <AlertCircle className="h-3 w-3" />
-              {CREDITS_PER_100_COMMENTS} credits per 100 comments synced
+              {CREDIT_RATES.PER_COMMENT} credits per comment synced
             </p>
           </div>
         </CardContent>
@@ -396,7 +396,10 @@ export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
         onOpenChange={setIsPickerOpen}
         accountId={accountId}
         selectedTiktokIds={selectedPostIds}
-        onConfirm={setSelectedPostIds}
+        onConfirm={(ids, commentCounts) => {
+          setSelectedPostIds(ids);
+          setSelectedPostComments(commentCounts);
+        }}
       />
     </>
   );

@@ -7,7 +7,9 @@ import {
   startSync,
   getSyncJobStatus,
   getAccountSyncData,
+  estimateSyncCost,
 } from "@/lib/services/sync-service";
+import { checkCredits } from "@/lib/services/credit-service";
 
 interface RouteParams {
   params: Promise<{ accountId: string }>;
@@ -111,6 +113,25 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           runId: runningJob.apifyRunId,
         },
         { status: 409 }
+      );
+    }
+
+    // Pre-check credit balance before starting sync
+    const estimate = estimateSyncCost({
+      postsLimit,
+      includeComments,
+      commentsLimit: includeComments ? postsLimit * 100 : 0,
+    });
+
+    const creditCheck = await checkCredits(userId, estimate.credits);
+    if (!creditCheck.sufficient) {
+      return NextResponse.json(
+        {
+          error: "Insufficient credits",
+          balance: creditCheck.balance,
+          required: creditCheck.required,
+        },
+        { status: 402 }
       );
     }
 

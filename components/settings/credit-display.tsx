@@ -25,19 +25,14 @@ interface CreditTransaction {
 
 interface CreditData {
   balance: number;
-  pricing: {
-    basic_sync: { credits: number; description: string };
-    standard_sync: { credits: number; description: string };
-    comments: { credits: number; description: string };
-    full_sync: { credits: number; description: string };
-  };
+  pricing: Record<string, { rate: number; description: string }>;
 }
 
 function formatTransactionType(type: string): string {
   const typeMap: Record<string, string> = {
-    sync_profile: "Profile Sync",
     sync_posts: "Posts Sync",
     sync_comments: "Comments Sync",
+    credit_hold: "Credit Hold",
     purchase: "Purchase",
     refund: "Refund",
     signup_bonus: "Signup Bonus",
@@ -170,7 +165,7 @@ export function CreditDisplay() {
                   className="flex items-center justify-between py-1 border-b border-border/50 last:border-0"
                 >
                   <span className="text-muted-foreground">{value.description}</span>
-                  <Badge variant="secondary">{value.credits} credits</Badge>
+                  <Badge variant="secondary">{value.rate} credits</Badge>
                 </div>
               ))}
             </div>

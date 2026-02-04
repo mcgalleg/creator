@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, serial, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, bigint, timestamp, serial, uniqueIndex } from "drizzle-orm/pg-core";
 import { tiktokAccounts } from "./tiktok-accounts";
 
 export const posts = pgTable("posts", {
@@ -6,11 +6,11 @@ export const posts = pgTable("posts", {
   accountId: integer("account_id").notNull().references(() => tiktokAccounts.id, { onDelete: "cascade" }),
   tiktokId: text("tiktok_id").notNull(), // The TikTok video ID (unique per account)
   description: text("description"),
-  likes: integer("likes").default(0),
-  comments: integer("comments").default(0),
-  shares: integer("shares").default(0),
-  plays: integer("plays").default(0),
-  saves: integer("saves").default(0),
+  likes: bigint("likes", { mode: "number" }).default(0),
+  comments: bigint("comments", { mode: "number" }).default(0),
+  shares: bigint("shares", { mode: "number" }).default(0),
+  plays: bigint("plays", { mode: "number" }).default(0),
+  saves: bigint("saves", { mode: "number" }).default(0),
   duration: integer("duration"), // Duration in seconds
   thumbnailUrl: text("thumbnail_url"),
   videoUrl: text("video_url"),

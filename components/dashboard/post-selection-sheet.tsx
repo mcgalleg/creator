@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -60,7 +60,7 @@ interface PostSelectionSheetProps {
   onOpenChange: (open: boolean) => void;
   accountId: number;
   selectedTiktokIds: Set<string>;
-  onConfirm: (selectedIds: Set<string>) => void;
+  onConfirm: (selectedIds: Set<string>, commentCounts: Map<string, number>) => void;
 }
 
 function formatNumber(num: number): string {
@@ -128,10 +128,14 @@ export function PostSelectionSheet({
     () => new Set(selectedTiktokIds)
   );
 
+  // Accumulate comment counts as we see posts across pages
+  const commentCountsRef = useRef<Map<string, number>>(new Map());
+
   // Sync external selection when the sheet opens
   useEffect(() => {
     if (open) {
       setLocalSelection(new Set(selectedTiktokIds));
+      commentCountsRef.current = new Map();
     }
   }, [open, selectedTiktokIds]);
 
@@ -151,6 +155,13 @@ export function PostSelectionSheet({
     setSortBy,
     setSortDir,
   } = usePostSelection({ accountId, enabled: open });
+
+  // Update comment counts whenever posts load (tracks across pages)
+  useEffect(() => {
+    for (const post of posts) {
+      commentCountsRef.current.set(post.tiktokId, post.comments);
+    }
+  }, [posts]);
 
   // Handle sort toggle
   const handleSort = (key: SortBy) => {
@@ -394,7 +405,15 @@ export function PostSelectionSheet({
   });
 
   const handleConfirm = () => {
-    onConfirm(localSelection);
+    // Build comment counts map for only the selected posts
+    const selectedCommentCounts = new Map<string, number>();
+    for (const tiktokId of localSelection) {
+      const count = commentCountsRef.current.get(tiktokId);
+      if (count !== undefined) {
+        selectedCommentCounts.set(tiktokId, count);
+      }
+    }
+    onConfirm(localSelection, selectedCommentCounts);
     onOpenChange(false);
   };
 
