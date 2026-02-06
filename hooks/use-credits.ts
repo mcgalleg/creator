@@ -1,18 +1,31 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, createContext, useContext } from "react";
 
-interface UseCreditsReturn {
+interface CreditsState {
   balance: number;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
 }
 
+const CreditsContext = createContext<CreditsState | null>(null);
+
 /**
- * Hook for fetching and managing user credit balance
+ * Hook for fetching and managing user credit balance.
+ * When used inside a CreditsProvider, shares state across all consumers.
+ * When used standalone (no provider), creates its own local state.
  */
-export function useCredits(): UseCreditsReturn {
+export function useCredits(): CreditsState {
+  const ctx = useContext(CreditsContext);
+  if (ctx) return ctx;
+
+  // Fallback: standalone usage (should not happen in dashboard)
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useCreditsInternal();
+}
+
+function useCreditsInternal(): CreditsState {
   const [balance, setBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,3 +63,5 @@ export function useCredits(): UseCreditsReturn {
     refresh: fetchCredits,
   };
 }
+
+export { CreditsContext, useCreditsInternal };

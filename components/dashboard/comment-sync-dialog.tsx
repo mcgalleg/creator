@@ -44,6 +44,7 @@ interface CommentSyncDialogProps {
   accountUsername: string;
   activeCommentJobs?: SyncJob[];
   onSyncStarted?: () => void;
+  userCreditBalance?: number;
 }
 
 interface CostEstimate {
@@ -59,6 +60,7 @@ export function CommentSyncDialog({
   accountUsername,
   activeCommentJobs,
   onSyncStarted,
+  userCreditBalance = 0,
 }: CommentSyncDialogProps) {
   const [mode, setMode] = useState<SyncMode>("top_performers");
   const [topCount, setTopCount] = useState(10);
@@ -74,6 +76,8 @@ export function CommentSyncDialog({
   const [syncing, setSyncing] = useState(false);
 
   const hasActiveCommentSync = (activeCommentJobs?.length ?? 0) > 0;
+  const insufficientCredits = costEstimate ? costEstimate.credits > userCreditBalance : false;
+  const newBalance = costEstimate ? userCreditBalance - costEstimate.credits : userCreditBalance;
 
   // Calculate cost estimate whenever config changes
   useEffect(() => {
@@ -382,10 +386,25 @@ export function CommentSyncDialog({
                 </div>
                 <div className="border-t pt-2 flex items-center justify-between">
                   <span className="font-medium">Estimated Cost</span>
-                  <Badge variant="secondary" className="text-base">
+                  <Badge
+                    variant={insufficientCredits ? "destructive" : "secondary"}
+                    className="text-base"
+                  >
                     {costEstimate.credits} credits
                   </Badge>
                 </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Your balance</span>
+                  <span className={insufficientCredits ? "text-destructive" : ""}>
+                    {userCreditBalance} → {newBalance} credits
+                  </span>
+                </div>
+                {insufficientCredits && (
+                  <p className="text-xs text-destructive flex items-start gap-1">
+                    <AlertCircle className="size-3 mt-0.5 shrink-0" />
+                    Insufficient credits. Reduce scope or add credits.
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground flex items-start gap-1">
                   <AlertCircle className="size-3 mt-0.5 shrink-0" />
                   {CREDIT_RATES.PER_COMMENT} credits per comment. Actual cost may vary based on comment availability.
@@ -400,7 +419,7 @@ export function CommentSyncDialog({
             </Button>
             <Button
               onClick={handleSync}
-              disabled={syncing || !costEstimate || costEstimate.postCount === 0 || hasActiveCommentSync}
+              disabled={syncing || !costEstimate || costEstimate.postCount === 0 || hasActiveCommentSync || insufficientCredits}
             >
               {syncing ? (
                 <>

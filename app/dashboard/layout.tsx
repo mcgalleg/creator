@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { tiktokAccounts } from "@/lib/db/schema";
 import { CompactHeader } from "@/components/dashboard/compact-header";
 import { ResponsiveLayout } from "@/components/dashboard/responsive-layout";
+import { CreditsProvider } from "@/components/dashboard/credits-provider";
 import { FeatureProvider } from "@/contexts/feature-context";
 import { getUserFeatures, getUserTier } from "@/lib/services/feature-service";
 import type { FeatureKey, SubscriptionTier } from "@/lib/services/feature-service";
@@ -48,14 +49,16 @@ export default async function DashboardLayout({
 
   return (
     <FeatureProvider tier={tier} features={features}>
-      <div className="h-screen flex flex-col overflow-hidden">
-        <CompactHeader />
-        <div className="flex-1 overflow-hidden">
-          <ResponsiveLayout accounts={accounts}>
-            {children}
-          </ResponsiveLayout>
+      <CreditsProvider>
+        <div className="h-screen flex flex-col overflow-hidden">
+          <CompactHeader />
+          <div className="flex-1 overflow-hidden">
+            <ResponsiveLayout accounts={accounts}>
+              {children}
+            </ResponsiveLayout>
+          </div>
         </div>
-      </div>
+      </CreditsProvider>
     </FeatureProvider>
   );
 }

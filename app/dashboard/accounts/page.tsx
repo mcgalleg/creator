@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { AccountConnectionForm } from "@/components/dashboard/account-connection-form";
 import { AccountList } from "@/components/dashboard/account-list";
 import { CreditBalanceDisplay } from "@/components/dashboard/credit-balance-display";
@@ -26,6 +27,24 @@ export default function AccountsPage() {
   } = useAccounts();
 
   const { balance: creditBalance, loading: creditsLoading, refresh: refreshCredits } = useCredits();
+
+  // Bug Fix 2: Auto-refresh credits when syncs complete
+  // Track whether any account had active jobs so we detect the transition to 0
+  const hadActiveJobsRef = useRef(false);
+  const totalActiveJobs = Object.values(syncData).reduce(
+    (sum, data) => sum + (data?.activeJobs?.length ?? 0),
+    0
+  );
+
+  useEffect(() => {
+    if (totalActiveJobs > 0) {
+      hadActiveJobsRef.current = true;
+    } else if (hadActiveJobsRef.current) {
+      // Transitioned from active jobs to no active jobs — sync completed
+      hadActiveJobsRef.current = false;
+      refreshCredits();
+    }
+  }, [totalActiveJobs, refreshCredits]);
 
   const handleConnect = async (
     username: string,

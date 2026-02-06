@@ -419,6 +419,7 @@ export function AccountCard({
         accountUsername={account.username}
         activeCommentJobs={activeJobs.filter((j) => j.type === "comments")}
         onSyncStarted={handleCommentSyncStarted}
+        userCreditBalance={userCreditBalance}
       />
 
       {/* Post Import Dialog */}

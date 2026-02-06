@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useCredits } from '@/hooks/use-credits';
 import {
   Select,
   SelectContent,
@@ -16,7 +17,7 @@ import {
 import { useAccounts } from '@/hooks/use-accounts';
 
 export function CompactHeader() {
-  const [credits, setCredits] = useState<number | null>(null);
+  const { balance: credits, loading: creditsLoading } = useCredits();
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const { accounts, loading: accountsLoading } = useAccounts();
@@ -25,13 +26,6 @@ export function CompactHeader() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional for hydration handling
     setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    fetch('/api/credits')
-      .then(res => res.json())
-      .then(data => setCredits(data.balance))
-      .catch(() => setCredits(null));
   }, []);
 
   // Derive the effective selected account ID
@@ -118,7 +112,7 @@ export function CompactHeader() {
         <div className="flex-1" />
 
         {/* Credits Badge - always visible */}
-        {credits !== null && (
+        {!creditsLoading && (
           <Badge variant="secondary" className="gap-1 shrink-0 text-xs md:text-sm">
             <Coins className="h-3 w-3" />
             <span>{credits}</span>
