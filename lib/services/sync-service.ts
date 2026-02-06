@@ -13,7 +13,7 @@ import {
   finalizeCredits,
   refundHold,
 } from "@/lib/services/credit-service";
-import { eq, desc, and, gte, lte, inArray, sql } from "drizzle-orm";
+import { eq, desc, and, gte, lte, inArray, isNull, sql } from "drizzle-orm";
 import {
   CREDIT_RATES,
   calculateCommentCredits,
@@ -411,11 +411,6 @@ export async function calculateEstimate(
         }
         break;
       }
-      case "budget": {
-        const costPerPost = maxCommentsPerPost * CREDIT_RATES.PER_COMMENT;
-        postCount = Math.floor((config.creditBudget ?? 0) / costPerPost);
-        break;
-      }
       default:
         postCount = config.topCount ?? 10;
     }
@@ -543,10 +538,33 @@ function buildWebhooks() {
  * - Credit escrow finalization (refund overpayment)
  */
 export async function processSyncResults(jobId: number): Promise<ProcessedSyncResults> {
-  const [job] = await db.select().from(syncJobs).where(eq(syncJobs.id, jobId));
-  if (!job) {
-    throw new Error(`Sync job ${jobId} not found`);
+  // Atomic claim: set completedAt as a lock to prevent concurrent processing
+  // by both the webhook and the polling fallback. Only one UPDATE will match
+  // the "running AND completedAt IS NULL" condition.
+  const [claimed] = await db
+    .update(syncJobs)
+    .set({ completedAt: new Date() })
+    .where(
+      and(
+        eq(syncJobs.id, jobId),
+        inArray(syncJobs.status, ["running", "pending"]),
+        isNull(syncJobs.completedAt)
+      )
+    )
+    .returning();
+
+  if (!claimed) {
+    // Another processor already claimed this job (or it's already completed/failed)
+    const [job] = await db.select().from(syncJobs).where(eq(syncJobs.id, jobId));
+    return {
+      postsCount: job?.postsCount ?? 0,
+      commentsCount: job?.commentsCount ?? 0,
+      creditsUsed: job?.creditsUsed ?? 0,
+      profileUpdated: false,
+    };
   }
+
+  const job = claimed;
 
   if (!job.apifyRunId) {
     throw new Error(`Sync job ${jobId} has no Apify run ID`);
@@ -742,12 +760,18 @@ async function processCommentResults(
   let commentsCount = 0;
 
   for (const item of items) {
-    const comment = item as unknown as TikTokCommentData & { postUrl?: string; videoId?: string };
+    const comment = item as unknown as TikTokCommentData & {
+      postUrl?: string; videoId?: string;
+      videoWebUrl?: string; submittedVideoUrl?: string;
+    };
     if (!comment.cid) continue;
 
-    // Extract video ID from postUrl or videoId field
-    const videoId = comment.videoId ||
-      (comment.postUrl ? extractVideoId(comment.postUrl as string) : null);
+    // Extract video ID from available URL fields (Apify comment scraper uses videoWebUrl)
+    const videoUrl = comment.videoId
+      || (comment.videoWebUrl ? extractVideoId(comment.videoWebUrl) : null)
+      || (comment.submittedVideoUrl ? extractVideoId(comment.submittedVideoUrl) : null)
+      || (comment.postUrl ? extractVideoId(comment.postUrl) : null);
+    const videoId = videoUrl;
 
     if (!videoId) continue;
 
@@ -899,26 +923,6 @@ async function getPostsForCommentSync(
         .limit(100);
     }
 
-    case "budget": {
-      if (!config.creditBudget || config.creditBudget <= 0) {
-        throw new Error("creditBudget required for budget mode");
-      }
-      const commentsPerPost = config.maxCommentsPerPost ?? 100;
-      const costPerPost = commentsPerPost * CREDIT_RATES.PER_COMMENT;
-      const maxPosts = Math.floor(config.creditBudget / costPerPost);
-
-      if (maxPosts <= 0) {
-        throw new Error("Credit budget too low for any comment syncs");
-      }
-
-      return db
-        .select({ id: posts.id, tiktokId: posts.tiktokId, videoUrl: posts.videoUrl })
-        .from(posts)
-        .where(eq(posts.accountId, accountId))
-        .orderBy(desc(sql`(${posts.likes} + ${posts.comments} + ${posts.shares} + ${posts.saves})`))
-        .limit(maxPosts);
-    }
-
     default:
       throw new Error(`Unknown comment sync mode: ${mode}`);
   }
@@ -983,7 +987,7 @@ export async function getSyncJobStatus(jobId: number): Promise<{
  */
 export async function getAccountSyncData(accountId: number, userId: string) {
   // Active jobs (pending or running)
-  const activeJobs = await db
+  let activeJobs = await db
     .select()
     .from(syncJobs)
     .where(
@@ -994,6 +998,49 @@ export async function getAccountSyncData(accountId: number, userId: string) {
       )
     )
     .orderBy(desc(syncJobs.createdAt));
+
+  // Polling fallback: for any running jobs with an Apify run ID, check if
+  // Apify has finished and process results if so. This handles the case where
+  // webhooks don't reach the server (e.g. local dev without ngrok).
+  let jobsChanged = false;
+  for (const job of activeJobs) {
+    if (job.status === "running" && job.apifyRunId) {
+      // Check for timeout
+      if (job.startedAt && Date.now() - job.startedAt.getTime() > SYNC_TIMEOUT_MS) {
+        await handleJobTimeout(job);
+        jobsChanged = true;
+        continue;
+      }
+
+      try {
+        const apifyStatus = await pollApifyStatus(job.apifyRunId);
+        if (apifyStatus.status === "SUCCEEDED") {
+          await processSyncResults(job.id);
+          jobsChanged = true;
+        } else if (["FAILED", "ABORTED", "TIMED-OUT"].includes(apifyStatus.status)) {
+          await handleJobFailure(job, `Apify run ${apifyStatus.status.toLowerCase()}`);
+          jobsChanged = true;
+        }
+      } catch (error) {
+        console.error(`[Sync Job ${job.id}] Error checking Apify status during poll:`, error);
+      }
+    }
+  }
+
+  // Re-fetch jobs if any were processed so we return accurate state
+  if (jobsChanged) {
+    activeJobs = await db
+      .select()
+      .from(syncJobs)
+      .where(
+        and(
+          eq(syncJobs.accountId, accountId),
+          eq(syncJobs.userId, userId),
+          inArray(syncJobs.status, ["pending", "running"])
+        )
+      )
+      .orderBy(desc(syncJobs.createdAt));
+  }
 
   // Recent completed/failed jobs (last 5)
   const recentJobs = await db
