@@ -168,6 +168,8 @@ export async function GET(request: NextRequest) {
         plays: posts.plays,
         saves: posts.saves,
         postedAt: posts.postedAt,
+        commentsSyncedAt: posts.commentsSyncedAt,
+        syncedCommentCount: posts.syncedCommentCount,
       })
       .from(posts)
       .where(whereClause)
@@ -197,6 +199,8 @@ export async function GET(request: NextRequest) {
         plays: post.plays ?? 0,
         saves: post.saves ?? 0,
         postedAt: post.postedAt?.toISOString() ?? null,
+        commentsSyncedAt: post.commentsSyncedAt?.toISOString() ?? null,
+        syncedCommentCount: post.syncedCommentCount ?? 0,
         engagementRate: Math.round(engagementRate * 100) / 100, // Round to 2 decimal places
       };
     });

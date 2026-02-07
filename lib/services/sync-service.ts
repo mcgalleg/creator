@@ -88,6 +88,10 @@ export interface SyncStatus {
 export interface ProcessedSyncResults {
   postsCount: number;
   commentsCount: number;
+  newPostsCount: number;
+  updatedPostsCount: number;
+  newCommentsCount: number;
+  updatedCommentsCount: number;
   creditsUsed: number;
   profileUpdated: boolean;
 }
@@ -566,6 +570,10 @@ export async function processSyncResults(jobId: number): Promise<ProcessedSyncRe
     return {
       postsCount: job?.postsCount ?? 0,
       commentsCount: job?.commentsCount ?? 0,
+      newPostsCount: job?.newPostsCount ?? 0,
+      updatedPostsCount: job?.updatedPostsCount ?? 0,
+      newCommentsCount: job?.newCommentsCount ?? 0,
+      updatedCommentsCount: job?.updatedCommentsCount ?? 0,
       creditsUsed: job?.creditsUsed ?? 0,
       profileUpdated: false,
     };
@@ -589,8 +597,8 @@ export async function processSyncResults(jobId: number): Promise<ProcessedSyncRe
 
     if (!items || items.length === 0) {
       // No data returned — finalize with 0 credits (refund full hold)
-      await finalizeAndComplete(job, 0, 0, 0, false);
-      return { postsCount: 0, commentsCount: 0, creditsUsed: 0, profileUpdated: false };
+      await finalizeAndComplete(job, { postsCount: 0, commentsCount: 0, newPostsCount: 0, updatedPostsCount: 0, newCommentsCount: 0, updatedCommentsCount: 0 }, 0, false);
+      return { postsCount: 0, commentsCount: 0, newPostsCount: 0, updatedPostsCount: 0, newCommentsCount: 0, updatedCommentsCount: 0, creditsUsed: 0, profileUpdated: false };
     }
 
     let result: ProcessedSyncResults;
@@ -676,6 +684,11 @@ async function processPostResults(
   // Upsert posts — scoped by (accountId, tiktokId) to prevent ownership collision
   let postsCount = 0;
   let commentsCount = 0;
+  let newPostsCount = 0;
+  let updatedPostsCount = 0;
+  let newCommentsCount = 0;
+  let updatedCommentsCount = 0;
+  const postsWithCommentChanges = new Set<number>();
 
   for (const item of typedItems) {
     if (!item.id) continue;
@@ -707,6 +720,7 @@ async function processPostResults(
 
     if (existingPost) {
       await db.update(posts).set(postData).where(eq(posts.id, existingPost.id));
+      updatedPostsCount++;
     } else {
       await db.insert(posts).values({
         accountId: job.accountId,
@@ -714,6 +728,7 @@ async function processPostResults(
         ...postData,
         postedAt: item.createTimeISO ? new Date(item.createTimeISO) : undefined,
       });
+      newPostsCount++;
     }
     postsCount++;
 
@@ -731,6 +746,7 @@ async function processPostResults(
         .limit(1);
 
       if (postRecord) {
+        let postHadComments = false;
         for (const comment of item.comments) {
           if (!comment.cid) continue;
 
@@ -740,7 +756,13 @@ async function processPostResults(
             .where(eq(comments.tiktokId, comment.cid))
             .limit(1);
 
-          if (!existing) {
+          if (existing) {
+            await db.update(comments).set({
+              likes: comment.diggCount || 0,
+              text: comment.text || "",
+            }).where(eq(comments.id, existing.id));
+            updatedCommentsCount++;
+          } else {
             await db.insert(comments).values({
               postId: postRecord.id,
               tiktokId: comment.cid,
@@ -750,17 +772,35 @@ async function processPostResults(
               likes: comment.diggCount || 0,
               postedAt: comment.createTime ? new Date(comment.createTime * 1000) : undefined,
             });
-            commentsCount++;
+            newCommentsCount++;
           }
+          commentsCount++;
+          postHadComments = true;
+        }
+        if (postHadComments) {
+          postsWithCommentChanges.add(postRecord.id);
         }
       }
     }
   }
 
-  const actualCredits = calculateActualCredits(postsCount, commentsCount);
-  await finalizeAndComplete(job, postsCount, commentsCount, actualCredits, profileUpdated);
+  // Update comment sync metadata on posts that had comments processed
+  for (const postId of postsWithCommentChanges) {
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(comments)
+      .where(eq(comments.postId, postId));
 
-  return { postsCount, commentsCount, creditsUsed: actualCredits, profileUpdated };
+    await db.update(posts).set({
+      commentsSyncedAt: new Date(),
+      syncedCommentCount: Number(countResult?.count ?? 0),
+    }).where(eq(posts.id, postId));
+  }
+
+  const actualCredits = calculateActualCredits(postsCount, commentsCount);
+  await finalizeAndComplete(job, { postsCount, commentsCount, newPostsCount, updatedPostsCount, newCommentsCount, updatedCommentsCount }, actualCredits, profileUpdated);
+
+  return { postsCount, commentsCount, newPostsCount, updatedPostsCount, newCommentsCount, updatedCommentsCount, creditsUsed: actualCredits, profileUpdated };
 }
 
 /**
@@ -771,6 +811,9 @@ async function processCommentResults(
   items: Record<string, unknown>[]
 ): Promise<ProcessedSyncResults> {
   let commentsCount = 0;
+  let newCommentsCount = 0;
+  let updatedCommentsCount = 0;
+  const postsWithCommentChanges = new Set<number>();
 
   for (const item of items) {
     const comment = item as unknown as TikTokCommentData & {
@@ -802,14 +845,21 @@ async function processCommentResults(
 
     if (!postRecord) continue;
 
-    // Upsert comment
+    // Upsert comment — charge for all processed (Apify costs us regardless)
     const [existing] = await db
       .select({ id: comments.id })
       .from(comments)
       .where(eq(comments.tiktokId, comment.cid))
       .limit(1);
 
-    if (!existing) {
+    if (existing) {
+      // Update existing comment metrics (likes change over time, text can be edited)
+      await db.update(comments).set({
+        likes: comment.diggCount || 0,
+        text: comment.text || "",
+      }).where(eq(comments.id, existing.id));
+      updatedCommentsCount++;
+    } else {
       await db.insert(comments).values({
         postId: postRecord.id,
         tiktokId: comment.cid,
@@ -819,23 +869,46 @@ async function processCommentResults(
         likes: comment.diggCount || 0,
         postedAt: comment.createTime ? new Date(comment.createTime * 1000) : undefined,
       });
-      commentsCount++;
+      newCommentsCount++;
     }
+    commentsCount++;
+    postsWithCommentChanges.add(postRecord.id);
+  }
+
+  // Update comment sync metadata on posts that had comments processed
+  for (const postId of postsWithCommentChanges) {
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(comments)
+      .where(eq(comments.postId, postId));
+
+    await db.update(posts).set({
+      commentsSyncedAt: new Date(),
+      syncedCommentCount: Number(countResult?.count ?? 0),
+    }).where(eq(posts.id, postId));
   }
 
   const actualCredits = calculateActualCredits(0, commentsCount);
-  await finalizeAndComplete(job, 0, commentsCount, actualCredits, false);
+  await finalizeAndComplete(job, { postsCount: 0, commentsCount, newPostsCount: 0, updatedPostsCount: 0, newCommentsCount, updatedCommentsCount }, actualCredits, false);
 
-  return { postsCount: 0, commentsCount, creditsUsed: actualCredits, profileUpdated: false };
+  return { postsCount: 0, commentsCount, newPostsCount: 0, updatedPostsCount: 0, newCommentsCount, updatedCommentsCount, creditsUsed: actualCredits, profileUpdated: false };
 }
 
 /**
  * Finalize credit escrow and mark job as completed
  */
+interface SyncCounts {
+  postsCount: number;
+  commentsCount: number;
+  newPostsCount: number;
+  updatedPostsCount: number;
+  newCommentsCount: number;
+  updatedCommentsCount: number;
+}
+
 async function finalizeAndComplete(
   job: typeof syncJobs.$inferSelect,
-  postsCount: number,
-  commentsCount: number,
+  counts: SyncCounts,
   actualCredits: number,
   profileUpdated: boolean
 ): Promise<void> {
@@ -848,7 +921,7 @@ async function finalizeAndComplete(
     held,
     actualCredits,
     creditType,
-    `Synced ${postsCount} posts, ${commentsCount} comments for job ${job.id}`
+    `Synced ${counts.postsCount} posts, ${counts.commentsCount} comments for job ${job.id}`
   );
 
   // Update account lastSyncedAt if profile was updated
@@ -864,14 +937,18 @@ async function finalizeAndComplete(
     .update(syncJobs)
     .set({
       status: "completed",
-      postsCount,
-      commentsCount,
+      postsCount: counts.postsCount,
+      commentsCount: counts.commentsCount,
+      newPostsCount: counts.newPostsCount,
+      updatedPostsCount: counts.updatedPostsCount,
+      newCommentsCount: counts.newCommentsCount,
+      updatedCommentsCount: counts.updatedCommentsCount,
       creditsUsed: actualCredits,
       completedAt: new Date(),
     })
     .where(eq(syncJobs.id, job.id));
 
-  console.log(`[Sync Job ${job.id}] Completed: ${postsCount} posts, ${commentsCount} comments, ${actualCredits} credits used (${held} held)`);
+  console.log(`[Sync Job ${job.id}] Completed: ${counts.postsCount} posts (${counts.newPostsCount} new, ${counts.updatedPostsCount} updated), ${counts.commentsCount} comments (${counts.newCommentsCount} new, ${counts.updatedCommentsCount} updated), ${actualCredits} credits used (${held} held)`);
 }
 
 /**

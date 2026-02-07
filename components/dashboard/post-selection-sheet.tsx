@@ -60,7 +60,7 @@ interface PostSelectionSheetProps {
   onOpenChange: (open: boolean) => void;
   accountId: number;
   selectedTiktokIds: Set<string>;
-  onConfirm: (selectedIds: Set<string>, commentCounts: Map<string, number>) => void;
+  onConfirm: (selectedIds: Set<string>, commentCounts: Map<string, number>, syncedCounts: Map<string, number>) => void;
 }
 
 function formatNumber(num: number): string {
@@ -128,14 +128,16 @@ export function PostSelectionSheet({
     () => new Set(selectedTiktokIds)
   );
 
-  // Accumulate comment counts as we see posts across pages
+  // Accumulate comment counts and synced counts as we see posts across pages
   const commentCountsRef = useRef<Map<string, number>>(new Map());
+  const syncedCountsRef = useRef<Map<string, number>>(new Map());
 
   // Sync external selection when the sheet opens
   useEffect(() => {
     if (open) {
       setLocalSelection(new Set(selectedTiktokIds));
       commentCountsRef.current = new Map();
+      syncedCountsRef.current = new Map();
     }
   }, [open, selectedTiktokIds]);
 
@@ -156,10 +158,11 @@ export function PostSelectionSheet({
     setSortDir,
   } = usePostSelection({ accountId, enabled: open });
 
-  // Update comment counts whenever posts load (tracks across pages)
+  // Update comment counts and synced counts whenever posts load (tracks across pages)
   useEffect(() => {
     for (const post of posts) {
       commentCountsRef.current.set(post.tiktokId, post.comments);
+      syncedCountsRef.current.set(post.tiktokId, post.syncedCommentCount);
     }
   }, [posts]);
 
@@ -284,7 +287,16 @@ export function PostSelectionSheet({
             onSort={handleSort}
           />
         ),
-        cell: ({ row }) => formatNumber(row.original.comments),
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1.5">
+            <span className="tabular-nums">{formatNumber(row.original.comments)}</span>
+            {row.original.syncedCommentCount > 0 && (
+              <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">
+                {formatNumber(row.original.syncedCommentCount)} synced
+              </Badge>
+            )}
+          </div>
+        ),
         enableSorting: false,
       },
       {
@@ -353,6 +365,11 @@ export function PostSelectionSheet({
               <span className="flex items-center gap-0.5">
                 <MessageCircle className="size-3" />
                 {formatNumber(row.original.comments)}
+                {row.original.syncedCommentCount > 0 && (
+                  <Badge variant="outline" className="text-[10px] px-1 py-0 ml-0.5">
+                    {formatNumber(row.original.syncedCommentCount)} synced
+                  </Badge>
+                )}
               </span>
             </div>
           </div>
@@ -370,7 +387,16 @@ export function PostSelectionSheet({
             onSort={handleSort}
           />
         ),
-        cell: ({ row }) => formatNumber(row.original.comments),
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1.5">
+            <span className="tabular-nums">{formatNumber(row.original.comments)}</span>
+            {row.original.syncedCommentCount > 0 && (
+              <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">
+                {formatNumber(row.original.syncedCommentCount)} synced
+              </Badge>
+            )}
+          </div>
+        ),
         enableSorting: false,
       },
     ],
@@ -405,15 +431,20 @@ export function PostSelectionSheet({
   });
 
   const handleConfirm = () => {
-    // Build comment counts map for only the selected posts
+    // Build comment counts and synced counts maps for only the selected posts
     const selectedCommentCounts = new Map<string, number>();
+    const selectedSyncedCounts = new Map<string, number>();
     for (const tiktokId of localSelection) {
       const count = commentCountsRef.current.get(tiktokId);
       if (count !== undefined) {
         selectedCommentCounts.set(tiktokId, count);
       }
+      const syncedCount = syncedCountsRef.current.get(tiktokId);
+      if (syncedCount !== undefined) {
+        selectedSyncedCounts.set(tiktokId, syncedCount);
+      }
     }
-    onConfirm(localSelection, selectedCommentCounts);
+    onConfirm(localSelection, selectedCommentCounts, selectedSyncedCounts);
     onOpenChange(false);
   };
 

@@ -16,6 +16,8 @@ export const posts = pgTable("posts", {
   videoUrl: text("video_url"),
   postedAt: timestamp("posted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  commentsSyncedAt: timestamp("comments_synced_at"),
+  syncedCommentCount: integer("synced_comment_count").default(0),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("posts_account_tiktok_id_idx").on(table.accountId, table.tiktokId),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type { TikTokAccount, AccountSyncData } from "@/hooks/use-accounts";
 
 interface AccountCardProps {
@@ -117,13 +118,53 @@ export function AccountCard({
     });
   };
 
+  // Track previous recent job IDs to detect newly completed jobs
+  const prevRecentJobIdsRef = useRef<Set<number> | null>(null);
+
+  // Active and recent jobs (moved up so useEffect can reference recentJobs)
+  const activeJobs = syncData?.activeJobs ?? [];
+  const recentJobs = syncData?.recentJobs ?? [];
+
+  useEffect(() => {
+    // On first mount, just record current job IDs without firing toasts
+    if (prevRecentJobIdsRef.current === null) {
+      prevRecentJobIdsRef.current = new Set(recentJobs.map(j => j.id));
+      return;
+    }
+
+    const prevIds = prevRecentJobIdsRef.current;
+    const newlyCompleted = recentJobs.filter(
+      j => j.status === "completed" && !prevIds.has(j.id)
+    );
+
+    for (const job of newlyCompleted) {
+      if (job.type === "posts" || job.type === "full") {
+        const parts: string[] = [];
+        if (job.newPostsCount) parts.push(`${job.newPostsCount} new`);
+        if (job.updatedPostsCount) parts.push(`${job.updatedPostsCount} updated`);
+        if (job.creditsUsed != null) parts.push(`${job.creditsUsed} credits used`);
+        toast.success("Post import complete", {
+          description: parts.join(", ") || "No posts processed",
+        });
+      }
+      if (job.type === "comments") {
+        const parts: string[] = [];
+        if (job.newCommentsCount) parts.push(`${job.newCommentsCount} new`);
+        if (job.updatedCommentsCount) parts.push(`${job.updatedCommentsCount} updated`);
+        if (job.creditsUsed != null) parts.push(`${job.creditsUsed} credits used`);
+        toast.success("Comment sync complete", {
+          description: parts.join(", ") || "No comments processed",
+        });
+      }
+    }
+
+    prevRecentJobIdsRef.current = new Set(recentJobs.map(j => j.id));
+  }, [recentJobs]);
+
   // Derive stats from syncData with account fallbacks
   const stats = syncData?.stats;
   const statsLoading = !syncData;
 
-  // Active and recent jobs
-  const activeJobs = syncData?.activeJobs ?? [];
-  const recentJobs = syncData?.recentJobs ?? [];
   const postsSyncing = activeJobs.some(
     (j) => j.type === "posts" || j.type === "full"
   );
@@ -462,6 +503,7 @@ export function AccountCard({
         userCreditBalance={userCreditBalance ?? 0}
         onImport={handlePostImport}
         isImporting={postsSyncing}
+        syncedPostCount={syncedPosts}
       />
     </>
   );

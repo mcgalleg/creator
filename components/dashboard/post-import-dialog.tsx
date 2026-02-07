@@ -56,6 +56,7 @@ export interface PostImportDialogProps {
   userCreditBalance: number;
   onImport: (config: PostImportConfig, estimatedCost: number) => void;
   isImporting?: boolean;
+  syncedPostCount?: number;
 }
 
 import {
@@ -94,6 +95,7 @@ export function PostImportDialog({
   userCreditBalance,
   onImport,
   isImporting = false,
+  syncedPostCount,
 }: PostImportDialogProps) {
   // Mode state
   const [mode, setMode] = useState<PostImportMode>("latest");
@@ -429,6 +431,19 @@ export function PostImportDialog({
               </div>
             )}
           </div>
+
+          {/* Already imported warning */}
+          {syncedPostCount != null && syncedPostCount > 0 && (
+            <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm space-y-1">
+              <div className="flex items-center gap-2 font-medium text-amber-700 dark:text-amber-400">
+                <AlertCircle className="size-4 shrink-0" />
+                You already have {syncedPostCount} post{syncedPostCount !== 1 ? "s" : ""} imported
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Overlapping posts will have their metrics refreshed. Credits are charged for all posts processed.
+              </p>
+            </div>
+          )}
 
           {/* Cost Estimate */}
           {costEstimate && (

@@ -13,6 +13,8 @@ export interface Post {
   plays: number;
   saves: number;
   postedAt: string | null;
+  commentsSyncedAt: string | null;
+  syncedCommentCount: number;
   engagementRate: number;
 }
 

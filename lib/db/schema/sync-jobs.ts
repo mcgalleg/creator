@@ -39,6 +39,10 @@ export const syncJobs = pgTable("sync_jobs", {
   postsCount: integer("posts_count"),
   commentsCount: integer("comments_count"),
   commentsEstimated: integer("comments_estimated"),
+  newPostsCount: integer("new_posts_count"),
+  updatedPostsCount: integer("updated_posts_count"),
+  newCommentsCount: integer("new_comments_count"),
+  updatedCommentsCount: integer("updated_comments_count"),
   syncConfig: jsonb("sync_config").$type<SyncConfigSchema>(),
   commentSyncConfig: jsonb("comment_sync_config").$type<CommentSyncConfigSchema>(), // Legacy, kept for existing rows
   error: text("error"),

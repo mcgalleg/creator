@@ -70,6 +70,7 @@ export function CommentSyncDialog({
   const [dateEnd, setDateEnd] = useState("");
   const [selectedPostIds, setSelectedPostIds] = useState<Set<string>>(new Set());
   const [selectedPostComments, setSelectedPostComments] = useState<Map<string, number>>(new Map());
+  const [selectedPostSyncedCounts, setSelectedPostSyncedCounts] = useState<Map<string, number>>(new Map());
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const [costEstimate, setCostEstimate] = useState<CostEstimate | null>(null);
@@ -89,6 +90,7 @@ export function CommentSyncDialog({
       setDateEnd("");
       setSelectedPostIds(new Set());
       setSelectedPostComments(new Map());
+      setSelectedPostSyncedCounts(new Map());
       setCostEstimate(null);
     }
   }, [isOpen]);
@@ -355,6 +357,22 @@ export function CommentSyncDialog({
               </Select>
             </div>
 
+            {/* Already synced warning */}
+            {mode === "selection" && (() => {
+              const alreadySyncedCount = [...selectedPostIds].filter(id => (selectedPostSyncedCounts.get(id) ?? 0) > 0).length;
+              return alreadySyncedCount > 0 ? (
+                <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm space-y-1">
+                  <div className="flex items-center gap-2 font-medium text-amber-700 dark:text-amber-400">
+                    <AlertCircle className="size-4 shrink-0" />
+                    {alreadySyncedCount} of {selectedPostIds.size} selected post{selectedPostIds.size !== 1 ? "s" : ""} already synced
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    Re-syncing updates comment metrics and fetches new comments. Credits are charged for all comments processed.
+                  </p>
+                </div>
+              ) : null;
+            })()}
+
             {/* Cost Estimate */}
             {costEstimate && (
               <div className="rounded-lg bg-muted p-4 space-y-2">
@@ -434,9 +452,10 @@ export function CommentSyncDialog({
         onOpenChange={setPickerOpen}
         accountId={accountId}
         selectedTiktokIds={selectedPostIds}
-        onConfirm={(ids, commentCounts) => {
+        onConfirm={(ids, commentCounts, syncedCounts) => {
           setSelectedPostIds(ids);
           setSelectedPostComments(commentCounts);
+          setSelectedPostSyncedCounts(syncedCounts);
         }}
       />
     </>

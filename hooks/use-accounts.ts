@@ -27,6 +27,10 @@ export interface SyncJob {
   postsCount: number | null;
   commentsCount: number | null;
   commentsEstimated: number | null;
+  newPostsCount: number | null;
+  updatedPostsCount: number | null;
+  newCommentsCount: number | null;
+  updatedCommentsCount: number | null;
   error: string | null;
   startedAt: string | null;
   completedAt: string | null;
