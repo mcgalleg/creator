@@ -213,6 +213,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         creditsUsed: jobStatus.job.creditsUsed,
         postsCount: jobStatus.job.postsCount,
         commentsCount: jobStatus.job.commentsCount,
+        commentsEstimated: jobStatus.job.commentsEstimated,
         error: jobStatus.job.error,
         startedAt: jobStatus.job.startedAt,
         completedAt: jobStatus.job.completedAt,

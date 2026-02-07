@@ -28,14 +28,13 @@ import {
   ListChecks,
   TrendingUp,
   Calendar,
-  Wallet,
   Coins,
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
 import { CREDIT_RATES, calculateCommentCredits } from "@/lib/credits";
 
-type SyncMode = "selection" | "top-performers" | "date-range" | "budget";
+type SyncMode = "selection" | "top-performers" | "date-range";
 
 interface CostEstimate {
   postsCount: number;
@@ -63,9 +62,6 @@ export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
   const [startDate, setStartDate] = React.useState<string>("");
   const [endDate, setEndDate] = React.useState<string>("");
   const [maxCommentsPerPost, setMaxCommentsPerPost] = React.useState<string>("100");
-
-  // Budget mode state
-  const [creditBudget, setCreditBudget] = React.useState<string>("100");
 
   const [isSyncing, setIsSyncing] = React.useState(false);
 
@@ -96,12 +92,6 @@ export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
         estimatedComments = postsCount * maxComments;
         break;
       }
-      case "budget": {
-        const budget = parseInt(creditBudget) || 0;
-        estimatedComments = Math.floor(budget / CREDIT_RATES.PER_COMMENT);
-        postsCount = Math.ceil(estimatedComments / maxComments);
-        break;
-      }
     }
 
     return {
@@ -109,7 +99,7 @@ export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
       estimatedComments,
       creditCost: calculateCommentCredits(estimatedComments),
     };
-  }, [syncMode, selectedPostIds, selectedPostComments, topN, maxComments, creditBudget]);
+  }, [syncMode, selectedPostIds, selectedPostComments, topN, maxComments]);
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -289,47 +279,6 @@ export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
               </div>
             </div>
 
-            <Separator />
-
-            {/* Budget Mode */}
-            <div className="flex items-start space-x-3">
-              <RadioGroupItem value="budget" id="budget" className="mt-1" />
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="budget" className="font-medium cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <Wallet className="h-4 w-4 text-muted-foreground" />
-                    Budget Mode
-                  </div>
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Set a credit budget and let the system optimize which comments to sync.
-                  Prioritizes high-engagement posts.
-                </p>
-
-                {syncMode === "budget" && (
-                  <div className="pt-2">
-                    <div className="flex items-center gap-3">
-                      <Label htmlFor="credit-budget" className="text-sm whitespace-nowrap">
-                        Credit budget:
-                      </Label>
-                      <div className="relative">
-                        <Coins className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          id="credit-budget"
-                          type="number"
-                          min="15"
-                          step="15"
-                          value={creditBudget}
-                          onChange={(e) => setCreditBudget(e.target.value)}
-                          className="w-32 pl-9"
-                          placeholder="100"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
           </RadioGroup>
 
           {/* Cost Estimation */}

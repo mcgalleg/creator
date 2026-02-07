@@ -217,7 +217,6 @@ export function TikTokPreviewCard({
                   {customImportConfig.mode === "latest" && `${customImportConfig.postsLimit} latest posts`}
                   {customImportConfig.mode === "date_range" && `Posts from ${customImportConfig.dateRangePreset?.replace("_", " ")}`}
                   {customImportConfig.mode === "top_performers" && `Top ${customImportConfig.topCount} posts`}
-                  {customImportConfig.mode === "budget" && `Within ${customImportConfig.creditBudget} credit budget`}
                   {customImportConfig.includeComments && " + comments"}
                 </p>
               )}

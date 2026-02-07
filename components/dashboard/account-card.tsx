@@ -46,6 +46,7 @@ interface AccountCardProps {
   isDisconnecting: boolean;
   userCreditBalance?: number;
   onFetchSyncData?: (accountId: number) => Promise<void>;
+  onRefreshCredits?: () => void;
 }
 
 const formatNumber = (num: number | null): string => {
@@ -89,12 +90,32 @@ export function AccountCard({
   isDisconnecting,
   userCreditBalance,
   onFetchSyncData,
+  onRefreshCredits,
 }: AccountCardProps) {
   const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [commentSyncOpen, setCommentSyncOpen] = useState(false);
   const [postImportOpen, setPostImportOpen] = useState(false);
-  const [dismissedError, setDismissedError] = useState<number | null>(null);
+  const [dismissedErrors, setDismissedErrors] = useState<Set<number>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const stored = localStorage.getItem("dismissedSyncErrors");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const dismissError = (jobId: number) => {
+    setDismissedErrors((prev) => {
+      const next = new Set(prev);
+      next.add(jobId);
+      try {
+        localStorage.setItem("dismissedSyncErrors", JSON.stringify([...next]));
+      } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   // Derive stats from syncData with account fallbacks
   const stats = syncData?.stats;
@@ -111,7 +132,7 @@ export function AccountCard({
 
   // Most recent failed job (unless dismissed)
   const lastFailedJob = recentJobs.find(
-    (j) => j.status === "failed" && j.id !== dismissedError
+    (j) => j.status === "failed" && !dismissedErrors.has(j.id)
   );
 
   // Post progress values
@@ -119,8 +140,15 @@ export function AccountCard({
   const totalPosts = stats?.totalPosts ?? account.videoCount ?? 0;
   const postsPercent = totalPosts > 0 ? (syncedPosts / totalPosts) * 100 : 0;
 
-  // Comments count
+  // Comments count and progress
   const syncedComments = stats?.syncedComments ?? 0;
+  const activeCommentJob = activeJobs.find((j) => j.type === "comments");
+  const commentItemsCollected = activeCommentJob?.commentsCount ?? 0;
+  const commentEstimatedTotal = activeCommentJob?.commentsEstimated ?? 0;
+  // During active sync: show real progress. Otherwise: full bar if comments exist.
+  const commentsPercent = commentsSyncing && commentEstimatedTotal > 0
+    ? Math.min((commentItemsCollected / commentEstimatedTotal) * 100, 99)
+    : syncedComments > 0 ? 100 : 0;
 
   // Last synced time
   const lastSyncedAt = stats?.lastSyncedAt ?? account.lastSyncedAt;
@@ -153,6 +181,7 @@ export function AccountCard({
 
   const handleCommentSyncStarted = () => {
     onFetchSyncData?.(account.id);
+    onRefreshCredits?.();
   };
 
   // Active job description for the status bar
@@ -169,7 +198,8 @@ export function AccountCard({
     if (commentsSyncing) {
       const commentJob = activeJobs.find((j) => j.type === "comments");
       const count = commentJob?.commentsCount;
-      if (count) return `Syncing comments... (${count} so far)`;
+      const estimated = commentJob?.commentsEstimated;
+      if (count && estimated) return `Syncing comments... (${count} of ~${estimated})`;
       return "Syncing comments...";
     }
     return "Syncing...";
@@ -309,7 +339,7 @@ export function AccountCard({
               <div className="h-2 w-full rounded-full bg-muted" />
             ) : (
               <Progress
-                value={syncedComments > 0 ? 100 : 0}
+                value={commentsPercent}
                 className="h-2"
               />
             )}
@@ -365,7 +395,7 @@ export function AccountCard({
               variant="ghost"
               size="icon-xs"
               className="shrink-0 text-destructive hover:text-destructive"
-              onClick={() => setDismissedError(lastFailedJob.id)}
+              onClick={() => dismissError(lastFailedJob.id)}
             >
               <X className="size-3" />
             </Button>
@@ -420,6 +450,7 @@ export function AccountCard({
         activeCommentJobs={activeJobs.filter((j) => j.type === "comments")}
         onSyncStarted={handleCommentSyncStarted}
         userCreditBalance={userCreditBalance}
+        syncedPostCount={syncedPosts}
       />
 
       {/* Post Import Dialog */}

@@ -52,6 +52,7 @@ export interface StartSyncResult {
 
 export interface CostEstimate {
   credits: number;
+  estimatedComments: number;
   description: string;
   breakdown: {
     posts: number;
@@ -81,6 +82,7 @@ export interface SyncStatus {
   finishedAt?: Date;
   exitCode?: number;
   defaultDatasetId?: string;
+  datasetItemCount?: number;
 }
 
 export interface ProcessedSyncResults {
@@ -152,18 +154,21 @@ export function estimateSyncCost(options: {
   const postsCost = calculatePostCredits(postsLimit);
 
   let commentsCost = 0;
+  let estimatedComments = 0;
   if (options.includeComments && options.commentsLimit && options.commentsLimit > 0) {
-    commentsCost = calculateCommentCredits(options.commentsLimit);
+    estimatedComments = options.commentsLimit;
+    commentsCost = calculateCommentCredits(estimatedComments);
   }
 
   const totalCredits = postsCost + commentsCost;
   const parts = [`${postsLimit} posts (~${postsCost} credits)`];
   if (commentsCost > 0) {
-    parts.push(`${options.commentsLimit} comments (~${commentsCost} credits)`);
+    parts.push(`${estimatedComments} comments (~${commentsCost} credits)`);
   }
 
   return {
     credits: totalCredits,
+    estimatedComments,
     description: parts.join(", "),
     breakdown: { posts: postsCost, comments: commentsCost },
   };
@@ -183,6 +188,7 @@ export function estimateCommentSyncCost(options: {
 
   return {
     credits: commentsCost,
+    estimatedComments,
     description: `Comments for ${postCount} posts (~${estimatedComments} comments, ${commentsCost} credits)`,
     breakdown: { posts: 0, comments: commentsCost },
   };
@@ -282,6 +288,7 @@ export async function startSync(input: StartSyncInput): Promise<StartSyncResult>
       status: "pending",
       creditsEstimated: creditsToHold,
       creditsHeld: creditsToHold,
+      commentsEstimated: estimate.estimatedComments || null,
       syncConfig: config,
     })
     .returning();
@@ -596,15 +603,21 @@ export async function processSyncResults(jobId: number): Promise<ProcessedSyncRe
 
     return result;
   } catch (error) {
-    // On processing failure: refund held credits and mark job failed
+    // On processing failure: refund held credits and mark job failed.
+    // IMPORTANT: Always update job status even if refund fails, to prevent
+    // the job from getting stuck (completedAt set by claim, but status never updated).
     const errorMessage = error instanceof Error ? error.message : "Unknown error processing results";
 
     if (job.creditsHeld && job.creditsHeld > 0) {
-      await refundHold(
-        job.userId,
-        job.creditsHeld,
-        `Refund: sync processing failed for job ${jobId}`
-      );
+      try {
+        await refundHold(
+          job.userId,
+          job.creditsHeld,
+          `Refund: sync processing failed for job ${jobId}`
+        );
+      } catch (refundError) {
+        console.error(`[Sync Job ${jobId}] Failed to refund credits:`, refundError);
+      }
     }
 
     await db
@@ -986,7 +999,9 @@ export async function getSyncJobStatus(jobId: number): Promise<{
  * Get active and recent jobs for an account — single endpoint for UI
  */
 export async function getAccountSyncData(accountId: number, userId: string) {
-  // Active jobs (pending or running)
+  // Active jobs (pending or running, and not already claimed for processing).
+  // The completedAt IS NULL check prevents showing jobs that were claimed by
+  // processSyncResults but got stuck before status could be updated.
   let activeJobs = await db
     .select()
     .from(syncJobs)
@@ -994,15 +1009,46 @@ export async function getAccountSyncData(accountId: number, userId: string) {
       and(
         eq(syncJobs.accountId, accountId),
         eq(syncJobs.userId, userId),
-        inArray(syncJobs.status, ["pending", "running"])
+        inArray(syncJobs.status, ["pending", "running"]),
+        isNull(syncJobs.completedAt)
       )
     )
     .orderBy(desc(syncJobs.createdAt));
 
+  // Clean up stuck jobs: status is still "running" but completedAt was set
+  // (claimed for processing but never finalized). Force-fail them.
+  // Grace period: only consider jobs stuck if completedAt was set more than
+  // 60 seconds ago, to avoid racing with webhook/polling processors.
+  const stuckJobs = await db
+    .select()
+    .from(syncJobs)
+    .where(
+      and(
+        eq(syncJobs.accountId, accountId),
+        eq(syncJobs.userId, userId),
+        inArray(syncJobs.status, ["pending", "running"]),
+        sql`${syncJobs.completedAt} IS NOT NULL`,
+        sql`${syncJobs.completedAt} < NOW() - INTERVAL '60 seconds'`
+      )
+    );
+
+  for (const stuckJob of stuckJobs) {
+    console.warn(`[Sync Job ${stuckJob.id}] Found stuck job (status=${stuckJob.status}, completedAt set). Force-failing.`);
+    await db
+      .update(syncJobs)
+      .set({
+        status: "failed",
+        error: "Job got stuck during processing",
+      })
+      .where(eq(syncJobs.id, stuckJob.id));
+  }
+
   // Polling fallback: for any running jobs with an Apify run ID, check if
   // Apify has finished and process results if so. This handles the case where
   // webhooks don't reach the server (e.g. local dev without ngrok).
+  // Also enriches running jobs with live dataset item counts for progress tracking.
   let jobsChanged = false;
+  const liveItemCounts = new Map<number, number>();
   for (const job of activeJobs) {
     if (job.status === "running" && job.apifyRunId) {
       // Check for timeout
@@ -1020,9 +1066,12 @@ export async function getAccountSyncData(accountId: number, userId: string) {
         } else if (["FAILED", "ABORTED", "TIMED-OUT"].includes(apifyStatus.status)) {
           await handleJobFailure(job, `Apify run ${apifyStatus.status.toLowerCase()}`);
           jobsChanged = true;
+        } else if (apifyStatus.status === "RUNNING" && apifyStatus.datasetItemCount != null) {
+          liveItemCounts.set(job.id, apifyStatus.datasetItemCount);
         }
       } catch (error) {
         console.error(`[Sync Job ${job.id}] Error checking Apify status during poll:`, error);
+        jobsChanged = true;
       }
     }
   }
@@ -1036,7 +1085,8 @@ export async function getAccountSyncData(accountId: number, userId: string) {
         and(
           eq(syncJobs.accountId, accountId),
           eq(syncJobs.userId, userId),
-          inArray(syncJobs.status, ["pending", "running"])
+          inArray(syncJobs.status, ["pending", "running"]),
+          isNull(syncJobs.completedAt)
         )
       )
       .orderBy(desc(syncJobs.createdAt));
@@ -1081,8 +1131,21 @@ export async function getAccountSyncData(accountId: number, userId: string) {
     .where(eq(tiktokAccounts.id, accountId))
     .limit(1);
 
+  // Enrich running jobs with live dataset item counts for progress tracking
+  const enrichedActiveJobs = activeJobs.map((job) => {
+    const liveCount = liveItemCounts.get(job.id);
+    if (liveCount == null) return job;
+    return {
+      ...job,
+      // Set the appropriate count field based on job type so the frontend
+      // can show real-time progress (e.g. "42 so far") while Apify runs
+      commentsCount: job.type === "comments" ? liveCount : job.commentsCount,
+      postsCount: (job.type === "posts" || job.type === "full") ? liveCount : job.postsCount,
+    };
+  });
+
   return {
-    activeJobs,
+    activeJobs: enrichedActiveJobs,
     recentJobs,
     stats: {
       syncedPosts: Number(postStats?.syncedPosts ?? 0),
@@ -1104,12 +1167,24 @@ async function pollApifyStatus(runId: string): Promise<SyncStatus> {
     throw new Error(`Apify run ${runId} not found`);
   }
 
+  // For running jobs, get live dataset item count for progress tracking
+  let datasetItemCount: number | undefined;
+  if (run.status === "RUNNING" && run.defaultDatasetId) {
+    try {
+      const dataset = await client.dataset(run.defaultDatasetId).get();
+      datasetItemCount = dataset?.itemCount ?? undefined;
+    } catch {
+      // Non-critical — progress just won't update this poll cycle
+    }
+  }
+
   return {
     status: run.status as SyncStatus["status"],
     startedAt: run.startedAt ? new Date(run.startedAt) : undefined,
     finishedAt: run.finishedAt ? new Date(run.finishedAt) : undefined,
     exitCode: run.exitCode,
     defaultDatasetId: run.defaultDatasetId,
+    datasetItemCount,
   };
 }
 

@@ -148,6 +148,7 @@ export default function AccountsPage() {
           disconnecting={disconnecting}
           syncData={syncData}
           onFetchSyncData={fetchSyncData}
+          onRefreshCredits={refreshCredits}
         />
       </div>
     </div>

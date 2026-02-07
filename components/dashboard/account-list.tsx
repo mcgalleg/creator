@@ -26,6 +26,7 @@ interface AccountListProps {
   syncData: Record<number, AccountSyncData>;
   onFetchSyncData?: (accountId: number) => Promise<void>;
   userCreditBalance?: number;
+  onRefreshCredits?: () => void;
 }
 
 export function AccountList({
@@ -40,6 +41,7 @@ export function AccountList({
   syncData,
   onFetchSyncData,
   userCreditBalance,
+  onRefreshCredits,
 }: AccountListProps) {
   const handleDelete = async (accountId: number) => {
     const account = accounts.find((a) => a.id === accountId);
@@ -153,6 +155,7 @@ export function AccountList({
               isDisconnecting={isDisconnecting}
               userCreditBalance={userCreditBalance}
               onFetchSyncData={onFetchSyncData}
+              onRefreshCredits={onRefreshCredits}
             />
           );
         })}

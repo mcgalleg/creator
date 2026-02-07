@@ -4,12 +4,11 @@ import { users } from "./users";
 
 // Legacy type for backward compatibility with existing comment sync rows
 export interface CommentSyncConfigSchema {
-  mode: "selection" | "top_performers" | "date_range" | "budget";
+  mode: "selection" | "top_performers" | "date_range";
   selectedPostIds?: string[];
   topCount?: number;
   dateRange?: { start: string; end: string }; // ISO date strings in DB
   maxPerPost?: number;
-  creditBudget?: number;
 }
 
 // Unified sync configuration covering all sync types
@@ -20,12 +19,11 @@ export interface SyncConfigSchema {
   oldestPostDate?: string;
   newestPostDate?: string;
   // Comment sync options
-  commentMode?: "selection" | "top_performers" | "date_range" | "budget";
+  commentMode?: "selection" | "top_performers" | "date_range";
   selectedPostIds?: string[];
   topCount?: number;
   dateRange?: { start: string; end: string };
   maxCommentsPerPost?: number;
-  creditBudget?: number;
 }
 
 export const syncJobs = pgTable("sync_jobs", {
@@ -40,6 +38,7 @@ export const syncJobs = pgTable("sync_jobs", {
   creditsUsed: integer("credits_used"),
   postsCount: integer("posts_count"),
   commentsCount: integer("comments_count"),
+  commentsEstimated: integer("comments_estimated"),
   syncConfig: jsonb("sync_config").$type<SyncConfigSchema>(),
   commentSyncConfig: jsonb("comment_sync_config").$type<CommentSyncConfigSchema>(), // Legacy, kept for existing rows
   error: text("error"),

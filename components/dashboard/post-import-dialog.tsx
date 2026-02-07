@@ -26,14 +26,13 @@ import {
   TrendingUp,
   Calendar,
   Star,
-  Wallet,
   AlertCircle,
   Loader2,
   Download,
 } from "lucide-react";
 
 // Types
-export type PostImportMode = "latest" | "date_range" | "top_performers" | "budget";
+export type PostImportMode = "latest" | "date_range" | "top_performers";
 export type PostSorting = "latest" | "popular" | "oldest";
 export type DateRangePreset = "last_week" | "last_month" | "last_3_months" | "last_6_months" | "all_time" | "custom";
 
@@ -45,7 +44,6 @@ export interface PostImportConfig {
   customDateStart?: string;
   customDateEnd?: string;
   topCount?: number;
-  creditBudget?: number;
   includeComments?: boolean;
   commentsPerPost?: number;
 }
@@ -112,9 +110,6 @@ export function PostImportDialog({
   // Top performers options
   const [topCount, setTopCount] = useState(10);
 
-  // Budget mode options
-  const [creditBudget, setCreditBudget] = useState(100);
-
   // Additional options
   const [includeComments, setIncludeComments] = useState(false);
   const [commentsPerPost, setCommentsPerPost] = useState(100);
@@ -134,7 +129,6 @@ export function PostImportDialog({
     sorting,
     dateRangePreset,
     topCount,
-    creditBudget,
     includeComments,
     commentsPerPost,
   ]);
@@ -173,24 +167,6 @@ export function PostImportDialog({
       case "top_performers":
         postsToImport = Math.min(topCount, totalPosts || topCount);
         break;
-      case "budget":
-        // Calculate max posts from budget using per-item pricing
-        const budgetBaseCost = CREDIT_RATES.PROFILE_SYNC;
-        const remainingBudget = creditBudget - budgetBaseCost;
-        if (remainingBudget <= 0) {
-          postsToImport = 0;
-        } else {
-          const costPerPost = CREDIT_RATES.PER_POST;
-          const commentsCostPerPost = includeComments
-            ? commentsPerPost * CREDIT_RATES.PER_COMMENT
-            : 0;
-          const totalCostPerPost = costPerPost + commentsCostPerPost;
-          postsToImport = Math.floor(remainingBudget / totalCostPerPost);
-          if (totalPosts) {
-            postsToImport = Math.min(postsToImport, totalPosts);
-          }
-        }
-        break;
     }
 
     const baseCost = CREDIT_RATES.PROFILE_SYNC;
@@ -202,7 +178,7 @@ export function PostImportDialog({
     const totalCredits = baseCost + postsCost + commentsCost;
 
     setCostEstimate({
-      totalCredits: mode === "budget" ? Math.min(totalCredits, creditBudget) : totalCredits,
+      totalCredits,
       baseCost,
       postsCost,
       commentsCost,
@@ -234,9 +210,6 @@ export function PostImportDialog({
         break;
       case "top_performers":
         config.topCount = topCount;
-        break;
-      case "budget":
-        config.creditBudget = creditBudget;
         break;
     }
 
@@ -420,32 +393,6 @@ export function PostImportDialog({
               </div>
             </div>
 
-            {/* Budget Mode */}
-            <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-              <RadioGroupItem value="budget" id="budget" className="mt-1" />
-              <div className="flex-1 min-w-0">
-                <Label htmlFor="budget" className="flex items-center gap-2 cursor-pointer text-sm sm:text-base">
-                  <Wallet className="size-4 text-green-500 shrink-0" />
-                  Budget Mode
-                </Label>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  Maximize posts within credit limit
-                </p>
-                {mode === "budget" && (
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <Label className="text-xs sm:text-sm">Max</Label>
-                    <Input
-                      type="number"
-                      value={creditBudget}
-                      onChange={(e) => setCreditBudget(parseInt(e.target.value) || 0)}
-                      className="w-20 sm:w-24 h-8 text-sm"
-                      min={1}
-                    />
-                    <span className="text-xs sm:text-sm text-muted-foreground">credits</span>
-                  </div>
-                )}
-              </div>
-            </div>
           </RadioGroup>
 
           {/* Additional Options */}

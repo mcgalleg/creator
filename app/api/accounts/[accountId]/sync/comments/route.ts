@@ -51,10 +51,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Parse body for sync config
     const body = await request.json().catch(() => ({}));
-    const { mode, selectedPostIds, topCount, dateRange, maxPerPost, creditBudget } = body;
+    const { mode, selectedPostIds, topCount, dateRange, maxPerPost } = body;
 
     // Validate mode
-    const validModes = ["selection", "top_performers", "date_range", "budget"];
+    const validModes = ["selection", "top_performers", "date_range"];
     if (!mode || !validModes.includes(mode)) {
       return NextResponse.json(
         { error: "Invalid sync mode. Must be one of: selection, top_performers, date_range, budget" },
@@ -73,13 +73,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (mode === "date_range" && (!dateRange?.start || !dateRange?.end)) {
       return NextResponse.json(
         { error: "dateRange with start and end required for date_range mode" },
-        { status: 400 }
-      );
-    }
-
-    if (mode === "budget" && (!creditBudget || creditBudget <= 0)) {
-      return NextResponse.json(
-        { error: "creditBudget required for budget mode" },
         { status: 400 }
       );
     }
@@ -126,18 +119,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           end: dateRange.end,
         };
         break;
-      case "budget":
-        syncConfig.creditBudget = creditBudget;
-        break;
     }
 
     // Estimate credits using the shared estimation logic (queries actual comment counts from DB)
     const costEstimate = await calculateEstimate("comments", syncConfig, accountIdNum);
 
-    // For budget mode, cap at the specified budget
-    const creditsToCheck = mode === "budget"
-      ? Math.min(costEstimate.credits, creditBudget)
-      : costEstimate.credits;
+    const creditsToCheck = costEstimate.credits;
 
     // Check sufficient credits
     const creditCheck = await checkCredits(userId, creditsToCheck);

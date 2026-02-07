@@ -25,7 +25,6 @@ import {
   MessageCircle,
   TrendingUp,
   Calendar,
-  Wallet,
   AlertCircle,
   Loader2,
   ListChecks,
@@ -35,7 +34,7 @@ import type { SyncJob } from "@/hooks/use-accounts";
 import { PostSelectionSheet } from "./post-selection-sheet";
 import { CREDIT_RATES, calculateCommentCredits } from "@/lib/credits";
 
-type SyncMode = "selection" | "top_performers" | "date_range" | "budget";
+type SyncMode = "selection" | "top_performers" | "date_range";
 
 interface CommentSyncDialogProps {
   isOpen: boolean;
@@ -45,6 +44,7 @@ interface CommentSyncDialogProps {
   activeCommentJobs?: SyncJob[];
   onSyncStarted?: () => void;
   userCreditBalance?: number;
+  syncedPostCount?: number;
 }
 
 interface CostEstimate {
@@ -61,11 +61,11 @@ export function CommentSyncDialog({
   activeCommentJobs,
   onSyncStarted,
   userCreditBalance = 0,
+  syncedPostCount,
 }: CommentSyncDialogProps) {
   const [mode, setMode] = useState<SyncMode>("top_performers");
   const [topCount, setTopCount] = useState(10);
   const [maxPerPost, setMaxPerPost] = useState(100);
-  const [creditBudget, setCreditBudget] = useState(100);
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
   const [selectedPostIds, setSelectedPostIds] = useState<Set<string>>(new Set());
@@ -79,12 +79,26 @@ export function CommentSyncDialog({
   const insufficientCredits = costEstimate ? costEstimate.credits > userCreditBalance : false;
   const newBalance = costEstimate ? userCreditBalance - costEstimate.credits : userCreditBalance;
 
+  // Reset form state when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setMode("top_performers");
+      setTopCount(10);
+      setMaxPerPost(100);
+      setDateStart("");
+      setDateEnd("");
+      setSelectedPostIds(new Set());
+      setSelectedPostComments(new Map());
+      setCostEstimate(null);
+    }
+  }, [isOpen]);
+
   // Calculate cost estimate whenever config changes
   useEffect(() => {
     if (!isOpen) return;
     calculateEstimate();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Config values are the dependencies we care about
-  }, [isOpen, mode, topCount, maxPerPost, creditBudget, selectedPostIds, selectedPostComments, dateStart, dateEnd]);
+  }, [isOpen, mode, topCount, maxPerPost, selectedPostIds, selectedPostComments, dateStart, dateEnd]);
 
   const calculateEstimate = () => {
     let postCount = 0;
@@ -100,33 +114,27 @@ export function CommentSyncDialog({
         }
         break;
       case "top_performers":
-        postCount = topCount;
+        postCount = syncedPostCount != null ? Math.min(topCount, syncedPostCount) : topCount;
         estimatedComments = postCount * maxPerPost;
         break;
       case "date_range":
-        // Estimate based on average posts per day
-        postCount = Math.min(50, 10); // Default estimate
-        estimatedComments = postCount * maxPerPost;
-        break;
-      case "budget":
-        // Calculate max posts from budget
-        const costPerPost = calculateCommentCredits(maxPerPost);
-        postCount = costPerPost > 0 ? Math.floor(creditBudget / costPerPost) : 0;
-        estimatedComments = postCount * maxPerPost;
+        // We can't know the count until the server queries, so leave unknown
+        postCount = 0;
+        estimatedComments = 0;
         break;
     }
 
     const credits = calculateCommentCredits(estimatedComments);
 
     setCostEstimate({
-      credits: mode === "budget" ? Math.min(credits, creditBudget) : credits,
+      credits,
       postCount,
       estimatedComments,
     });
   };
 
   const handleSync = async () => {
-    if (!costEstimate || costEstimate.postCount === 0) {
+    if (!costEstimate || (mode !== "date_range" && costEstimate.postCount === 0)) {
       toast.error("Please configure the sync options");
       return;
     }
@@ -150,9 +158,6 @@ export function CommentSyncDialog({
             start: new Date(dateStart).toISOString(),
             end: new Date(dateEnd).toISOString(),
           };
-          break;
-        case "budget":
-          config.creditBudget = creditBudget;
           break;
       }
 
@@ -244,11 +249,13 @@ export function CommentSyncDialog({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {[5, 10, 15, 20, 25, 50].map((n) => (
-                            <SelectItem key={n} value={n.toString()}>
-                              {n}
-                            </SelectItem>
-                          ))}
+                          {[5, 10, 15, 20, 25, 50]
+                            .filter((n) => syncedPostCount == null || n <= syncedPostCount)
+                            .map((n) => (
+                              <SelectItem key={n} value={n.toString()}>
+                                {n}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                       <span className="text-sm text-muted-foreground">posts</span>
@@ -326,31 +333,6 @@ export function CommentSyncDialog({
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-                <RadioGroupItem value="budget" id="budget" className="mt-1" />
-                <div className="flex-1">
-                  <Label htmlFor="budget" className="flex items-center gap-2 cursor-pointer">
-                    <Wallet className="size-4 text-amber-500" />
-                    Budget Mode
-                  </Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Set a credit limit and prioritize high-engagement posts
-                  </p>
-                  {mode === "budget" && (
-                    <div className="mt-3 flex items-center gap-2">
-                      <Label className="text-sm">Max</Label>
-                      <Input
-                        type="number"
-                        value={creditBudget}
-                        onChange={(e) => setCreditBudget(parseInt(e.target.value) || 0)}
-                        className="w-24 h-8"
-                        min={15}
-                      />
-                      <span className="text-sm text-muted-foreground">credits</span>
-                    </div>
-                  )}
-                </div>
-              </div>
             </RadioGroup>
 
             {/* Max Comments Per Post */}
@@ -378,28 +360,38 @@ export function CommentSyncDialog({
               <div className="rounded-lg bg-muted p-4 space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Posts to sync</span>
-                  <span className="font-medium">{costEstimate.postCount}</span>
+                  <span className="font-medium">
+                    {mode === "date_range" ? "—" : costEstimate.postCount}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Est. comments</span>
-                  <span className="font-medium">~{formatNumber(costEstimate.estimatedComments)}</span>
+                  <span className="font-medium">
+                    {mode === "date_range" ? "—" : `~${formatNumber(costEstimate.estimatedComments)}`}
+                  </span>
                 </div>
                 <div className="border-t pt-2 flex items-center justify-between">
                   <span className="font-medium">Estimated Cost</span>
-                  <Badge
-                    variant={insufficientCredits ? "destructive" : "secondary"}
-                    className="text-base"
-                  >
-                    {costEstimate.credits} credits
-                  </Badge>
+                  {mode === "date_range" ? (
+                    <span className="text-sm text-muted-foreground">Calculated after sync</span>
+                  ) : (
+                    <Badge
+                      variant={insufficientCredits ? "destructive" : "secondary"}
+                      className="text-base"
+                    >
+                      {costEstimate.credits} credits
+                    </Badge>
+                  )}
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Your balance</span>
-                  <span className={insufficientCredits ? "text-destructive" : ""}>
-                    {userCreditBalance} → {newBalance} credits
-                  </span>
-                </div>
-                {insufficientCredits && (
+                {mode !== "date_range" && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Your balance</span>
+                    <span className={insufficientCredits ? "text-destructive" : ""}>
+                      {userCreditBalance} → {newBalance} credits
+                    </span>
+                  </div>
+                )}
+                {insufficientCredits && mode !== "date_range" && (
                   <p className="text-xs text-destructive flex items-start gap-1">
                     <AlertCircle className="size-3 mt-0.5 shrink-0" />
                     Insufficient credits. Reduce scope or add credits.
@@ -419,7 +411,7 @@ export function CommentSyncDialog({
             </Button>
             <Button
               onClick={handleSync}
-              disabled={syncing || !costEstimate || costEstimate.postCount === 0 || hasActiveCommentSync || insufficientCredits}
+              disabled={syncing || !costEstimate || (mode !== "date_range" && costEstimate.postCount === 0) || (mode === "date_range" && (!dateStart || !dateEnd)) || hasActiveCommentSync || (mode !== "date_range" && insufficientCredits)}
             >
               {syncing ? (
                 <>
