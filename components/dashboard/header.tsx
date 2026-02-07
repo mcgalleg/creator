@@ -2,6 +2,7 @@
 
 import { UserButton } from '@clerk/nextjs';
 import { Coins } from 'lucide-react';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -21,7 +22,13 @@ export function Header() {
       <div className="flex h-16 items-center justify-between px-4 md:px-6">
         <div className="md:hidden">
           {/* Mobile menu button could go here */}
-          <span className="text-lg font-bold">TikTok Analytics</span>
+          <Image
+            src="/logo.png"
+            alt="Not a Bot"
+            width={100}
+            height={33}
+            className="h-6 w-auto dark:invert"
+          />
         </div>
 
         <div className="flex-1" />
