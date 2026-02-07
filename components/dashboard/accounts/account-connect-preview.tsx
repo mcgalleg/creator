@@ -4,56 +4,43 @@ import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditBalanceDisplay } from "./credit-balance-display";
-import { PostImportDialog, PostImportConfig } from "./post-import-dialog";
-import { BadgeCheck, Users, Heart, Video, Loader2, ArrowLeft, Settings2 } from "lucide-react";
+import { CreditBalanceDisplay } from "@/components/dashboard/credit-balance-display";
+import { PostImportDialog, type PostImportConfig } from "@/components/dashboard/post-import-dialog";
+import { BadgeCheck, Users, Heart, Video, Loader2, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { formatNumber } from "./shared-utils";
+import type { TikTokProfile } from "./account-detail-panel";
 
-interface TikTokProfile {
-  username: string;
-  displayName: string;
-  avatarUrl: string;
-  followerCount: number;
-  followingCount: number;
-  likesCount: number;
-  videoCount: number;
-  bio: string;
-  isVerified: boolean;
-}
-
-interface TikTokPreviewCardProps {
+interface AccountConnectPreviewProps {
   profile: TikTokProfile;
   userCreditBalance: number;
-  onConnect: (importConfig?: PostImportConfig) => void;
+  onConnect: (
+    username: string,
+    options?: {
+      triggerSync?: boolean;
+      postsLimit?: number;
+      includeComments?: boolean;
+    }
+  ) => Promise<{ profile: { username: string } }>;
   onCancel: () => void;
   isConnecting: boolean;
+  onRefreshCredits?: () => void;
 }
 
-export type { PostImportConfig };
-
-const formatNumber = (num: number): string => {
-  if (num >= 1000000) {
-    return `${(num / 1000000).toFixed(1)}M`;
-  }
-  if (num >= 1000) {
-    return `${(num / 1000).toFixed(1)}K`;
-  }
-  return num.toString();
-};
-
-export function TikTokPreviewCard({
+export function AccountConnectPreview({
   profile,
   userCreditBalance,
   onConnect,
   onCancel,
   isConnecting,
-}: TikTokPreviewCardProps) {
+  onRefreshCredits,
+}: AccountConnectPreviewProps) {
   const [importPosts, setImportPosts] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [customImportConfig, setCustomImportConfig] = useState<PostImportConfig | null>(null);
   const [customImportCost, setCustomImportCost] = useState<number | null>(null);
 
-  // Default cost estimate for posts (25 posts × 1 credit = 25 credits)
   const defaultPostsCost = 25;
   const selectedCost = importPosts ? (customImportCost ?? defaultPostsCost) : 0;
   const hasEnoughCredits = userCreditBalance >= selectedCost;
@@ -65,11 +52,29 @@ export function TikTokPreviewCard({
     setShowImportDialog(false);
   };
 
-  const handleConnect = () => {
-    if (importPosts && customImportConfig) {
-      onConnect(customImportConfig);
-    } else {
-      onConnect();
+  const handleConnect = async () => {
+    try {
+      const triggerSync = importPosts && !!customImportConfig;
+      const includeComments = customImportConfig?.includeComments ?? false;
+      const postsLimit = customImportConfig?.postsLimit ?? customImportConfig?.topCount ?? 50;
+
+      const result = await onConnect(profile.username, {
+        triggerSync,
+        postsLimit,
+        includeComments,
+      });
+
+      toast.success("Account connected successfully!", {
+        description: `@${result.profile.username} has been added to your accounts.`,
+      });
+
+      onRefreshCredits?.();
+      onCancel(); // Close the panel
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to connect account";
+      toast.error("Failed to connect account", {
+        description: `${message}. You can try again.`,
+      });
     }
   };
 
@@ -82,10 +87,10 @@ export function TikTokPreviewCard({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 py-2">
       {/* Profile Preview */}
       <div className="flex items-start gap-4">
-        <Avatar className="size-14 sm:size-16 border-2 border-border shrink-0">
+        <Avatar className="size-14 border-2 border-border shrink-0">
           <AvatarImage
             src={profile.avatarUrl || undefined}
             alt={profile.displayName || profile.username}
@@ -104,11 +109,10 @@ export function TikTokPreviewCard({
               <BadgeCheck className="size-5 text-blue-500 shrink-0" />
             )}
           </div>
-          <div className="text-muted-foreground mb-3">
+          <div className="text-sm text-muted-foreground mb-3">
             @{profile.username}
           </div>
-
-          <div className="flex flex-wrap gap-3 sm:gap-4 text-sm">
+          <div className="flex flex-wrap gap-3 text-sm">
             <div className="flex items-center gap-1.5">
               <Users className="size-4 text-muted-foreground" />
               <span className="font-medium">{formatNumber(profile.followerCount)}</span>
@@ -128,9 +132,8 @@ export function TikTokPreviewCard({
         </div>
       </div>
 
-      {/* Simplified Options: Connect only vs Connect & Import */}
+      {/* Options: Connect only vs Connect & Import */}
       <div className="space-y-3">
-        {/* Connect only - FREE */}
         <button
           type="button"
           onClick={() => handleImportToggle(false)}
@@ -142,15 +145,11 @@ export function TikTokPreviewCard({
           )}
         >
           <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                "size-4 rounded-full border-2 flex items-center justify-center",
-                !importPosts ? "border-primary" : "border-muted-foreground/50"
-              )}
-            >
-              {!importPosts && (
-                <div className="size-2 rounded-full bg-primary" />
-              )}
+            <div className={cn(
+              "size-4 rounded-full border-2 flex items-center justify-center",
+              !importPosts ? "border-primary" : "border-muted-foreground/50"
+            )}>
+              {!importPosts && <div className="size-2 rounded-full bg-primary" />}
             </div>
             <div>
               <span className="font-medium">Connect only</span>
@@ -164,30 +163,23 @@ export function TikTokPreviewCard({
           </Badge>
         </button>
 
-        {/* Connect & Import Posts */}
-        <div
-          className={cn(
-            "rounded-lg border transition-colors",
-            importPosts
-              ? "border-primary bg-primary/5"
-              : "border-border hover:border-muted-foreground/50"
-          )}
-        >
+        <div className={cn(
+          "rounded-lg border transition-colors",
+          importPosts
+            ? "border-primary bg-primary/5"
+            : "border-border hover:border-muted-foreground/50"
+        )}>
           <button
             type="button"
             onClick={() => handleImportToggle(true)}
             className="w-full flex items-center justify-between p-4 text-left"
           >
             <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "size-4 rounded-full border-2 flex items-center justify-center",
-                  importPosts ? "border-primary" : "border-muted-foreground/50"
-                )}
-              >
-                {importPosts && (
-                  <div className="size-2 rounded-full bg-primary" />
-                )}
+              <div className={cn(
+                "size-4 rounded-full border-2 flex items-center justify-center",
+                importPosts ? "border-primary" : "border-muted-foreground/50"
+              )}>
+                {importPosts && <div className="size-2 rounded-full bg-primary" />}
               </div>
               <div>
                 <span className="font-medium">Connect & Import Posts</span>
@@ -201,7 +193,6 @@ export function TikTokPreviewCard({
             </Badge>
           </button>
 
-          {/* Configure link - shown when this option is selected */}
           {importPosts && (
             <div className="px-4 pb-4 pt-0">
               <button
@@ -238,37 +229,25 @@ export function TikTokPreviewCard({
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
-        <Button
-          variant="ghost"
-          onClick={onCancel}
-          disabled={isConnecting}
-          className="w-full sm:w-auto"
-        >
-          <ArrowLeft className="size-4 mr-1" />
-          Back
-        </Button>
+      {/* Action Button */}
+      <Button
+        onClick={handleConnect}
+        disabled={isConnecting || (!hasEnoughCredits && !isFreeOption)}
+        className="w-full"
+      >
+        {isConnecting ? (
+          <>
+            <Loader2 className="size-4 animate-spin" />
+            Connecting...
+          </>
+        ) : isFreeOption ? (
+          "Connect Account"
+        ) : (
+          `Connect for ${selectedCost} credits`
+        )}
+      </Button>
 
-        <Button
-          onClick={handleConnect}
-          disabled={isConnecting || (!hasEnoughCredits && !isFreeOption)}
-          className="w-full sm:w-auto"
-        >
-          {isConnecting ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              Connecting...
-            </>
-          ) : isFreeOption ? (
-            "Connect Account"
-          ) : (
-            `Connect for ${selectedCost} credits`
-          )}
-        </Button>
-      </div>
-
-      {/* Post Import Dialog */}
+      {/* Post Import Dialog for configuring import options */}
       <PostImportDialog
         isOpen={showImportDialog}
         onClose={() => setShowImportDialog(false)}

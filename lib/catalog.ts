@@ -78,16 +78,8 @@ const MetricCardSchema = z.object({
   format: z.enum(["number", "currency", "percent", "compact"]).optional(),
 });
 
-const MetricSchema = z.object({
-  label: z.string(),
-  value: z.union([z.string(), z.number()]),
-  change: z.number().optional(),
-  trend: trendSchema,
-  format: z.enum(["number", "currency", "percent", "compact"]).optional(),
-});
-
 const MetricGroupSchema = z.object({
-  metrics: z.array(MetricSchema),
+  metrics: z.array(MetricCardSchema),
   columns: z.number().min(1).max(6).optional().default(4),
 });
 

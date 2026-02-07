@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { handleSyncWebhook } from "@/lib/services/sync-service";
 
 export async function POST(request: NextRequest) {
-  // 1. Verify secret from query params
+  // 1. Verify secret — prefer header, fall back to query param for backward compat
+  const headerSecret = request.headers.get("X-Apify-Webhook-Secret");
   const { searchParams } = new URL(request.url);
-  const secret = searchParams.get("secret");
+  const querySecret = searchParams.get("secret");
   const expectedSecret = process.env.APIFY_WEBHOOK_SECRET;
 
-  if (!expectedSecret || secret !== expectedSecret) {
+  if (!expectedSecret || (headerSecret !== expectedSecret && querySecret !== expectedSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

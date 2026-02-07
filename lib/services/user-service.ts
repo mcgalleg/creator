@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
+import { addCredits } from "@/lib/services/credit-service";
+import { SIGNUP_BONUS_CREDITS } from "@/lib/credits";
 
 /**
  * Ensures a user exists in the database.
@@ -29,16 +31,18 @@ export async function ensureUserExists(userId: string): Promise<boolean> {
       return false;
     }
 
-    // Create user with signup bonus
+    // Create user with zero balance, then add signup bonus with audit trail
     await db.insert(users).values({
       id: userId,
       email: clerkUser.emailAddresses?.[0]?.emailAddress ?? "",
       name: [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || null,
       imageUrl: clerkUser.imageUrl ?? null,
-      creditBalance: 100, // Signup bonus
+      creditBalance: 0,
     });
 
-    console.log(`Created user ${userId} on-the-fly with 100 signup bonus credits`);
+    await addCredits(userId, SIGNUP_BONUS_CREDITS, "signup_bonus", "Welcome bonus credits");
+
+    console.log(`Created user ${userId} on-the-fly with ${SIGNUP_BONUS_CREDITS} signup bonus credits`);
     return true;
   } catch (error) {
     console.error("Error ensuring user exists:", error);

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { users, creditTransactions } from "@/lib/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and, gte } from "drizzle-orm";
 import { CREDIT_PRICING_DISPLAY } from "@/lib/credits";
 
 export type CreditTransactionType =
@@ -58,27 +58,26 @@ export async function addCredits(
     return getUserCredits(userId);
   }
 
-  // Update user balance (increment)
-  const updateResult = await db
-    .update(users)
-    .set({
-      creditBalance: sql`${users.creditBalance} + ${amount}`,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId))
-    .returning({ creditBalance: users.creditBalance });
+  // Atomic update + transaction record
+  const [updateResult] = await db.batch([
+    db.update(users)
+      .set({
+        creditBalance: sql`${users.creditBalance} + ${amount}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning({ creditBalance: users.creditBalance }),
+    db.insert(creditTransactions).values({
+      userId,
+      amount, // Positive for additions
+      type,
+      description,
+    }),
+  ]);
 
   if (updateResult.length === 0) {
     throw new Error("User not found");
   }
-
-  // Insert credit transaction record with positive amount
-  await db.insert(creditTransactions).values({
-    userId,
-    amount, // Positive for additions
-    type,
-    description,
-  });
 
   return updateResult[0].creditBalance;
 }
@@ -96,37 +95,30 @@ export async function holdCredits(
     return getUserCredits(userId);
   }
 
-  // Check sufficient balance
-  const { sufficient, balance } = await checkCredits(userId, amount);
-  if (!sufficient) {
+  // Atomic check-and-deduct: WHERE clause ensures sufficient balance
+  const [balanceUpdate] = await db.batch([
+    db.update(users)
+      .set({
+        creditBalance: sql`${users.creditBalance} - ${amount}`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(users.id, userId), gte(users.creditBalance, amount)))
+      .returning({ creditBalance: users.creditBalance }),
+    db.insert(creditTransactions).values({
+      userId,
+      amount: -amount,
+      type: "credit_hold",
+      description,
+    }),
+  ]);
+
+  if (balanceUpdate.length === 0) {
     throw new Error(
-      `Insufficient credits. Balance: ${balance}, Required: ${amount}`
+      `Insufficient credits. Required: ${amount}`
     );
   }
 
-  // Deduct from user balance
-  const updateResult = await db
-    .update(users)
-    .set({
-      creditBalance: sql`${users.creditBalance} - ${amount}`,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId))
-    .returning({ creditBalance: users.creditBalance });
-
-  if (updateResult.length === 0) {
-    throw new Error("Failed to update user balance");
-  }
-
-  // Insert credit hold transaction with negative amount
-  await db.insert(creditTransactions).values({
-    userId,
-    amount: -amount,
-    type: "credit_hold",
-    description,
-  });
-
-  return updateResult[0].creditBalance;
+  return balanceUpdate[0].creditBalance;
 }
 
 /**
@@ -150,40 +142,47 @@ export async function finalizeCredits(
 
   if (difference > 0) {
     // Refund the overestimate back to the user
-    await db
-      .update(users)
-      .set({
-        creditBalance: sql`${users.creditBalance} + ${difference}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId));
-
-    await db.insert(creditTransactions).values({
-      userId,
-      amount: difference,
-      type: "refund",
-      description: `Settled hold: used ${actual} of ${held} held. ${description}`,
-    });
+    await db.batch([
+      db.update(users)
+        .set({
+          creditBalance: sql`${users.creditBalance} + ${difference}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId)),
+      db.insert(creditTransactions).values({
+        userId,
+        amount: difference,
+        type: "refund",
+        description: `Settled hold: used ${actual} of ${held} held. ${description}`,
+      }),
+    ]);
   } else if (difference < 0) {
-    // Deduct the additional amount beyond the hold
+    // Deduct the additional amount beyond the hold, clamping balance to 0
     const additionalAmount = -difference;
 
-    await db
-      .update(users)
-      .set({
-        creditBalance: sql`${users.creditBalance} - ${additionalAmount}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId));
-
+    await db.batch([
+      db.update(users)
+        .set({
+          creditBalance: sql`GREATEST(${users.creditBalance} - ${additionalAmount}, 0)`,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId)),
+      db.insert(creditTransactions).values({
+        userId,
+        amount: -additionalAmount,
+        type,
+        description: `Additional charge beyond hold: used ${actual} of ${held} held. ${description}`,
+      }),
+    ]);
+  } else {
+    // Exact match — record for audit completeness
     await db.insert(creditTransactions).values({
       userId,
-      amount: -additionalAmount,
+      amount: 0,
       type,
-      description: `Additional charge beyond hold: used ${actual} of ${held} held. ${description}`,
+      description: `Settled hold: used ${actual} of ${held} held (exact match). ${description}`,
     });
   }
-  // If difference === 0, no balance change or transaction needed — the hold was exact
 }
 
 /**
@@ -194,32 +193,31 @@ export async function refundHold(
   amount: number,
   description: string
 ): Promise<number> {
-  // No-op for zero amount
-  if (amount === 0) {
+  // No-op for zero or negative amount
+  if (amount <= 0) {
     return getUserCredits(userId);
   }
 
-  // Add full amount back to user balance
-  const updateResult = await db
-    .update(users)
-    .set({
-      creditBalance: sql`${users.creditBalance} + ${amount}`,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId))
-    .returning({ creditBalance: users.creditBalance });
+  // Atomic refund + transaction record
+  const [updateResult] = await db.batch([
+    db.update(users)
+      .set({
+        creditBalance: sql`${users.creditBalance} + ${amount}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning({ creditBalance: users.creditBalance }),
+    db.insert(creditTransactions).values({
+      userId,
+      amount,
+      type: "refund",
+      description,
+    }),
+  ]);
 
   if (updateResult.length === 0) {
     throw new Error("User not found");
   }
-
-  // Insert refund transaction with positive amount
-  await db.insert(creditTransactions).values({
-    userId,
-    amount,
-    type: "refund",
-    description,
-  });
 
   return updateResult[0].creditBalance;
 }

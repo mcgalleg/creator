@@ -1,8 +1,9 @@
 import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { tiktokAccounts, posts } from "@/lib/db/schema";
-import { eq, and, count } from "drizzle-orm";
+import { tiktokAccounts, posts, syncJobs } from "@/lib/db/schema";
+import { eq, and, inArray, count } from "drizzle-orm";
+import { cancelSyncJob } from "@/lib/services/sync-service";
 
 interface RouteParams {
   params: Promise<{ accountId: string }>;
@@ -109,6 +110,25 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     if (!account) {
       return NextResponse.json({ error: "Account not found" }, { status: 404 });
+    }
+
+    // Cancel active sync jobs before deletion
+    const activeJobs = await db
+      .select({ id: syncJobs.id })
+      .from(syncJobs)
+      .where(
+        and(
+          eq(syncJobs.accountId, accountIdNum),
+          inArray(syncJobs.status, ["pending", "running"])
+        )
+      );
+
+    for (const activeJob of activeJobs) {
+      try {
+        await cancelSyncJob(activeJob.id);
+      } catch (cancelError) {
+        console.error(`Failed to cancel sync job ${activeJob.id} during account deletion:`, cancelError);
+      }
     }
 
     // Delete the account (cascade will handle posts and comments)

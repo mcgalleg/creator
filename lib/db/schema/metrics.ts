@@ -1,4 +1,4 @@
-import { pgTable, integer, bigint, timestamp, serial } from "drizzle-orm/pg-core";
+import { pgTable, integer, bigint, timestamp, serial, index } from "drizzle-orm/pg-core";
 import { tiktokAccounts } from "./tiktok-accounts";
 
 export const accountMetricsHistory = pgTable("account_metrics_history", {
@@ -9,4 +9,6 @@ export const accountMetricsHistory = pgTable("account_metrics_history", {
   likesCount: bigint("likes_count", { mode: "number" }).default(0),
   videoCount: bigint("video_count", { mode: "number" }).default(0),
   recordedAt: timestamp("recorded_at").notNull(),
-});
+}, (table) => [
+  index("metrics_account_recorded_idx").on(table.accountId, table.recordedAt),
+]);

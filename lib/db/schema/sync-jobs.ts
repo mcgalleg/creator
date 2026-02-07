@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, serial, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, serial, jsonb, index } from "drizzle-orm/pg-core";
 import { tiktokAccounts } from "./tiktok-accounts";
 import { users } from "./users";
 
@@ -49,4 +49,7 @@ export const syncJobs = pgTable("sync_jobs", {
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("sync_jobs_apify_run_id_idx").on(table.apifyRunId),
+  index("sync_jobs_account_status_idx").on(table.accountId, table.status),
+]);

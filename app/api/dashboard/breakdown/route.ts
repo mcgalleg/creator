@@ -1,8 +1,12 @@
-import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { posts, tiktokAccounts } from "@/lib/db/schema";
+import { posts } from "@/lib/db/schema";
 import { eq, and, gte, sum } from "drizzle-orm";
+import {
+  withAccountAuth,
+  isAuthError,
+  PERIOD_DAYS,
+} from "@/lib/dashboard-utils";
 
 type EngagementType = "likes" | "comments" | "shares" | "saves";
 
@@ -11,12 +15,6 @@ interface BreakdownItem {
   value: number;
   percentage: number;
 }
-
-const PERIOD_DAYS: Record<string, number> = {
-  "7d": 7,
-  "30d": 30,
-  "90d": 90,
-};
 
 /**
  * GET /api/dashboard/breakdown
@@ -28,58 +26,9 @@ const PERIOD_DAYS: Record<string, number> = {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const searchParams = request.nextUrl.searchParams;
-    const accountIdParam = searchParams.get("accountId");
-    const period = searchParams.get("period") || "30d";
-
-    // Validate accountId
-    if (!accountIdParam) {
-      return NextResponse.json(
-        { error: "accountId is required" },
-        { status: 400 }
-      );
-    }
-
-    const accountId = parseInt(accountIdParam, 10);
-    if (isNaN(accountId)) {
-      return NextResponse.json(
-        { error: "Invalid accountId" },
-        { status: 400 }
-      );
-    }
-
-    // Validate period
-    if (!PERIOD_DAYS[period]) {
-      return NextResponse.json(
-        { error: "Invalid period. Must be one of: 7d, 30d, 90d" },
-        { status: 400 }
-      );
-    }
-
-    // Verify account ownership
-    const [account] = await db
-      .select({ id: tiktokAccounts.id })
-      .from(tiktokAccounts)
-      .where(
-        and(
-          eq(tiktokAccounts.id, accountId),
-          eq(tiktokAccounts.userId, userId)
-        )
-      )
-      .limit(1);
-
-    if (!account) {
-      return NextResponse.json(
-        { error: "Account not found" },
-        { status: 404 }
-      );
-    }
+    const authResult = await withAccountAuth(request);
+    if (isAuthError(authResult)) return authResult;
+    const { accountId, period } = authResult;
 
     // Calculate the date threshold for the period
     const days = PERIOD_DAYS[period];

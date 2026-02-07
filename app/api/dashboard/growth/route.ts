@@ -1,20 +1,13 @@
-import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tiktokAccounts, accountMetricsHistory, posts } from "@/lib/db/schema";
 import { eq, and, gte, sql } from "drizzle-orm";
-
-type Period = "7d" | "30d" | "90d";
-
-const PERIOD_DAYS: Record<Period, number> = {
-  "7d": 7,
-  "30d": 30,
-  "90d": 90,
-};
-
-function isValidPeriod(value: string): value is Period {
-  return value in PERIOD_DAYS;
-}
+import {
+  withAccountAuth,
+  isAuthError,
+  calculateEngagementRate,
+  PERIOD_DAYS,
+} from "@/lib/dashboard-utils";
 
 /**
  * GET /api/dashboard/growth
@@ -26,41 +19,11 @@ function isValidPeriod(value: string): value is Period {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const authResult = await withAccountAuth(request);
+    if (isAuthError(authResult)) return authResult;
+    const { accountId, period } = authResult;
 
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const searchParams = request.nextUrl.searchParams;
-    const accountIdParam = searchParams.get("accountId");
-    const periodParam = searchParams.get("period") || "30d";
-
-    // Validate accountId
-    if (!accountIdParam) {
-      return NextResponse.json(
-        { error: "accountId is required" },
-        { status: 400 }
-      );
-    }
-
-    const accountId = parseInt(accountIdParam, 10);
-    if (isNaN(accountId)) {
-      return NextResponse.json(
-        { error: "Invalid accountId" },
-        { status: 400 }
-      );
-    }
-
-    // Validate period
-    if (!isValidPeriod(periodParam)) {
-      return NextResponse.json(
-        { error: "Invalid period. Must be one of: 7d, 30d, 90d" },
-        { status: 400 }
-      );
-    }
-
-    // Verify account ownership
+    // Get account data (need followerCount, likesCount for summary)
     const [account] = await db
       .select({
         id: tiktokAccounts.id,
@@ -68,23 +31,11 @@ export async function GET(request: NextRequest) {
         likesCount: tiktokAccounts.likesCount,
       })
       .from(tiktokAccounts)
-      .where(
-        and(
-          eq(tiktokAccounts.id, accountId),
-          eq(tiktokAccounts.userId, userId)
-        )
-      )
+      .where(eq(tiktokAccounts.id, accountId))
       .limit(1);
 
-    if (!account) {
-      return NextResponse.json(
-        { error: "Account not found" },
-        { status: 404 }
-      );
-    }
-
     // Calculate the start date for the period
-    const days = PERIOD_DAYS[periodParam];
+    const days = PERIOD_DAYS[period];
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
     startDate.setHours(0, 0, 0, 0);
@@ -147,10 +98,13 @@ export async function GET(request: NextRequest) {
       const totalSaves = Number(row.totalSaves);
       const postCount = Number(row.postCount);
 
-      const totalEngagements = totalLikes + totalComments + totalShares + totalSaves;
-      const engagementRate = totalPlays > 0
-        ? Number(((totalEngagements / totalPlays) * 100).toFixed(2))
-        : 0;
+      const engagementRate = calculateEngagementRate(
+        totalLikes,
+        totalComments,
+        totalShares,
+        totalSaves,
+        totalPlays
+      );
 
       return {
         date: row.date,
@@ -180,7 +134,7 @@ export async function GET(request: NextRequest) {
       currentFollowers: account.followerCount ?? 0,
       currentLikes: account.likesCount ?? 0,
       followerGrowth: calculateGrowth(followerGrowth),
-      period: periodParam,
+      period,
       dataPoints: followerGrowth.length,
     };
 

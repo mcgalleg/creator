@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tiktokAccounts, syncJobs } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import {
   startSync,
   calculateEstimate,
@@ -77,14 +77,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Check if there's already a running sync for this account
+    // Check if there's already a pending or running sync for this account
     const [runningJob] = await db
       .select()
       .from(syncJobs)
       .where(
         and(
           eq(syncJobs.accountId, accountIdNum),
-          eq(syncJobs.status, "running")
+          inArray(syncJobs.status, ["pending", "running"])
         )
       )
       .limit(1);

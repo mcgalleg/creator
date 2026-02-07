@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { PostSelectionSheet } from "@/components/dashboard/post-selection-sheet";
+import { InlinePostSelector } from "@/components/dashboard/accounts/inline-post-selector";
 import {
   MessageCircle,
   ListChecks,
@@ -340,16 +340,16 @@ export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
         </CardFooter>
       </Card>
 
-      <PostSelectionSheet
-        open={isPickerOpen}
-        onOpenChange={setIsPickerOpen}
-        accountId={accountId}
-        selectedTiktokIds={selectedPostIds}
-        onConfirm={(ids, commentCounts) => {
-          setSelectedPostIds(ids);
-          setSelectedPostComments(commentCounts);
-        }}
-      />
+      {isPickerOpen && (
+        <InlinePostSelector
+          accountId={accountId}
+          selectedTiktokIds={selectedPostIds}
+          onSelectionChange={(ids, commentCounts) => {
+            setSelectedPostIds(ids);
+            setSelectedPostComments(commentCounts);
+          }}
+        />
+      )}
     </>
   );
 }

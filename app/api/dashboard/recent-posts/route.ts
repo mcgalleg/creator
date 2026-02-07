@@ -1,10 +1,13 @@
-import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { posts, tiktokAccounts } from "@/lib/db/schema";
+import { posts } from "@/lib/db/schema";
 import { eq, and, desc, asc, count, gte, sql, ilike } from "drizzle-orm";
-
-type Period = "7d" | "30d" | "90d";
+import {
+  withAccountAuth,
+  isAuthError,
+  escapeLikePattern,
+  type Period,
+} from "@/lib/dashboard-utils";
 
 function getStartDate(period: Period): Date {
   const now = new Date();
@@ -29,15 +32,11 @@ function getStartDate(period: Period): Date {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await withAccountAuth(request);
+    if (isAuthError(authResult)) return authResult;
+    const { accountId, period } = authResult;
 
     const searchParams = request.nextUrl.searchParams;
-    const accountIdParam = searchParams.get("accountId");
-    const periodParam = searchParams.get("period") as Period | null;
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
     const allPostsParam = searchParams.get("allPosts");
@@ -45,28 +44,9 @@ export async function GET(request: NextRequest) {
     const sortByParam = searchParams.get("sortBy");
     const sortDirParam = searchParams.get("sortDir");
 
-    // Validate accountId
-    if (!accountIdParam) {
-      return NextResponse.json(
-        { error: "accountId is required" },
-        { status: 400 }
-      );
-    }
-
-    const accountId = parseInt(accountIdParam, 10);
-    if (isNaN(accountId)) {
-      return NextResponse.json(
-        { error: "Invalid accountId" },
-        { status: 400 }
-      );
-    }
-
     // Determine if we should skip the date filter
     const showAllPosts = allPostsParam === "true";
 
-    // Validate period (used only when not showing all posts)
-    const validPeriods: Period[] = ["7d", "30d", "90d"];
-    const period: Period = periodParam && validPeriods.includes(periodParam) ? periodParam : "30d";
     const startDate = getStartDate(period);
 
     // Parse and validate limit
@@ -87,25 +67,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify the account belongs to the current user
-    const [account] = await db
-      .select({ id: tiktokAccounts.id })
-      .from(tiktokAccounts)
-      .where(
-        and(
-          eq(tiktokAccounts.id, accountId),
-          eq(tiktokAccounts.userId, userId)
-        )
-      )
-      .limit(1);
-
-    if (!account) {
-      return NextResponse.json(
-        { error: "Account not found" },
-        { status: 404 }
-      );
-    }
-
     // Build the where clause from an array of conditions
     const conditions = [eq(posts.accountId, accountId)];
 
@@ -114,7 +75,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (searchParam && searchParam.trim()) {
-      conditions.push(ilike(posts.description, `%${searchParam.trim()}%`));
+      conditions.push(ilike(posts.description, `%${escapeLikePattern(searchParam.trim())}%`));
     }
 
     const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);

@@ -15,7 +15,6 @@ import {
 } from "@/lib/services/credit-service";
 import { eq, desc, and, gte, lte, inArray, isNull, sql } from "drizzle-orm";
 import {
-  CREDIT_RATES,
   calculateCommentCredits,
   calculatePostCredits,
   calculateSyncCredits,
@@ -531,7 +530,8 @@ function buildWebhooks() {
         "ACTOR.RUN.ABORTED" as const,
         "ACTOR.RUN.TIMED_OUT" as const,
       ],
-      requestUrl: `${appUrl}/api/webhooks/apify?secret=${webhookSecret}`,
+      requestUrl: `${appUrl}/api/webhooks/apify`,
+      headersTemplate: `{"X-Apify-Webhook-Secret": "${webhookSecret}"}`,
     },
   ];
 }
@@ -681,31 +681,19 @@ async function processPostResults(
     profileUpdated = true;
   }
 
-  // Upsert posts — scoped by (accountId, tiktokId) to prevent ownership collision
-  let postsCount = 0;
-  let commentsCount = 0;
-  let newPostsCount = 0;
-  let updatedPostsCount = 0;
-  let newCommentsCount = 0;
-  let updatedCommentsCount = 0;
-  const postsWithCommentChanges = new Set<number>();
+  // Pre-query existing posts for this account
+  const existingPosts = await db
+    .select({ id: posts.id, tiktokId: posts.tiktokId })
+    .from(posts)
+    .where(eq(posts.accountId, job.accountId));
+  const existingPostMap = new Map(existingPosts.map(p => [p.tiktokId, p.id]));
 
-  for (const item of typedItems) {
-    if (!item.id) continue;
-
-    // Check for existing post scoped to THIS account
-    const [existingPost] = await db
-      .select()
-      .from(posts)
-      .where(
-        and(
-          eq(posts.accountId, job.accountId),
-          eq(posts.tiktokId, item.id)
-        )
-      )
-      .limit(1);
-
-    const postData = {
+  // Build values array for batch upsert
+  const postValues = typedItems
+    .filter(item => item.id)
+    .map(item => ({
+      accountId: job.accountId,
+      tiktokId: item.id,
       description: item.text || "",
       likes: item.diggCount || 0,
       comments: item.commentCount || 0,
@@ -715,76 +703,108 @@ async function processPostResults(
       duration: item.videoMeta?.duration || 0,
       thumbnailUrl: item.videoMeta?.coverUrl || "",
       videoUrl: item.webVideoUrl || "",
+      postedAt: item.createTimeISO ? new Date(item.createTimeISO) : undefined,
       updatedAt: new Date(),
-    };
+    }));
 
-    if (existingPost) {
-      await db.update(posts).set(postData).where(eq(posts.id, existingPost.id));
-      updatedPostsCount++;
-    } else {
-      await db.insert(posts).values({
-        accountId: job.accountId,
-        tiktokId: item.id,
-        ...postData,
-        postedAt: item.createTimeISO ? new Date(item.createTimeISO) : undefined,
+  let upsertedPosts: { id: number; tiktokId: string }[] = [];
+  if (postValues.length > 0) {
+    upsertedPosts = await db
+      .insert(posts)
+      .values(postValues)
+      .onConflictDoUpdate({
+        target: [posts.accountId, posts.tiktokId],
+        set: {
+          description: sql`excluded.description`,
+          likes: sql`excluded.likes`,
+          comments: sql`excluded.comments`,
+          shares: sql`excluded.shares`,
+          plays: sql`excluded.plays`,
+          saves: sql`excluded.saves`,
+          duration: sql`excluded.duration`,
+          thumbnailUrl: sql`excluded.thumbnail_url`,
+          videoUrl: sql`excluded.video_url`,
+          updatedAt: sql`excluded.updated_at`,
+        },
+      })
+      .returning({ id: posts.id, tiktokId: posts.tiktokId });
+  }
+
+  const postsCount = upsertedPosts.length;
+  const newPostsCount = upsertedPosts.filter(p => !existingPostMap.has(p.tiktokId)).length;
+  const updatedPostsCount = postsCount - newPostsCount;
+
+  // Build a map of tiktokId -> postId for comment upserts
+  const postIdMap = new Map(upsertedPosts.map(p => [p.tiktokId, p.id]));
+
+  // Collect all inline comments
+  let commentsCount = 0;
+  let newCommentsCount = 0;
+  let updatedCommentsCount = 0;
+  const postsWithCommentChanges = new Set<number>();
+  const allCommentValues: Array<{
+    postId: number;
+    tiktokId: string;
+    text: string;
+    authorUsername: string;
+    authorAvatarUrl: string;
+    likes: number;
+    postedAt: Date | undefined;
+  }> = [];
+
+  for (const item of typedItems) {
+    if (!item.id || !item.comments || !Array.isArray(item.comments)) continue;
+    const postId = postIdMap.get(item.id);
+    if (!postId) continue;
+
+    for (const comment of item.comments) {
+      if (!comment.cid) continue;
+      allCommentValues.push({
+        postId,
+        tiktokId: comment.cid,
+        text: comment.text || "",
+        authorUsername: comment.user?.uniqueId || "",
+        authorAvatarUrl: comment.user?.avatarThumb || "",
+        likes: comment.diggCount || 0,
+        postedAt: comment.createTime ? new Date(comment.createTime * 1000) : undefined,
       });
-      newPostsCount++;
-    }
-    postsCount++;
-
-    // Process inline comments if present (from full sync)
-    if (item.comments && Array.isArray(item.comments)) {
-      const [postRecord] = await db
-        .select({ id: posts.id })
-        .from(posts)
-        .where(
-          and(
-            eq(posts.accountId, job.accountId),
-            eq(posts.tiktokId, item.id)
-          )
-        )
-        .limit(1);
-
-      if (postRecord) {
-        let postHadComments = false;
-        for (const comment of item.comments) {
-          if (!comment.cid) continue;
-
-          const [existing] = await db
-            .select({ id: comments.id })
-            .from(comments)
-            .where(eq(comments.tiktokId, comment.cid))
-            .limit(1);
-
-          if (existing) {
-            await db.update(comments).set({
-              likes: comment.diggCount || 0,
-              text: comment.text || "",
-            }).where(eq(comments.id, existing.id));
-            updatedCommentsCount++;
-          } else {
-            await db.insert(comments).values({
-              postId: postRecord.id,
-              tiktokId: comment.cid,
-              text: comment.text || "",
-              authorUsername: comment.user?.uniqueId || "",
-              authorAvatarUrl: comment.user?.avatarThumb || "",
-              likes: comment.diggCount || 0,
-              postedAt: comment.createTime ? new Date(comment.createTime * 1000) : undefined,
-            });
-            newCommentsCount++;
-          }
-          commentsCount++;
-          postHadComments = true;
-        }
-        if (postHadComments) {
-          postsWithCommentChanges.add(postRecord.id);
-        }
-      }
+      postsWithCommentChanges.add(postId);
     }
   }
 
-  // Update comment sync metadata on posts that had comments processed
+  // Batch upsert comments in chunks of 500
+  if (allCommentValues.length > 0) {
+    // Pre-query existing comments for affected posts
+    const affectedPostIds = [...postsWithCommentChanges];
+    const existingComments = await db
+      .select({ id: comments.id, tiktokId: comments.tiktokId, postId: comments.postId })
+      .from(comments)
+      .where(inArray(comments.postId, affectedPostIds));
+    const existingCommentSet = new Set(existingComments.map(c => `${c.postId}:${c.tiktokId}`));
+
+    const CHUNK_SIZE = 500;
+    for (let i = 0; i < allCommentValues.length; i += CHUNK_SIZE) {
+      const chunk = allCommentValues.slice(i, i + CHUNK_SIZE);
+      await db
+        .insert(comments)
+        .values(chunk)
+        .onConflictDoUpdate({
+          target: [comments.postId, comments.tiktokId],
+          set: {
+            text: sql`excluded.text`,
+            likes: sql`excluded.likes`,
+            authorUsername: sql`excluded.author_username`,
+            authorAvatarUrl: sql`excluded.author_avatar_url`,
+          },
+        });
+    }
+
+    commentsCount = allCommentValues.length;
+    newCommentsCount = allCommentValues.filter(c => !existingCommentSet.has(`${c.postId}:${c.tiktokId}`)).length;
+    updatedCommentsCount = commentsCount - newCommentsCount;
+  }
+
+  // Batch update comment sync metadata
   for (const postId of postsWithCommentChanges) {
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
@@ -810,10 +830,25 @@ async function processCommentResults(
   job: typeof syncJobs.$inferSelect,
   items: Record<string, unknown>[]
 ): Promise<ProcessedSyncResults> {
-  let commentsCount = 0;
-  let newCommentsCount = 0;
-  let updatedCommentsCount = 0;
   const postsWithCommentChanges = new Set<number>();
+
+  // Pre-query all posts for this account to build videoId -> postId map
+  const accountPosts = await db
+    .select({ id: posts.id, tiktokId: posts.tiktokId })
+    .from(posts)
+    .where(eq(posts.accountId, job.accountId));
+  const postIdMap = new Map(accountPosts.map(p => [p.tiktokId, p.id]));
+
+  // Collect all valid comment values
+  const allCommentValues: Array<{
+    postId: number;
+    tiktokId: string;
+    text: string;
+    authorUsername: string;
+    authorAvatarUrl: string;
+    likes: number;
+    postedAt: Date | undefined;
+  }> = [];
 
   for (const item of items) {
     const comment = item as unknown as TikTokCommentData & {
@@ -822,60 +857,62 @@ async function processCommentResults(
     };
     if (!comment.cid) continue;
 
-    // Extract video ID from available URL fields (Apify comment scraper uses videoWebUrl)
-    const videoUrl = comment.videoId
+    const videoId = comment.videoId
       || (comment.videoWebUrl ? extractVideoId(comment.videoWebUrl) : null)
       || (comment.submittedVideoUrl ? extractVideoId(comment.submittedVideoUrl) : null)
       || (comment.postUrl ? extractVideoId(comment.postUrl) : null);
-    const videoId = videoUrl;
 
     if (!videoId) continue;
 
-    // Find the post in our DB scoped to this account
-    const [postRecord] = await db
-      .select({ id: posts.id })
-      .from(posts)
-      .where(
-        and(
-          eq(posts.accountId, job.accountId),
-          eq(posts.tiktokId, videoId)
-        )
-      )
-      .limit(1);
+    const postId = postIdMap.get(videoId);
+    if (!postId) continue;
 
-    if (!postRecord) continue;
-
-    // Upsert comment — charge for all processed (Apify costs us regardless)
-    const [existing] = await db
-      .select({ id: comments.id })
-      .from(comments)
-      .where(eq(comments.tiktokId, comment.cid))
-      .limit(1);
-
-    if (existing) {
-      // Update existing comment metrics (likes change over time, text can be edited)
-      await db.update(comments).set({
-        likes: comment.diggCount || 0,
-        text: comment.text || "",
-      }).where(eq(comments.id, existing.id));
-      updatedCommentsCount++;
-    } else {
-      await db.insert(comments).values({
-        postId: postRecord.id,
-        tiktokId: comment.cid,
-        text: comment.text || "",
-        authorUsername: comment.user?.uniqueId || "",
-        authorAvatarUrl: comment.user?.avatarThumb || "",
-        likes: comment.diggCount || 0,
-        postedAt: comment.createTime ? new Date(comment.createTime * 1000) : undefined,
-      });
-      newCommentsCount++;
-    }
-    commentsCount++;
-    postsWithCommentChanges.add(postRecord.id);
+    allCommentValues.push({
+      postId,
+      tiktokId: comment.cid,
+      text: comment.text || "",
+      authorUsername: comment.user?.uniqueId || "",
+      authorAvatarUrl: comment.user?.avatarThumb || "",
+      likes: comment.diggCount || 0,
+      postedAt: comment.createTime ? new Date(comment.createTime * 1000) : undefined,
+    });
+    postsWithCommentChanges.add(postId);
   }
 
-  // Update comment sync metadata on posts that had comments processed
+  // Pre-query existing comments for counting
+  const affectedPostIds = [...postsWithCommentChanges];
+  let existingCommentSet = new Set<string>();
+  if (affectedPostIds.length > 0) {
+    const existingComments = await db
+      .select({ tiktokId: comments.tiktokId, postId: comments.postId })
+      .from(comments)
+      .where(inArray(comments.postId, affectedPostIds));
+    existingCommentSet = new Set(existingComments.map(c => `${c.postId}:${c.tiktokId}`));
+  }
+
+  // Batch upsert in chunks
+  const CHUNK_SIZE = 500;
+  for (let i = 0; i < allCommentValues.length; i += CHUNK_SIZE) {
+    const chunk = allCommentValues.slice(i, i + CHUNK_SIZE);
+    await db
+      .insert(comments)
+      .values(chunk)
+      .onConflictDoUpdate({
+        target: [comments.postId, comments.tiktokId],
+        set: {
+          text: sql`excluded.text`,
+          likes: sql`excluded.likes`,
+          authorUsername: sql`excluded.author_username`,
+          authorAvatarUrl: sql`excluded.author_avatar_url`,
+        },
+      });
+  }
+
+  const commentsCount = allCommentValues.length;
+  const newCommentsCount = allCommentValues.filter(c => !existingCommentSet.has(`${c.postId}:${c.tiktokId}`)).length;
+  const updatedCommentsCount = commentsCount - newCommentsCount;
+
+  // Update comment sync metadata
   for (const postId of postsWithCommentChanges) {
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
@@ -1111,6 +1148,17 @@ export async function getAccountSyncData(accountId: number, userId: string) {
 
   for (const stuckJob of stuckJobs) {
     console.warn(`[Sync Job ${stuckJob.id}] Found stuck job (status=${stuckJob.status}, completedAt set). Force-failing.`);
+    if (stuckJob.creditsHeld && stuckJob.creditsHeld > 0) {
+      try {
+        await refundHold(
+          stuckJob.userId,
+          stuckJob.creditsHeld,
+          `Refund: stuck job ${stuckJob.id} force-failed`
+        );
+      } catch (refundError) {
+        console.error(`[Sync Job ${stuckJob.id}] Failed to refund credits for stuck job:`, refundError);
+      }
+    }
     await db
       .update(syncJobs)
       .set({
@@ -1294,13 +1342,16 @@ async function handleJobFailure(
   job: typeof syncJobs.$inferSelect,
   errorMessage: string
 ): Promise<void> {
-  // Refund held credits
   if (job.creditsHeld && job.creditsHeld > 0) {
-    await refundHold(
-      job.userId,
-      job.creditsHeld,
-      `Refund: ${errorMessage} for job ${job.id}`
-    );
+    try {
+      await refundHold(
+        job.userId,
+        job.creditsHeld,
+        `Refund: ${errorMessage} for job ${job.id}`
+      );
+    } catch (refundError) {
+      console.error(`[Sync Job ${job.id}] Failed to refund credits during failure handling:`, refundError);
+    }
   }
 
   await db
@@ -1358,16 +1409,17 @@ export async function cancelSyncJob(jobId: number): Promise<void> {
     throw new Error(`Sync job ${jobId} not found`);
   }
 
-  if (job.status !== "running" || !job.apifyRunId) {
-    throw new Error("Job is not running or has no Apify run ID");
+  if (!["pending", "running"].includes(job.status)) {
+    throw new Error("Job is not pending or running");
   }
 
-  const client = getApifyClient();
-
-  try {
-    await client.run(job.apifyRunId).abort();
-  } catch {
-    // Best-effort abort
+  if (job.apifyRunId) {
+    const client = getApifyClient();
+    try {
+      await client.run(job.apifyRunId).abort();
+    } catch {
+      // Best-effort abort
+    }
   }
 
   await handleJobFailure(job, "Cancelled by user");

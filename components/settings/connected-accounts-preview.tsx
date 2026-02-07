@@ -43,7 +43,7 @@ export function ConnectedAccountsPreview() {
   useEffect(() => {
     async function fetchAccounts() {
       try {
-        const res = await fetch("/api/tiktok/accounts");
+        const res = await fetch("/api/accounts");
         if (!res.ok) {
           if (res.status === 404) {
             // No accounts endpoint or no accounts

@@ -2,8 +2,9 @@ import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { users, syncJobs } from "@/lib/db/schema";
+import { eq, and, inArray } from "drizzle-orm";
+import { cancelSyncJob } from "@/lib/services/sync-service";
 
 export async function POST(req: Request) {
   const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SIGNING_SECRET;
@@ -124,6 +125,25 @@ export async function POST(req: Request) {
     const { id } = evt.data;
 
     if (id) {
+      // Cancel active sync jobs before user deletion
+      const activeJobs = await db
+        .select({ id: syncJobs.id })
+        .from(syncJobs)
+        .where(
+          and(
+            eq(syncJobs.userId, id),
+            inArray(syncJobs.status, ["pending", "running"])
+          )
+        );
+
+      for (const activeJob of activeJobs) {
+        try {
+          await cancelSyncJob(activeJob.id);
+        } catch (cancelError) {
+          console.error(`Failed to cancel sync job ${activeJob.id} during user deletion:`, cancelError);
+        }
+      }
+
       await db.delete(users).where(eq(users.id, id));
       console.log(`Deleted user ${id}`);
     }

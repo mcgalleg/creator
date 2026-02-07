@@ -1,18 +1,14 @@
-import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { posts, tiktokAccounts } from "@/lib/db/schema";
+import { posts } from "@/lib/db/schema";
 import { eq, and, gte, desc } from "drizzle-orm";
+import {
+  withAccountAuth,
+  isAuthError,
+  calculateEngagementRate,
+  PERIOD_DAYS,
+} from "@/lib/dashboard-utils";
 
-type Period = "7d" | "30d" | "90d";
-
-const PERIOD_DAYS: Record<Period, number> = {
-  "7d": 7,
-  "30d": 30,
-  "90d": 90,
-};
-
-const DEFAULT_PERIOD: Period = "30d";
 const DEFAULT_LIMIT = 6;
 const MAX_LIMIT = 50;
 
@@ -27,39 +23,12 @@ const MAX_LIMIT = 50;
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-
-    // Parse and validate accountId
-    const accountIdParam = searchParams.get("accountId");
-    if (!accountIdParam) {
-      return NextResponse.json(
-        { error: "accountId is required" },
-        { status: 400 }
-      );
-    }
-
-    const accountId = parseInt(accountIdParam, 10);
-    if (isNaN(accountId)) {
-      return NextResponse.json(
-        { error: "Invalid accountId" },
-        { status: 400 }
-      );
-    }
-
-    // Parse and validate period
-    const periodParam = searchParams.get("period") as Period | null;
-    const period: Period =
-      periodParam && Object.keys(PERIOD_DAYS).includes(periodParam)
-        ? periodParam
-        : DEFAULT_PERIOD;
+    const authResult = await withAccountAuth(request);
+    if (isAuthError(authResult)) return authResult;
+    const { accountId, period } = authResult;
 
     // Parse and validate limit
+    const { searchParams } = new URL(request.url);
     const limitParam = searchParams.get("limit");
     let limit = DEFAULT_LIMIT;
     if (limitParam) {
@@ -67,22 +36,6 @@ export async function GET(request: NextRequest) {
       if (!isNaN(parsedLimit) && parsedLimit > 0) {
         limit = Math.min(parsedLimit, MAX_LIMIT);
       }
-    }
-
-    // Verify the account belongs to the authenticated user
-    const [account] = await db
-      .select({ id: tiktokAccounts.id })
-      .from(tiktokAccounts)
-      .where(
-        and(
-          eq(tiktokAccounts.id, accountId),
-          eq(tiktokAccounts.userId, userId)
-        )
-      )
-      .limit(1);
-
-    if (!account) {
-      return NextResponse.json({ error: "Account not found" }, { status: 404 });
     }
 
     // Calculate the date threshold based on period
@@ -120,12 +73,10 @@ export async function GET(request: NextRequest) {
       const likes = video.likes ?? 0;
       const comments = video.comments ?? 0;
       const shares = video.shares ?? 0;
+      const saves = video.saves ?? 0;
       const plays = video.plays ?? 0;
 
-      // Engagement rate: (likes + comments + shares) / plays * 100
-      // Handle division by zero
-      const engagementRate =
-        plays > 0 ? ((likes + comments + shares) / plays) * 100 : 0;
+      const engagementRate = calculateEngagementRate(likes, comments, shares, saves, plays);
 
       return {
         id: video.id,
@@ -137,9 +88,9 @@ export async function GET(request: NextRequest) {
         comments,
         shares,
         plays,
-        saves: video.saves ?? 0,
+        saves,
         postedAt: video.postedAt?.toISOString() ?? null,
-        engagementRate: Math.round(engagementRate * 100) / 100, // Round to 2 decimal places
+        engagementRate,
       };
     });
 

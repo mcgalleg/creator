@@ -39,3 +39,5 @@ export const CREDIT_PRICING_DISPLAY = {
     description: "Profile sync (free)",
   },
 } as const;
+
+export const SIGNUP_BONUS_CREDITS = 100;

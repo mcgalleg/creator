@@ -2,14 +2,12 @@ import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tiktokAccounts, syncJobs } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import {
   startSync,
   getSyncJobStatus,
   getAccountSyncData,
-  estimateSyncCost,
 } from "@/lib/services/sync-service";
-import { checkCredits } from "@/lib/services/credit-service";
 
 interface RouteParams {
   params: Promise<{ accountId: string }>;
@@ -93,14 +91,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Check if there's already a running sync for this account
+    // Check if there's already a pending or running sync for this account
     const [runningJob] = await db
       .select()
       .from(syncJobs)
       .where(
         and(
           eq(syncJobs.accountId, accountIdNum),
-          eq(syncJobs.status, "running")
+          inArray(syncJobs.status, ["pending", "running"])
         )
       )
       .limit(1);
@@ -113,25 +111,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           runId: runningJob.apifyRunId,
         },
         { status: 409 }
-      );
-    }
-
-    // Pre-check credit balance before starting sync
-    const estimate = estimateSyncCost({
-      postsLimit,
-      includeComments,
-      commentsLimit: includeComments ? postsLimit * 100 : 0,
-    });
-
-    const creditCheck = await checkCredits(userId, estimate.credits);
-    if (!creditCheck.sufficient) {
-      return NextResponse.json(
-        {
-          error: "Insufficient credits",
-          balance: creditCheck.balance,
-          required: creditCheck.required,
-        },
-        { status: 402 }
       );
     }
 

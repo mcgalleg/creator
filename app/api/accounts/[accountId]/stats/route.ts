@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tiktokAccounts, posts, comments } from "@/lib/db/schema";
-import { eq, sql, count } from "drizzle-orm";
+import { eq, and, sql, count } from "drizzle-orm";
 
 interface AccountStats {
   syncedPosts: number;
@@ -45,7 +45,12 @@ export async function GET(
         lastSyncedAt: tiktokAccounts.lastSyncedAt,
       })
       .from(tiktokAccounts)
-      .where(eq(tiktokAccounts.id, accountIdNum))
+      .where(
+        and(
+          eq(tiktokAccounts.id, accountIdNum),
+          eq(tiktokAccounts.userId, userId)
+        )
+      )
       .limit(1);
 
     if (!account) {

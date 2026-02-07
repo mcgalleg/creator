@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, serial, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
 export const creditTransactions = pgTable("credit_transactions", {
@@ -10,4 +10,6 @@ export const creditTransactions = pgTable("credit_transactions", {
   >(),
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("credit_tx_user_created_idx").on(table.userId, table.createdAt),
+]);

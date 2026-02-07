@@ -1,16 +1,13 @@
-import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tiktokAccounts, posts, accountMetricsHistory } from "@/lib/db/schema";
 import { eq, and, gte, lt, sql, desc } from "drizzle-orm";
-
-type Period = "7d" | "30d" | "90d";
-
-const PERIOD_DAYS: Record<Period, number> = {
-  "7d": 7,
-  "30d": 30,
-  "90d": 90,
-};
+import {
+  withAccountAuth,
+  isAuthError,
+  calculateEngagementRate,
+  PERIOD_DAYS,
+} from "@/lib/dashboard-utils";
 
 interface OverviewMetrics {
   followers: number;
@@ -37,78 +34,21 @@ function calculatePercentChange(current: number, previous: number): number {
 }
 
 /**
- * Calculate engagement rate from engagement metrics
- */
-function calculateEngagementRate(
-  likes: number,
-  comments: number,
-  shares: number,
-  plays: number
-): number {
-  if (plays === 0) {
-    return 0;
-  }
-  return Number((((likes + comments + shares) / plays) * 100).toFixed(2));
-}
-
-/**
  * GET /api/dashboard/overview
  * Returns KPI metrics for a TikTok account dashboard
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const authResult = await withAccountAuth(request);
+    if (isAuthError(authResult)) return authResult;
+    const { accountId, period } = authResult;
 
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const accountId = searchParams.get("accountId");
-    const period = (searchParams.get("period") || "30d") as Period;
-
-    // Validate accountId
-    if (!accountId) {
-      return NextResponse.json(
-        { error: "accountId is required" },
-        { status: 400 }
-      );
-    }
-
-    const accountIdNum = parseInt(accountId, 10);
-    if (isNaN(accountIdNum)) {
-      return NextResponse.json(
-        { error: "Invalid accountId" },
-        { status: 400 }
-      );
-    }
-
-    // Validate period
-    if (!PERIOD_DAYS[period]) {
-      return NextResponse.json(
-        { error: "Invalid period. Must be one of: 7d, 30d, 90d" },
-        { status: 400 }
-      );
-    }
-
-    // Verify account ownership
+    // Get account data (need followerCount)
     const [account] = await db
       .select()
       .from(tiktokAccounts)
-      .where(
-        and(
-          eq(tiktokAccounts.id, accountIdNum),
-          eq(tiktokAccounts.userId, userId)
-        )
-      )
+      .where(eq(tiktokAccounts.id, accountId))
       .limit(1);
-
-    if (!account) {
-      return NextResponse.json(
-        { error: "Account not found" },
-        { status: 404 }
-      );
-    }
 
     // Calculate date ranges
     const now = new Date();
@@ -129,7 +69,7 @@ export async function GET(request: NextRequest) {
       .from(accountMetricsHistory)
       .where(
         and(
-          eq(accountMetricsHistory.accountId, accountIdNum),
+          eq(accountMetricsHistory.accountId, accountId),
           lt(accountMetricsHistory.recordedAt, currentPeriodStart)
         )
       )
@@ -150,7 +90,7 @@ export async function GET(request: NextRequest) {
       .from(posts)
       .where(
         and(
-          eq(posts.accountId, accountIdNum),
+          eq(posts.accountId, accountId),
           gte(posts.postedAt, currentPeriodStart)
         )
       );
@@ -166,7 +106,7 @@ export async function GET(request: NextRequest) {
       .from(posts)
       .where(
         and(
-          eq(posts.accountId, accountIdNum),
+          eq(posts.accountId, accountId),
           gte(posts.postedAt, previousPeriodStart),
           lt(posts.postedAt, currentPeriodStart)
         )
@@ -184,11 +124,12 @@ export async function GET(request: NextRequest) {
     const previousShares = Number(previousPeriodEngagement?.totalShares ?? 0);
     const previousPlays = Number(previousPeriodEngagement?.totalPlays ?? 0);
 
-    // Calculate engagement rates
+    // Calculate engagement rates (overview intentionally excludes saves, pass 0)
     const currentEngagementRate = calculateEngagementRate(
       currentLikes,
       currentComments,
       currentShares,
+      0,
       currentPlays
     );
 
@@ -196,6 +137,7 @@ export async function GET(request: NextRequest) {
       previousLikes,
       previousComments,
       previousShares,
+      0,
       previousPlays
     );
 

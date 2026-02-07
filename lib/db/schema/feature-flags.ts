@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, timestamp, serial, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, boolean, timestamp, serial, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { users, subscriptionTierEnum } from "./users";
 
 // Re-export subscription tier enum for convenience
@@ -25,4 +25,6 @@ export const userFeatureOverrides = pgTable("user_feature_overrides", {
   reason: text("reason"),
   expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  uniqueIndex("user_feature_overrides_user_key_idx").on(table.userId, table.featureKey),
+]);

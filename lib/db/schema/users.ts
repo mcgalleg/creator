@@ -1,4 +1,5 @@
-import { pgTable, pgEnum, text, integer, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, pgEnum, text, integer, timestamp, uniqueIndex, check } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 // Subscription tier enum (also exported from feature-flags.ts for convenience)
 export const subscriptionTierEnum = pgEnum("subscription_tier", ["free", "pro", "enterprise"]);
@@ -17,4 +18,5 @@ export const users = pgTable("users", {
 }, (table) => [
   // Ensure one user per email address
   uniqueIndex("users_email_idx").on(table.email),
+  check("credit_balance_non_negative", sql`credit_balance >= 0`),
 ]);

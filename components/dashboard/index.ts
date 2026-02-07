@@ -1,5 +1,3 @@
-export { AccountConnectionForm } from "./account-connection-form";
-export { AccountList } from "./account-list";
 export { SyncStatus } from "./sync-status";
 export { PinButton } from "./pin-button";
 export { PinnedGrid } from "./pinned-grid";

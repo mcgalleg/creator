@@ -33,3 +33,24 @@ Components are added via the shadcn CLI. The project uses:
 - Style: New York
 - Base color: neutral
 - CSS variables for theming
+
+## Testing with Auth Bypass
+
+For UAT/automated testing without Clerk authentication (development only):
+
+1. **Enable bypass**: Set `BYPASS_AUTH=true` in `.env.local`
+2. **Seed test user**: Run `npx tsx scripts/seed-test-user.ts` (creates `test_user_123` with 1000 credits, pro tier)
+3. **Start dev server**: `npm run dev` — no Clerk login required, all API routes use the test user
+
+**How it works** (`lib/auth.ts`):
+- `auth()` returns `{ userId: "test_user_123" }` instead of calling Clerk
+- `currentUser()` returns mock user data
+- Middleware (`proxy.ts`) skips Clerk protection
+- Custom test user ID via `X-Test-User-Id` header for multi-user isolation
+- Production safeguard throws if `BYPASS_AUTH=true` in production
+
+**Test-only API routes** (guarded by `BYPASS_AUTH`):
+- `GET /api/test/state` — inspect DB state (accounts, posts, sync jobs, credits)
+- `POST /api/test/reset-credits` — reset credit balance for a user
+
+**Bulk seed**: `npx tsx scripts/seed-test-users.ts` creates multiple test users (api, ui, edge, default)

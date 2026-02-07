@@ -1,8 +1,11 @@
-import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { comments, posts, tiktokAccounts } from "@/lib/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { comments, posts } from "@/lib/db/schema";
+import { eq, desc } from "drizzle-orm";
+import {
+  withAccountAuth,
+  isAuthError,
+} from "@/lib/dashboard-utils";
 
 /**
  * GET /api/dashboard/comments
@@ -14,31 +17,12 @@ import { eq, and, desc } from "drizzle-orm";
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await withAccountAuth(request, { requirePeriod: false });
+    if (isAuthError(authResult)) return authResult;
+    const { accountId } = authResult;
 
     const searchParams = request.nextUrl.searchParams;
-    const accountIdParam = searchParams.get("accountId");
     const limitParam = searchParams.get("limit");
-
-    // Validate accountId
-    if (!accountIdParam) {
-      return NextResponse.json(
-        { error: "accountId is required" },
-        { status: 400 }
-      );
-    }
-
-    const accountId = parseInt(accountIdParam, 10);
-    if (isNaN(accountId)) {
-      return NextResponse.json(
-        { error: "Invalid accountId" },
-        { status: 400 }
-      );
-    }
 
     // Parse and validate limit
     const limit = limitParam ? parseInt(limitParam, 10) : 20;
@@ -46,25 +30,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: "Invalid limit. Must be between 1 and 100" },
         { status: 400 }
-      );
-    }
-
-    // Verify the account belongs to the current user
-    const [account] = await db
-      .select({ id: tiktokAccounts.id })
-      .from(tiktokAccounts)
-      .where(
-        and(
-          eq(tiktokAccounts.id, accountId),
-          eq(tiktokAccounts.userId, userId)
-        )
-      )
-      .limit(1);
-
-    if (!account) {
-      return NextResponse.json(
-        { error: "Account not found" },
-        { status: 404 }
       );
     }
 
