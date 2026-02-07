@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       .where(
         and(
           eq(posts.accountId, accountId),
-          sql`${comments.authorUsername} IS NOT NULL`
+          sql`${comments.authorUsername} IS NOT NULL AND ${comments.authorUsername} != ''`
         )
       )
       .groupBy(comments.authorUsername)

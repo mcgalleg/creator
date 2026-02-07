@@ -137,10 +137,14 @@ interface TikTokCommentData {
   text: string;
   createTime: number;
   diggCount: number;
-  user: {
+  // Nested user object (inline comments from post scraper)
+  user?: {
     uniqueId: string;
     avatarThumb: string;
   };
+  // Flat fields (dedicated clockworks/tiktok-comments-scraper output)
+  uniqueId?: string;
+  avatarThumbnail?: string;
 }
 
 // ─── Cost Estimation ─────────────────────────────────────────────────────────
@@ -763,8 +767,8 @@ async function processPostResults(
         postId,
         tiktokId: comment.cid,
         text: comment.text || "",
-        authorUsername: comment.user?.uniqueId || "",
-        authorAvatarUrl: comment.user?.avatarThumb || "",
+        authorUsername: comment.user?.uniqueId || comment.uniqueId || "",
+        authorAvatarUrl: comment.user?.avatarThumb || comment.avatarThumbnail || "",
         likes: comment.diggCount || 0,
         postedAt: comment.createTime ? new Date(comment.createTime * 1000) : undefined,
       });
@@ -871,8 +875,8 @@ async function processCommentResults(
       postId,
       tiktokId: comment.cid,
       text: comment.text || "",
-      authorUsername: comment.user?.uniqueId || "",
-      authorAvatarUrl: comment.user?.avatarThumb || "",
+      authorUsername: comment.user?.uniqueId || comment.uniqueId || "",
+      authorAvatarUrl: comment.user?.avatarThumb || comment.avatarThumbnail || "",
       likes: comment.diggCount || 0,
       postedAt: comment.createTime ? new Date(comment.createTime * 1000) : undefined,
     });

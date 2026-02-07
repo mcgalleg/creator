@@ -38,7 +38,7 @@ function getWidgetData(
 ): unknown {
   if (!dashboardData) return null;
 
-  const { overview, engagement, topContent, recentPosts, breakdown } = dashboardData;
+  const { overview, engagement, topContent, recentPosts, breakdown, recentComments, commentActivity, topCommenters } = dashboardData;
 
   switch (widgetType) {
     // KPI widgets - map from overview metrics
@@ -104,6 +104,17 @@ function getWidgetData(
       return topContent?.videos ?? null;
     case "recent-posts":
       return recentPosts ?? null;
+
+    // Comment widgets
+    case "recent-comments":
+      return recentComments ?? null;
+    case "comment-activity":
+      return commentActivity ?? null;
+    case "top-commenters":
+      return topCommenters ?? null;
+    case "comment-sentiment":
+      // Sentiment analysis not yet implemented - return null to show placeholder
+      return null;
 
     default:
       return null;

@@ -90,6 +90,56 @@ export interface BreakdownData {
   breakdown: BreakdownItem[];
 }
 
+// Recent comments from /api/dashboard/comments
+export interface CommentPost {
+  id: number;
+  tiktokId: string;
+  description: string | null;
+  thumbnailUrl: string | null;
+}
+
+export interface DashboardComment {
+  id: number;
+  tiktokId: string | null;
+  text: string | null;
+  authorUsername: string | null;
+  authorAvatarUrl: string | null;
+  likes: number;
+  postedAt: string | null;
+  createdAt: string;
+  post: CommentPost;
+}
+
+export interface RecentCommentsData {
+  comments: DashboardComment[];
+  total: number;
+}
+
+// Comment activity from /api/dashboard/comments/activity
+export interface CommentActivityPoint {
+  date: string;
+  comments: number;
+}
+
+export interface CommentActivityData {
+  activity: CommentActivityPoint[];
+  total: number;
+  period: Period;
+}
+
+// Top commenters from /api/dashboard/comments/top-commenters
+export interface TopCommenter {
+  authorUsername: string;
+  authorAvatarUrl: string | null;
+  commentCount: number;
+  totalLikes: number;
+}
+
+export interface TopCommentersData {
+  commenters: TopCommenter[];
+  total: number;
+}
+
 // ============================================================================
 // Hook Interface
 // ============================================================================
@@ -107,6 +157,9 @@ export interface DashboardData {
   topContent: TopContentData | null;
   recentPosts: RecentPostsData | null;
   breakdown: BreakdownData | null;
+  recentComments: RecentCommentsData | null;
+  commentActivity: CommentActivityData | null;
+  topCommenters: TopCommentersData | null;
 }
 
 export interface UseDashboardDataReturn {
@@ -146,6 +199,9 @@ export function useDashboardData(
     topContent: null,
     recentPosts: null,
     breakdown: null,
+    recentComments: null,
+    commentActivity: null,
+    topCommenters: null,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -162,6 +218,9 @@ export function useDashboardData(
         topContent: null,
         recentPosts: null,
         breakdown: null,
+        recentComments: null,
+        commentActivity: null,
+        topCommenters: null,
       });
       setIsLoading(false);
       setError(null);
@@ -184,16 +243,22 @@ export function useDashboardData(
         topContent: `/api/dashboard/top-content?${baseParams}&limit=${topContentLimit}`,
         recentPosts: `/api/dashboard/recent-posts?${baseParams}&limit=${recentPostsLimit}`,
         breakdown: `/api/dashboard/breakdown?${baseParams}`,
+        recentComments: `/api/dashboard/comments?accountId=${accountId}`,
+        commentActivity: `/api/dashboard/comments/activity?${baseParams}`,
+        topCommenters: `/api/dashboard/comments/top-commenters?accountId=${accountId}`,
       };
 
       // Fetch all endpoints in parallel
-      const [overview, engagement, topContent, recentPosts, breakdown] =
+      const [overview, engagement, topContent, recentPosts, breakdown, recentComments, commentActivity, topCommenters] =
         await Promise.all([
           fetchJson<OverviewData>(urls.overview),
           fetchJson<EngagementData>(urls.engagement),
           fetchJson<TopContentData>(urls.topContent),
           fetchJson<RecentPostsData>(urls.recentPosts),
           fetchJson<BreakdownData>(urls.breakdown),
+          fetchJson<RecentCommentsData>(urls.recentComments),
+          fetchJson<CommentActivityData>(urls.commentActivity),
+          fetchJson<TopCommentersData>(urls.topCommenters),
         ]);
 
       // Only update state if this is still the latest fetch
@@ -204,6 +269,9 @@ export function useDashboardData(
           topContent,
           recentPosts,
           breakdown,
+          recentComments,
+          commentActivity,
+          topCommenters,
         });
         setError(null);
       }

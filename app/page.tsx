@@ -16,6 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import { LazyPixelBlastBg } from "@/components/backgrounds/lazy-pixel-blast-bg";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function Home() {
   return (
@@ -28,6 +29,7 @@ export default function Home() {
             <span className="text-xl font-bold">Not a Bot</span>
           </div>
           <nav className="flex items-center gap-4">
+            <ThemeToggle />
             <SignedOut>
               <SignInButton mode="modal">
                 <Button variant="ghost" size="sm">

@@ -4,6 +4,7 @@ import { UserButton } from '@clerk/nextjs';
 import { Coins } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export function Header() {
   const [credits, setCredits] = useState<number | null>(null);
@@ -32,6 +33,7 @@ export function Header() {
               {credits} credits
             </Badge>
           )}
+          <ThemeToggle />
           <UserButton afterSignOutUrl="/" />
         </div>
       </div>
