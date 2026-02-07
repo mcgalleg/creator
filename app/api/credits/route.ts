@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { getUserCredits, getCreditPricing } from "@/lib/services/credit-service";
+import { ensureUserExists } from "@/lib/services/user-service";
 
 export async function GET() {
   try {
@@ -9,6 +10,8 @@ export async function GET() {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    await ensureUserExists(userId);
 
     const [balance, pricing] = await Promise.all([
       getUserCredits(userId),

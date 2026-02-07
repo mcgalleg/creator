@@ -9,6 +9,7 @@ import { CreditsProvider } from "@/components/dashboard/credits-provider";
 import { FeatureProvider } from "@/contexts/feature-context";
 import { getUserFeatures, getUserTier } from "@/lib/services/feature-service";
 import type { FeatureKey, SubscriptionTier } from "@/lib/services/feature-service";
+import { ensureUserExists } from "@/lib/services/user-service";
 
 export default async function DashboardLayout({
   children,
@@ -20,6 +21,11 @@ export default async function DashboardLayout({
   // Only redirect to sign-in if not in bypass mode
   if (!userId && !isAuthBypassed()) {
     redirect("/sign-in");
+  }
+
+  // Ensure user exists in the database (auto-provisions from Clerk if missing)
+  if (userId) {
+    await ensureUserExists(userId);
   }
 
   // Fetch user's TikTok accounts for the layout
