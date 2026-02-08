@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { tiktokAccounts, posts, comments, accountMetricsHistory } from "@/lib/db/schema";
 import { eq, desc, and, gte, sql, inArray } from "drizzle-orm";
 import { getAnalyticsCatalogPrompt } from "@/lib/catalog";
+import { createDiagramTool, EXCALIDRAW_FORMAT_REFERENCE } from "@/lib/ai-tools/excalidraw-tools";
 
 // Helper function to get time range filter
 function getTimeRangeDate(timeRange: string): Date | null {
@@ -91,7 +92,7 @@ export async function POST(req: Request) {
     const result = streamText({
       model: anthropic(process.env.ANTHROPIC_MODEL || "claude-haiku-4-5"),
       system:
-        getAnalyticsCatalogPrompt() + additionalInstructions + accountContext,
+        getAnalyticsCatalogPrompt() + additionalInstructions + EXCALIDRAW_FORMAT_REFERENCE + accountContext,
       messages: await convertToModelMessages(messages),
       stopWhen: stepCountIs(5), // Allow multiple tool calls (fetch data → generate UI)
       tools: {
@@ -399,6 +400,8 @@ export async function POST(req: Request) {
             }
           },
         }),
+
+        createDiagram: createDiagramTool,
 
         generateUI: tool({
           description:

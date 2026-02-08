@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface CanvasSelectorProps {
-  canvases: Array<{
+interface DrawingSelectorProps {
+  drawings: Array<{
     id: number;
     name: string;
     isDefault: boolean;
@@ -33,20 +33,20 @@ interface CanvasSelectorProps {
   disabled?: boolean;
 }
 
-export function CanvasSelector({
-  canvases,
+export function DrawingSelector({
+  drawings,
   selectedId,
   onSelect,
   onCreate,
   onRename,
   onDelete,
   disabled = false,
-}: CanvasSelectorProps) {
+}: DrawingSelectorProps) {
   const [open, setOpen] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
 
-  const selectedCanvas = canvases.find((c) => c.id === selectedId);
-  const canDeleteCanvas = canvases.length > 1;
+  const selectedDrawing = drawings.find((d) => d.id === selectedId);
+  const canDeleteDrawing = drawings.length > 1;
 
   const handleSelect = (id: number) => {
     onSelect(id);
@@ -79,36 +79,36 @@ export function CanvasSelector({
           disabled={disabled}
         >
           <span className="truncate">
-            {selectedCanvas?.name ?? "Select Canvas"}
+            {selectedDrawing?.name ?? "Select Drawing"}
           </span>
           <ChevronDown className="size-4 shrink-0 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[240px]">
-        {canvases.map((canvas) => (
+        {drawings.map((drawing) => (
           <div
-            key={canvas.id}
+            key={drawing.id}
             className="group relative flex items-center"
           >
             <DropdownMenuItem
               className={cn(
                 "flex-1 cursor-pointer pr-8",
-                selectedId === canvas.id && "bg-accent"
+                selectedId === drawing.id && "bg-accent"
               )}
-              onClick={() => handleSelect(canvas.id)}
+              onClick={() => handleSelect(drawing.id)}
             >
               <Check
                 className={cn(
                   "mr-2 size-4",
-                  selectedId === canvas.id ? "opacity-100" : "opacity-0"
+                  selectedId === drawing.id ? "opacity-100" : "opacity-0"
                 )}
               />
-              <span className="truncate">{canvas.name}</span>
+              <span className="truncate">{drawing.name}</span>
             </DropdownMenuItem>
             <DropdownMenu
-              open={activeMenuId === canvas.id}
+              open={activeMenuId === drawing.id}
               onOpenChange={(isOpen) =>
-                setActiveMenuId(isOpen ? canvas.id : null)
+                setActiveMenuId(isOpen ? drawing.id : null)
               }
             >
               <DropdownMenuTrigger asChild>
@@ -119,17 +119,17 @@ export function CanvasSelector({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <MoreVertical className="size-3" />
-                  <span className="sr-only">Canvas options</span>
+                  <span className="sr-only">Drawing options</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="right">
-                <DropdownMenuItem onClick={(e) => handleRename(canvas.id, e)}>
+                <DropdownMenuItem onClick={(e) => handleRename(drawing.id, e)}>
                   <Pencil className="mr-2 size-4" />
                   Rename
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={(e) => handleDelete(canvas.id, e)}
-                  disabled={!canDeleteCanvas}
+                  onClick={(e) => handleDelete(drawing.id, e)}
+                  disabled={!canDeleteDrawing}
                   variant="destructive"
                 >
                   <Trash2 className="mr-2 size-4" />
@@ -145,7 +145,7 @@ export function CanvasSelector({
           onClick={handleCreate}
         >
           <Plus className="mr-2 size-4" />
-          New Canvas
+          New Drawing
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

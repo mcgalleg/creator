@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
-import { MessageSquare, LayoutDashboard, Sparkles, Lock, Loader2 } from 'lucide-react';
+import { MessageSquare, LayoutDashboard, Pencil, Lock, Loader2 } from 'lucide-react';
 import { SplitPaneLayout } from './split-pane-layout';
 import { ViewTabs } from './view-tabs';
 import { DefaultDashboard } from './default-dashboard';
@@ -11,15 +11,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { usePinToCanvasOptional, PinToCanvasProvider } from '@/contexts/pin-to-canvas-context';
+import { useDrawingBridgeOptional, DrawingBridgeProvider } from '@/contexts/drawing-bridge-context';
 import { useFeatures } from '@/contexts/feature-context';
 import { FeatureGate } from '@/components/feature-gate';
 import { UpgradePrompt } from '@/components/upgrade-prompt';
 
-// Dynamically import heavy components to speed up dev compilation
-// CanvasView imports React Flow (~2MB)
-const CanvasView = dynamic(
-  () => import('./canvas-view').then((mod) => mod.CanvasView),
+// Dynamically import ExcalidrawView to avoid loading Excalidraw until needed
+const ExcalidrawView = dynamic(
+  () => import('../excalidraw/excalidraw-view').then((mod) => mod.ExcalidrawView),
   {
     ssr: false,
     loading: () => (
@@ -51,14 +50,14 @@ interface ResponsiveLayoutProps {
 /**
  * Responsive layout that adapts to different screen sizes:
  * - Desktop (lg+): Full split-pane layout with ChatPanel left, ViewTabs right
- * - Tablet (md): Tabs-based navigation between Dashboard, Canvas, and Chat
- * - Mobile (sm and below): ViewTabs (Dashboard/Canvas) with chat as slide-in drawer
+ * - Tablet (md): Tabs-based navigation between Dashboard, Draw, and Chat
+ * - Mobile (sm and below): ViewTabs (Dashboard/Draw) with chat as slide-in drawer
  */
 export function ResponsiveLayout({
   accounts,
   children,
 }: ResponsiveLayoutProps) {
-  const [tabletTab, setTabletTab] = useState<'dashboard' | 'canvas' | 'chat'>('dashboard');
+  const [tabletTab, setTabletTab] = useState<'dashboard' | 'draw' | 'chat'>('dashboard');
   const [chatOpen, setChatOpen] = useState(false);
   const pathname = usePathname();
   const { hasAccess } = useFeatures();
@@ -66,28 +65,26 @@ export function ResponsiveLayout({
   const canAccessCanvas = hasAccess("canvas");
 
   // Check if we're on a sub-page (accounts, settings) that needs to render children
-  // vs the main dashboard page which renders ViewTabs
   const isMainDashboard = pathname === '/dashboard';
 
-  // Track if user has new canvas content (from queued renders in context)
-  const pinContext = usePinToCanvasOptional();
-  const hasNewCanvasContent = pinContext?.hasQueuedRenders ?? false;
+  // Track if user has new draw content
+  const drawingBridge = useDrawingBridgeOptional();
+  const hasNewDrawContent = drawingBridge?.hasNewContent ?? false;
 
   // Track active tab for controlled ViewTabs (desktop)
-  const [activeTab, setActiveTab] = useState<"dashboard" | "canvas">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "draw">("dashboard");
 
-  const handleCanvasContentViewed = useCallback(() => {
-    // Canvas content viewed - context will handle clearing the badge
-  }, []);
+  const handleDrawContentViewed = useCallback(() => {
+    drawingBridge?.markContentViewed();
+  }, [drawingBridge]);
 
   const handleTabletTabChange = (value: string) => {
-    const tab = value as 'dashboard' | 'canvas' | 'chat';
-    // Prevent switching to gated features
-    if (tab === 'canvas' && !canAccessCanvas) return;
+    const tab = value as 'dashboard' | 'draw' | 'chat';
+    if (tab === 'draw' && !canAccessCanvas) return;
     if (tab === 'chat' && !canAccessChat) return;
     setTabletTab(tab);
-    if (tab === 'canvas') {
-      handleCanvasContentViewed();
+    if (tab === 'draw') {
+      handleDrawContentViewed();
     }
   };
 
@@ -108,8 +105,8 @@ export function ResponsiveLayout({
         <SplitPaneLayout>
           <ViewTabs
             accounts={accounts}
-            hasNewCanvasContent={hasNewCanvasContent}
-            onCanvasContentViewed={handleCanvasContentViewed}
+            hasNewDrawContent={hasNewDrawContent}
+            onDrawContentViewed={handleDrawContentViewed}
             activeTab={activeTab}
             onTabChange={setActiveTab}
           />
@@ -118,7 +115,7 @@ export function ResponsiveLayout({
 
       {/* Tablet: Tabs-based navigation (md only) */}
       <div className="hidden md:flex lg:hidden h-full flex-col">
-        <PinToCanvasProvider>
+        <DrawingBridgeProvider>
           <Tabs
             value={tabletTab}
             onValueChange={handleTabletTabChange}
@@ -133,17 +130,17 @@ export function ResponsiveLayout({
                 <span>Dashboard</span>
               </TabsTrigger>
               <TabsTrigger
-                value="canvas"
+                value="draw"
                 className="min-h-[44px] min-w-[44px] gap-2"
                 disabled={!canAccessCanvas}
               >
                 {canAccessCanvas ? (
-                  <Sparkles className="h-4 w-4" />
+                  <Pencil className="h-4 w-4" />
                 ) : (
                   <Lock className="h-4 w-4 text-muted-foreground" />
                 )}
-                <span>Canvas</span>
-                {canAccessCanvas && hasNewCanvasContent && (
+                <span>Draw</span>
+                {canAccessCanvas && hasNewDrawContent && (
                   <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px]">
                     New
                   </Badge>
@@ -175,8 +172,8 @@ export function ResponsiveLayout({
             <TabsContent value="dashboard" className="flex-1 mt-0 overflow-auto p-6">
               <DefaultDashboard accounts={accounts} />
             </TabsContent>
-            {/* Force mount canvas so it can receive render events even when not visible */}
-            <TabsContent value="canvas" className="flex-1 mt-0 overflow-hidden data-[state=inactive]:hidden" forceMount>
+            {/* Force mount draw so it can receive element push events even when not visible */}
+            <TabsContent value="draw" className="flex-1 mt-0 overflow-hidden data-[state=inactive]:hidden" forceMount>
               <FeatureGate
                 feature="canvas"
                 fallback={
@@ -185,7 +182,7 @@ export function ResponsiveLayout({
                   </div>
                 }
               >
-                <CanvasView />
+                <ExcalidrawView />
               </FeatureGate>
             </TabsContent>
             <TabsContent value="chat" className="flex-1 mt-0 overflow-hidden">
@@ -197,18 +194,18 @@ export function ResponsiveLayout({
               </FeatureGate>
             </TabsContent>
           </Tabs>
-        </PinToCanvasProvider>
+        </DrawingBridgeProvider>
       </div>
 
       {/* Mobile: ViewTabs with chat drawer (below md) */}
       <div className="flex md:hidden h-full flex-col relative">
-        <PinToCanvasProvider>
+        <DrawingBridgeProvider>
           {/* ViewTabs takes full screen */}
           <div className="flex-1 overflow-hidden">
             <ViewTabs
               accounts={accounts}
-              hasNewCanvasContent={hasNewCanvasContent}
-              onCanvasContentViewed={handleCanvasContentViewed}
+              hasNewDrawContent={hasNewDrawContent}
+              onDrawContentViewed={handleDrawContentViewed}
             />
           </div>
 
@@ -233,7 +230,7 @@ export function ResponsiveLayout({
               </SheetContent>
             </Sheet>
           </FeatureGate>
-        </PinToCanvasProvider>
+        </DrawingBridgeProvider>
       </div>
     </>
   );

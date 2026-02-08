@@ -1,7 +1,7 @@
 export {
-  PinToCanvasProvider,
-  usePinToCanvas,
-  usePinToCanvasOptional,
-  type PinToCanvasData,
-} from './pin-to-canvas-context';
+  DrawingBridgeProvider,
+  useDrawingBridge,
+  useDrawingBridgeOptional,
+  type DrawingBridgeData,
+} from './drawing-bridge-context';
 export { FeatureProvider, useFeatures } from './feature-context';

@@ -22,12 +22,20 @@ async function seedTestUser() {
         email: "test@example.com",
         name: "Test User",
         creditBalance: 1000, // Generous balance for testing
+        subscriptionTier: "pro", // Pro tier for full feature access
       })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          creditBalance: 1000,
+          subscriptionTier: "pro",
+        },
+      });
 
     console.log(`✅ Test user seeded successfully (ID: ${TEST_USER_ID})`);
     console.log("   Email: test@example.com");
     console.log("   Credits: 1000");
+    console.log("   Tier: pro");
   } catch (error) {
     console.error("❌ Failed to seed test user:", error);
     process.exit(1);

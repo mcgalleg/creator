@@ -1,7 +1,7 @@
 /**
  * Dashboard page - serves as the main entry point for the dashboard.
  *
- * The actual dashboard content (DefaultDashboard, CanvasView, ChatPanel)
+ * The actual dashboard content (DefaultDashboard, ExcalidrawView, ChatPanel)
  * is rendered by ResponsiveLayout in the layout.tsx file which handles
  * responsive layouts for desktop, tablet, and mobile views.
  *
@@ -10,6 +10,6 @@
  */
 export default function DashboardPage() {
   // The ResponsiveLayout in layout.tsx renders the main dashboard content
-  // including ViewTabs with DefaultDashboard and CanvasView
+  // including ViewTabs with DefaultDashboard and ExcalidrawView
   return null;
 }

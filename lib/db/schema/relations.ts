@@ -7,7 +7,7 @@ import { accountMetricsHistory } from "./metrics";
 import { pinnedComponents } from "./pinned-components";
 import { creditTransactions } from "./credits";
 import { syncJobs } from "./sync-jobs";
-import { canvases } from "./canvases";
+import { drawings } from "./drawings";
 import { dashboardLayouts } from "./dashboard-layouts";
 import { userFeatureOverrides } from "./feature-flags";
 
@@ -17,7 +17,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   pinnedComponents: many(pinnedComponents),
   creditTransactions: many(creditTransactions),
   syncJobs: many(syncJobs),
-  canvases: many(canvases),
+  drawings: many(drawings),
   dashboardLayouts: many(dashboardLayouts),
   featureOverrides: many(userFeatureOverrides),
 }));
@@ -86,10 +86,10 @@ export const syncJobsRelations = relations(syncJobs, ({ one }) => ({
   }),
 }));
 
-// Canvases relations
-export const canvasesRelations = relations(canvases, ({ one }) => ({
+// Drawings relations
+export const drawingsRelations = relations(drawings, ({ one }) => ({
   user: one(users, {
-    fields: [canvases.userId],
+    fields: [drawings.userId],
     references: [users.id],
   }),
 }));

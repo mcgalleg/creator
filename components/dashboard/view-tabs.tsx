@@ -3,14 +3,14 @@
 import dynamic from "next/dynamic";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Sparkles, Lock, Loader2 } from "lucide-react";
+import { LayoutDashboard, Pencil, Lock, Loader2 } from "lucide-react";
 import { DynamicDashboard } from "./dynamic-dashboard";
 import { useFeatures } from "@/contexts/feature-context";
 import { FeatureGate } from "@/components/feature-gate";
 
-// Dynamically import CanvasView to avoid loading React Flow until needed
-const CanvasView = dynamic(
-  () => import("./canvas-view").then((mod) => mod.CanvasView),
+// Dynamically import ExcalidrawView to avoid loading Excalidraw until needed
+const ExcalidrawView = dynamic(
+  () => import("../excalidraw/excalidraw-view").then((mod) => mod.ExcalidrawView),
   {
     ssr: false,
     loading: () => (
@@ -23,18 +23,18 @@ const CanvasView = dynamic(
 
 interface ViewTabsProps {
   accounts: Array<{ id: number; username: string }>;
-  hasNewCanvasContent?: boolean;
-  onCanvasContentViewed?: () => void;
+  hasNewDrawContent?: boolean;
+  onDrawContentViewed?: () => void;
   /** Controlled tab value */
-  activeTab?: "dashboard" | "canvas";
+  activeTab?: "dashboard" | "draw";
   /** Callback when tab changes */
-  onTabChange?: (tab: "dashboard" | "canvas") => void;
+  onTabChange?: (tab: "dashboard" | "draw") => void;
 }
 
 export function ViewTabs({
   accounts,
-  hasNewCanvasContent = false,
-  onCanvasContentViewed,
+  hasNewDrawContent = false,
+  onDrawContentViewed,
   activeTab,
   onTabChange,
 }: ViewTabsProps) {
@@ -42,13 +42,13 @@ export function ViewTabs({
   const canAccessCanvas = hasAccess("canvas");
 
   const handleTabChange = (value: string) => {
-    const tab = value as "dashboard" | "canvas";
-    // Prevent switching to canvas if user doesn't have access
-    if (tab === "canvas" && !canAccessCanvas) {
+    const tab = value as "dashboard" | "draw";
+    // Prevent switching to draw if user doesn't have access
+    if (tab === "draw" && !canAccessCanvas) {
       return;
     }
-    if (tab === "canvas" && onCanvasContentViewed) {
-      onCanvasContentViewed();
+    if (tab === "draw" && onDrawContentViewed) {
+      onDrawContentViewed();
     }
     onTabChange?.(tab);
   };
@@ -69,17 +69,17 @@ export function ViewTabs({
           Dashboard
         </TabsTrigger>
         <TabsTrigger
-          value="canvas"
+          value="draw"
           className="min-h-[44px] gap-2"
           disabled={!canAccessCanvas}
         >
           {canAccessCanvas ? (
-            <Sparkles className="size-4" />
+            <Pencil className="size-4" />
           ) : (
             <Lock className="size-4 text-muted-foreground" />
           )}
-          Canvas
-          {canAccessCanvas && hasNewCanvasContent && (
+          Draw
+          {canAccessCanvas && hasNewDrawContent && (
             <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px]">
               New
             </Badge>
@@ -96,10 +96,10 @@ export function ViewTabs({
         <DynamicDashboard accounts={accounts} />
       </TabsContent>
 
-      {/* Force mount canvas so it can receive render events even when not visible */}
+      {/* Force mount draw so it can receive element push events even when not visible */}
       <FeatureGate feature="canvas">
-        <TabsContent value="canvas" className="flex-1 mt-0 overflow-hidden data-[state=inactive]:hidden" forceMount>
-          <CanvasView />
+        <TabsContent value="draw" className="flex-1 mt-0 overflow-hidden data-[state=inactive]:hidden" forceMount>
+          <ExcalidrawView />
         </TabsContent>
       </FeatureGate>
     </Tabs>

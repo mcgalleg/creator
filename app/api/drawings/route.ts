@@ -1,13 +1,13 @@
 import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { canvases } from "@/lib/db/schema";
+import { drawings } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 
 /**
- * GET /api/canvases
- * List all canvases for the authenticated user
- * Auto-creates a default canvas if user has none
+ * GET /api/drawings
+ * List all drawings for the authenticated user
+ * Auto-creates a default drawing if user has none
  */
 export async function GET() {
   try {
@@ -17,43 +17,41 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch all canvases for the user
-    let userCanvases = await db
+    let userDrawings = await db
       .select()
-      .from(canvases)
-      .where(eq(canvases.userId, userId))
-      .orderBy(desc(canvases.createdAt));
+      .from(drawings)
+      .where(eq(drawings.userId, userId))
+      .orderBy(desc(drawings.createdAt));
 
-    // If user has no canvases, auto-create a default one
-    if (userCanvases.length === 0) {
-      const [defaultCanvas] = await db
-        .insert(canvases)
+    // If user has no drawings, auto-create a default one
+    if (userDrawings.length === 0) {
+      const [defaultDrawing] = await db
+        .insert(drawings)
         .values({
           userId,
-          name: "My Canvas",
+          name: "My Drawing",
           isDefault: true,
-          nodes: [],
-          edges: [],
-          viewport: { x: 0, y: 0, zoom: 1 },
+          elements: [],
+          appState: { viewBackgroundColor: "#ffffff", zoom: 1, scrollX: 0, scrollY: 0 },
         })
         .returning();
 
-      userCanvases = [defaultCanvas];
+      userDrawings = [defaultDrawing];
     }
 
-    return NextResponse.json({ canvases: userCanvases });
+    return NextResponse.json({ drawings: userDrawings });
   } catch (error) {
-    console.error("Error fetching canvases:", error);
+    console.error("Error fetching drawings:", error);
     return NextResponse.json(
-      { error: "Failed to fetch canvases" },
+      { error: "Failed to fetch drawings" },
       { status: 500 }
     );
   }
 }
 
 /**
- * POST /api/canvases
- * Create a new canvas
+ * POST /api/drawings
+ * Create a new drawing
  */
 export async function POST(request: NextRequest) {
   try {
@@ -66,7 +64,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name } = body;
 
-    // Validate required fields
     if (!name || typeof name !== "string") {
       return NextResponse.json(
         { error: "name is required and must be a string" },
@@ -81,24 +78,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the canvas
-    const [canvas] = await db
-      .insert(canvases)
+    const [drawing] = await db
+      .insert(drawings)
       .values({
         userId,
         name: name.trim(),
         isDefault: false,
-        nodes: [],
-        edges: [],
-        viewport: { x: 0, y: 0, zoom: 1 },
+        elements: [],
+        appState: { viewBackgroundColor: "#ffffff", zoom: 1, scrollX: 0, scrollY: 0 },
       })
       .returning();
 
-    return NextResponse.json({ canvas });
+    return NextResponse.json({ drawing });
   } catch (error) {
-    console.error("Error creating canvas:", error);
+    console.error("Error creating drawing:", error);
     return NextResponse.json(
-      { error: "Failed to create canvas" },
+      { error: "Failed to create drawing" },
       { status: 500 }
     );
   }

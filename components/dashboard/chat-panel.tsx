@@ -1,20 +1,32 @@
 'use client';
 
-import { useState, FormEvent, useRef, useEffect } from 'react';
+import { useState, FormEvent, useRef, useEffect, useCallback } from 'react';
 import { MessageSquare, AlertCircle } from 'lucide-react';
 import { useAnalyticsChat } from '@/hooks/use-analytics-chat';
 import { ChatInput } from '@/components/chat/chat-input';
 import { MessageList } from '@/components/chat/message-list';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useDrawingBridgeOptional } from '@/contexts/drawing-bridge-context';
+import type { DiagramResult } from '@/hooks/use-analytics-chat';
 
 /**
  * Chat panel component that integrates with the analytics chat hook.
  * Visualizations render inline in the chat by default.
- * Users with canvas access can pin visualizations to the canvas via pin buttons.
+ * Diagrams are pushed to the Excalidraw Draw tab via the drawing bridge.
  */
 export function ChatPanel() {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const drawingBridge = useDrawingBridgeOptional();
+
+  const handleDiagramGenerated = useCallback((diagram: DiagramResult) => {
+    if (drawingBridge) {
+      drawingBridge.pushElements({
+        title: diagram.title,
+        elements: diagram.elements,
+      });
+    }
+  }, [drawingBridge]);
 
   const {
     messages,
@@ -24,7 +36,9 @@ export function ChatPanel() {
     uiTrees,
     error,
     getMessageText,
-  } = useAnalyticsChat();
+  } = useAnalyticsChat({
+    onDiagramGenerated: handleDiagramGenerated,
+  });
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels';
 import type { PanelSize } from 'react-resizable-panels';
 import { PanelLeftClose, PanelLeft, Loader2 } from 'lucide-react';
-import { PinToCanvasProvider } from '@/contexts/pin-to-canvas-context';
+import { DrawingBridgeProvider } from '@/contexts/drawing-bridge-context';
 import { Button } from '@/components/ui/button';
 
 // Dynamically import ChatPanel to defer AI SDK compilation
@@ -58,7 +58,7 @@ export function SplitPaneLayout({ children }: SplitPaneLayoutProps) {
   }, []);
 
   return (
-    <PinToCanvasProvider>
+    <DrawingBridgeProvider>
       <Group orientation="horizontal" className="h-full">
         {/* Chat Panel - Left Side */}
         <Panel
@@ -87,13 +87,13 @@ export function SplitPaneLayout({ children }: SplitPaneLayoutProps) {
           </Button>
         </Separator>
 
-        {/* Canvas Area - Right Side */}
+        {/* Draw Area - Right Side */}
         <Panel minSize="50%" className="flex flex-col">
           <div className="flex-1 overflow-hidden">
             {children}
           </div>
         </Panel>
       </Group>
-    </PinToCanvasProvider>
+    </DrawingBridgeProvider>
   );
 }

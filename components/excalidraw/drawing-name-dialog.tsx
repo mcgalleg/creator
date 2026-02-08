@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-interface CanvasNameDialogProps {
+interface DrawingNameDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialName?: string;
@@ -20,18 +20,17 @@ interface CanvasNameDialogProps {
   mode: "create" | "rename";
 }
 
-export function CanvasNameDialog({
+export function DrawingNameDialog({
   open,
   onOpenChange,
   initialName = "",
   onSave,
   mode,
-}: CanvasNameDialogProps) {
+}: DrawingNameDialogProps) {
   const [name, setName] = useState(initialName);
 
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {
-      // Reset name when dialog opens
       setName(initialName);
     }
     onOpenChange(isOpen);
@@ -55,7 +54,7 @@ export function CanvasNameDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {mode === "create" ? "Create Canvas" : "Rename Canvas"}
+            {mode === "create" ? "Create Drawing" : "Rename Drawing"}
           </DialogTitle>
         </DialogHeader>
         <div className="py-4">
@@ -63,7 +62,7 @@ export function CanvasNameDialog({
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="e.g., Weekly Performance, Campaign Analysis"
+            placeholder="e.g., Content Strategy, Campaign Flow"
             autoFocus
           />
         </div>

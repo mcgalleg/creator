@@ -1,10 +1,9 @@
 // Hooks barrel export
 export { useAccounts, type UseAccountsReturn, type TikTokAccount, type SyncJob, type SyncOptions, type ConnectResult, type SyncResult, type AccountSyncData } from './use-accounts';
-export { useAnalyticsChat, type UseAnalyticsChatReturn, type UITree, type AnalyticsData } from './use-analytics-chat';
-export { useCanvases, type UseCanvasesReturn, type Canvas } from './use-canvases';
+export { useAnalyticsChat, type UseAnalyticsChatReturn, type UITree, type AnalyticsData, type DiagramResult } from './use-analytics-chat';
+export { useDrawings, type Drawing } from './use-drawings';
+export { useDrawingState } from './use-drawing-state';
 export { usePinnedComponents, type PinnedComponent } from './use-pinned-components';
-export { useCanvasState, type UseCanvasStateReturn } from './use-canvas-state';
-export { useKeyboardShortcuts, shortcutDefinitions, type UseKeyboardShortcutsReturn, type KeyboardShortcutsConfig, type ShortcutDefinition } from './use-keyboard-shortcuts';
 export {
   useDashboardData,
   type UseDashboardDataOptions,

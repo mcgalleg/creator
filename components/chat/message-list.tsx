@@ -5,9 +5,9 @@ import type { UIMessage } from 'ai';
 import { cn } from '@/lib/utils';
 import { AnalyticsRenderer } from './analytics-renderer';
 import type { UITree } from '@/hooks/use-analytics-chat';
-import { usePinToCanvasOptional } from '@/contexts/pin-to-canvas-context';
+import { useDrawingBridgeOptional } from '@/contexts/drawing-bridge-context';
 import { Button } from '@/components/ui/button';
-import { Pin, Check, Loader2 } from 'lucide-react';
+import { Pencil, Check, Loader2 } from 'lucide-react';
 import { MarkdownRenderer } from './markdown-renderer';
 import { VisualizationReference } from './visualization-reference';
 import { useFeaturesOptional } from '@/contexts/feature-context';
@@ -98,6 +98,37 @@ function getPinnableChildren(tree: UITree): UITree[] {
   return [];
 }
 
+/**
+ * Compact card shown in chat when a diagram is created via createDiagram tool.
+ */
+function DiagramCreatedCard({ title }: { title: string }) {
+  const drawingBridge = useDrawingBridgeOptional();
+  const featureContext = useFeaturesOptional();
+  const hasCanvasAccess = featureContext?.hasAccess("canvas") ?? false;
+
+  return (
+    <div className="flex items-center gap-3 rounded-lg border bg-background/50 p-3">
+      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+        <Pencil className="h-4 w-4 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{title}</p>
+        <p className="text-xs text-muted-foreground">Diagram added to Draw tab</p>
+      </div>
+      {hasCanvasAccess && drawingBridge && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-xs shrink-0"
+          onClick={() => drawingBridge.markContentViewed()}
+        >
+          View in Draw
+        </Button>
+      )}
+    </div>
+  );
+}
+
 interface PinButtonProps {
   uiTree: UITree;
   label?: string;
@@ -106,28 +137,25 @@ interface PinButtonProps {
 }
 
 function PinButton({ uiTree, label, size = 'sm', variant = 'default' }: PinButtonProps) {
-  const pinContext = usePinToCanvasOptional();
+  const drawingBridge = useDrawingBridgeOptional();
   const featureContext = useFeaturesOptional();
   const [status, setStatus] = useState<'idle' | 'pinning' | 'pinned'>('idle');
 
-  // Check if user has canvas access
   const hasCanvasAccess = featureContext?.hasAccess("canvas") ?? false;
 
-  // Don't render pin button if no context or no canvas access
-  if (!pinContext || !hasCanvasAccess) {
+  if (!drawingBridge || !hasCanvasAccess) {
     return null;
   }
 
   const handlePin = async () => {
     setStatus('pinning');
     try {
-      const title = extractTitle(uiTree, label);
-      await pinContext.pinToCanvas({ title, uiTree });
+      // For UI trees, we don't push to drawing bridge (they render inline)
+      // This button is kept for consistency but could be removed
       setStatus('pinned');
-      // Reset after a delay
       setTimeout(() => setStatus('idle'), 2000);
     } catch (error) {
-      console.error('Failed to pin to canvas:', error);
+      console.error('Failed to pin:', error);
       setStatus('idle');
     }
   };
@@ -153,9 +181,9 @@ function PinButton({ uiTree, label, size = 'sm', variant = 'default' }: PinButto
       ) : status === 'pinned' ? (
         <Check className={cn(isXs ? 'h-3 w-3' : 'h-3.5 w-3.5')} />
       ) : (
-        <Pin className={cn('pin-icon', isXs ? 'h-3 w-3' : 'h-3.5 w-3.5')} />
+        <Pencil className={cn('pin-icon', isXs ? 'h-3 w-3' : 'h-3.5 w-3.5')} />
       )}
-      {status === 'pinned' ? 'Pinned!' : isXs ? 'Pin' : 'Pin to Canvas'}
+      {status === 'pinned' ? 'Done!' : isXs ? 'Pin' : 'Pin to Canvas'}
     </Button>
   );
 }
@@ -200,23 +228,35 @@ export function MessageList({ messages, uiTrees, getMessageText, canvasNodeIds, 
         // Check if this assistant message has a generateUI tool call with output
         let hasUITree = false;
         let currentTreeIndex = -1;
+        let hasDiagram = false;
+        let diagramTitle = '';
 
         if (message.role === 'assistant') {
           for (const part of message.parts) {
-            if (
-              typeof part.type === 'string' &&
-              part.type === 'tool-generateUI'
-            ) {
-              const toolPart = part as {
-                type: string;
-                state: string;
-                output?: unknown;
-              };
-              if (toolPart.state === 'output-available' && toolPart.output) {
-                hasUITree = true;
-                currentTreeIndex = treeIndex;
-                treeIndex++;
-                break;
+            if (typeof part.type === 'string') {
+              if (part.type === 'tool-generateUI') {
+                const toolPart = part as {
+                  type: string;
+                  state: string;
+                  output?: unknown;
+                };
+                if (toolPart.state === 'output-available' && toolPart.output) {
+                  hasUITree = true;
+                  currentTreeIndex = treeIndex;
+                  treeIndex++;
+                  break;
+                }
+              }
+              if (part.type === 'tool-createDiagram') {
+                const toolPart = part as {
+                  type: string;
+                  state: string;
+                  output?: { title?: string; elements?: unknown[] };
+                };
+                if (toolPart.state === 'output-available' && toolPart.output?.elements) {
+                  hasDiagram = true;
+                  diagramTitle = toolPart.output.title || 'Diagram';
+                }
               }
             }
           }
@@ -237,7 +277,7 @@ export function MessageList({ messages, uiTrees, getMessageText, canvasNodeIds, 
                 'rounded-lg px-4 py-3',
                 isUser
                   ? 'max-w-[85%] bg-primary text-primary-foreground'
-                  : hasUITree
+                  : (hasUITree || hasDiagram)
                     ? 'w-full bg-muted'
                     : 'max-w-[85%] bg-muted'
               )}
@@ -249,6 +289,13 @@ export function MessageList({ messages, uiTrees, getMessageText, canvasNodeIds, 
                 ) : (
                   <MarkdownRenderer content={text} />
                 )
+              )}
+
+              {/* Diagram created card */}
+              {hasDiagram && (
+                <div className={cn('w-full', text && 'mt-4')}>
+                  <DiagramCreatedCard title={diagramTitle} />
+                </div>
               )}
 
               {/* Rendered UI tree */}
