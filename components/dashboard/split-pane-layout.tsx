@@ -59,9 +59,10 @@ export function SplitPaneLayout({ children }: SplitPaneLayoutProps) {
 
   return (
     <DrawingBridgeProvider>
-      <Group orientation="horizontal" className="h-full">
+      <Group id="split-pane-group" orientation="horizontal" className="h-full">
         {/* Chat Panel - Left Side */}
         <Panel
+          id="chat-panel"
           panelRef={chatPanelRef}
           defaultSize="30%"
           minSize="20%"
@@ -74,7 +75,7 @@ export function SplitPaneLayout({ children }: SplitPaneLayoutProps) {
         </Panel>
 
         {/* Resize Handle */}
-        <Separator className="relative w-1.5 bg-border hover:bg-primary/50 transition-colors data-[active]:bg-primary">
+        <Separator id="split-pane-separator" className="relative w-1.5 bg-border hover:bg-primary/50 transition-colors data-[active]:bg-primary">
           {/* Always visible toggle button */}
           <Button
             variant="default"
@@ -88,7 +89,7 @@ export function SplitPaneLayout({ children }: SplitPaneLayoutProps) {
         </Separator>
 
         {/* Draw Area - Right Side */}
-        <Panel minSize="50%" className="flex flex-col">
+        <Panel id="view-panel" minSize="50%" className="flex flex-col">
           <div className="flex-1 overflow-hidden">
             {children}
           </div>

@@ -33,6 +33,18 @@ interface DrawingBridgeContextValue {
    * Mark content as viewed (clear the badge).
    */
   markContentViewed: () => void;
+
+  /**
+   * Switch to the Draw tab programmatically.
+   * Used by "View in Draw" buttons in chat.
+   */
+  switchToDrawTab: () => void;
+
+  /**
+   * Register a callback for switching to the Draw tab.
+   * Called by the layout component that controls tab state.
+   */
+  registerTabSwitcher: (switcher: () => void) => void;
 }
 
 const DrawingBridgeContext = createContext<DrawingBridgeContextValue | null>(null);
@@ -44,6 +56,7 @@ interface DrawingBridgeProviderProps {
 export function DrawingBridgeProvider({ children }: DrawingBridgeProviderProps) {
   const [hasNewContent, setHasNewContent] = useState(false);
   const subscribersRef = useRef<Set<ElementsPushedCallback>>(new Set());
+  const tabSwitcherRef = useRef<(() => void) | null>(null);
 
   const pushElements = useCallback((data: DrawingBridgeData) => {
     setHasNewContent(true);
@@ -68,12 +81,23 @@ export function DrawingBridgeProvider({ children }: DrawingBridgeProviderProps) 
     setHasNewContent(false);
   }, []);
 
+  const switchToDrawTab = useCallback(() => {
+    setHasNewContent(false);
+    tabSwitcherRef.current?.();
+  }, []);
+
+  const registerTabSwitcher = useCallback((switcher: () => void) => {
+    tabSwitcherRef.current = switcher;
+  }, []);
+
   return (
     <DrawingBridgeContext.Provider value={{
       pushElements,
       onElementsPushed,
       hasNewContent,
       markContentViewed,
+      switchToDrawTab,
+      registerTabSwitcher,
     }}>
       {children}
     </DrawingBridgeContext.Provider>

@@ -120,7 +120,7 @@ function DiagramCreatedCard({ title }: { title: string }) {
           variant="outline"
           size="sm"
           className="text-xs shrink-0"
-          onClick={() => drawingBridge.markContentViewed()}
+          onClick={() => drawingBridge.switchToDrawTab()}
         >
           View in Draw
         </Button>

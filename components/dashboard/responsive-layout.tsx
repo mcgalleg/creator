@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { MessageSquare, LayoutDashboard, Pencil, Lock, Loader2 } from 'lucide-react';
 import { SplitPaneLayout } from './split-pane-layout';
@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useDrawingBridgeOptional, DrawingBridgeProvider } from '@/contexts/drawing-bridge-context';
+import { useDrawingBridge, useDrawingBridgeOptional, DrawingBridgeProvider } from '@/contexts/drawing-bridge-context';
 import { useFeatures } from '@/contexts/feature-context';
 import { FeatureGate } from '@/components/feature-gate';
 import { UpgradePrompt } from '@/components/upgrade-prompt';
@@ -41,6 +41,18 @@ const ChatPanel = dynamic(
     ),
   }
 );
+
+/**
+ * Registers a tab switcher callback with the DrawingBridge context.
+ * Must be rendered inside a DrawingBridgeProvider.
+ */
+function TabSwitcherRegistrar({ onSwitch }: { onSwitch: () => void }) {
+  const drawingBridge = useDrawingBridge();
+  useEffect(() => {
+    drawingBridge.registerTabSwitcher(onSwitch);
+  }, [drawingBridge, onSwitch]);
+  return null;
+}
 
 interface ResponsiveLayoutProps {
   accounts: Array<{ id: number; username: string }>;
@@ -88,6 +100,12 @@ export function ResponsiveLayout({
     }
   };
 
+  const switchTabletToDraw = useCallback(() => {
+    if (canAccessCanvas) {
+      setTabletTab('draw');
+    }
+  }, [canAccessCanvas]);
+
   // If on a sub-page (accounts/settings), render children directly
   if (!isMainDashboard) {
     return (
@@ -116,6 +134,7 @@ export function ResponsiveLayout({
       {/* Tablet: Tabs-based navigation (md only) */}
       <div className="hidden md:flex lg:hidden h-full flex-col">
         <DrawingBridgeProvider>
+          <TabSwitcherRegistrar onSwitch={switchTabletToDraw} />
           <Tabs
             value={tabletTab}
             onValueChange={handleTabletTabChange}

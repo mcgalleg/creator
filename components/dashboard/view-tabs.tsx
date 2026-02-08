@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,7 @@ import { LayoutDashboard, Pencil, Lock, Loader2 } from "lucide-react";
 import { DynamicDashboard } from "./dynamic-dashboard";
 import { useFeatures } from "@/contexts/feature-context";
 import { FeatureGate } from "@/components/feature-gate";
+import { useDrawingBridgeOptional } from "@/contexts/drawing-bridge-context";
 
 // Dynamically import ExcalidrawView to avoid loading Excalidraw until needed
 const ExcalidrawView = dynamic(
@@ -40,6 +42,14 @@ export function ViewTabs({
 }: ViewTabsProps) {
   const { hasAccess } = useFeatures();
   const canAccessCanvas = hasAccess("canvas");
+  const drawingBridge = useDrawingBridgeOptional();
+
+  // Register tab switcher so "View in Draw" buttons can programmatically switch tabs
+  useEffect(() => {
+    if (drawingBridge && onTabChange && canAccessCanvas) {
+      drawingBridge.registerTabSwitcher(() => onTabChange("draw"));
+    }
+  }, [drawingBridge, onTabChange, canAccessCanvas]);
 
   const handleTabChange = (value: string) => {
     const tab = value as "dashboard" | "draw";
