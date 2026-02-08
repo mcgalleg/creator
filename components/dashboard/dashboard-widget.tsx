@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { GripVertical, X, Settings } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { MoreHorizontal, Trash2 } from "lucide-react";
 // Import from index to trigger widget registration
 import { widgetRegistry, WidgetProps } from "@/lib/widgets";
 import { WidgetPosition } from "@/lib/db/schema/dashboard-layouts";
@@ -10,11 +9,11 @@ import { DashboardData } from "@/hooks/use-dashboard-data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface DashboardWidgetProps {
   widget: WidgetPosition;
@@ -23,7 +22,6 @@ interface DashboardWidgetProps {
   dashboardData?: DashboardData;
   isDataLoading?: boolean;
   config?: Record<string, unknown>;
-  isEditing: boolean;
   onDelete?: (widgetId: string) => void;
   onConfigChange?: (widgetId: string, config: Record<string, unknown>) => void;
 }
@@ -38,7 +36,7 @@ function getWidgetData(
 ): unknown {
   if (!dashboardData) return null;
 
-  const { overview, engagement, topContent, recentPosts, breakdown, recentComments, commentActivity, topCommenters } = dashboardData;
+  const { overview, engagement, topContent, recentPosts, breakdown, recentComments, commentActivity, topCommenters, postingTimes, growth, durationPerformance } = dashboardData;
 
   switch (widgetType) {
     // KPI widgets - map from overview metrics
@@ -116,6 +114,148 @@ function getWidgetData(
       // Sentiment analysis not yet implemented - return null to show placeholder
       return null;
 
+    case "posting-frequency":
+      if (postingTimes?.summary?.byDayOfWeek) {
+        const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        return postingTimes.summary.byDayOfWeek.map((d, i) => ({
+          day: d.dayName,
+          shortDay: SHORT_DAYS[i],
+          posts: d.postCount,
+        }));
+      }
+      return null;
+
+    // Engagement KPI widgets
+    case "total-comments":
+      if (engagement?.data) {
+        const totalComments = engagement.data.reduce((sum, d) => sum + d.comments, 0);
+        return { totalComments, commentsChange: 0 };
+      }
+      return null;
+
+    case "saves-rate":
+      if (engagement?.data) {
+        const totalSaves = engagement.data.reduce((sum, d) => sum + d.saves, 0);
+        const totalPlays = engagement.data.reduce((sum, d) => sum + d.plays, 0);
+        const savesRate = totalPlays > 0 ? (totalSaves / totalPlays) * 100 : 0;
+        return { savesRate, totalSaves, totalPlays };
+      }
+      return null;
+
+    case "virality-score":
+      if (engagement?.data) {
+        const totalShares = engagement.data.reduce((sum, d) => sum + d.shares, 0);
+        const totalPlays = engagement.data.reduce((sum, d) => sum + d.plays, 0);
+        const viralityScore = totalPlays > 0 ? (totalShares / totalPlays) * 100 : 0;
+        return { viralityScore, totalShares, totalPlays };
+      }
+      return null;
+
+    case "comments-per-post":
+      if (engagement?.data && engagement.data.length > 0) {
+        const totalComments = engagement.data.reduce((sum, d) => sum + d.comments, 0);
+        const commentsPerPost = totalComments / engagement.data.length;
+        return { commentsPerPost, totalComments, postCount: engagement.data.length };
+      }
+      return null;
+
+    case "engagement-by-day":
+      if (postingTimes?.summary?.byDayOfWeek) {
+        return postingTimes.summary.byDayOfWeek.map((d) => ({
+          day: d.dayName,
+          shortDay: d.dayName.slice(0, 3),
+          engagementRate: d.avgEngagementRate,
+          posts: d.postCount,
+        }));
+      }
+      return null;
+
+    case "follower-engagement-ratio":
+      if (overview?.metrics) {
+        const ratio = overview.metrics.followers > 0
+          ? (overview.metrics.totalPlays / overview.metrics.followers) * 100
+          : 0;
+        return { ratio, totalPlays: overview.metrics.totalPlays, followers: overview.metrics.followers };
+      }
+      return null;
+
+    // Chart widgets - additional
+    case "views-distribution":
+      if (topContent?.videos && topContent.videos.length > 0) {
+        const buckets = [
+          { label: "0-1K", min: 0, max: 1000, count: 0 },
+          { label: "1K-10K", min: 1000, max: 10000, count: 0 },
+          { label: "10K-100K", min: 10000, max: 100000, count: 0 },
+          { label: "100K-1M", min: 100000, max: 1000000, count: 0 },
+          { label: "1M+", min: 1000000, max: Infinity, count: 0 },
+        ];
+        topContent.videos.forEach(v => {
+          const bucket = buckets.find(b => v.plays >= b.min && v.plays < b.max);
+          if (bucket) bucket.count++;
+        });
+        return buckets;
+      }
+      return null;
+
+    // Comments - audience loyalty
+    case "audience-loyalty":
+      if (topCommenters?.commenters && topCommenters.commenters.length > 0) {
+        const repeat = topCommenters.commenters.filter(c => c.commentCount > 1).length;
+        const oneTime = topCommenters.commenters.filter(c => c.commentCount === 1).length;
+        const total = topCommenters.commenters.length;
+        const loyaltyRate = total > 0 ? (repeat / total) * 100 : 0;
+        return { loyaltyRate, repeat, oneTime, total };
+      }
+      return null;
+
+    // 2A: Growth chart
+    case "growth-chart":
+      return growth?.followerGrowth ?? null;
+
+    // 2B: Best posting times heatmap
+    case "best-posting-times":
+      if (postingTimes?.timeSlots) {
+        return postingTimes.timeSlots.map((slot) => ({
+          day: slot.dayOfWeek,
+          hour: slot.hour,
+          engagement: slot.metrics?.avgPlays || 0,
+          posts: slot.postCount,
+        }));
+      }
+      return null;
+
+    // 2C: Viral posts
+    case "viral-posts":
+      if (topContent?.videos && topContent.videos.length > 0) {
+        const viralThreshold = 1.0; // 1% share rate
+        const postsWithShareRate = topContent.videos
+          .map(v => ({ ...v, shareRate: v.plays > 0 ? (v.shares / v.plays) * 100 : 0 }))
+          .filter(v => v.shareRate > viralThreshold)
+          .sort((a, b) => b.shareRate - a.shareRate);
+        return postsWithShareRate.length > 0 ? postsWithShareRate : null;
+      }
+      return null;
+
+    // 2D: Underperforming posts
+    case "underperforming":
+      if (topContent?.videos && topContent.videos.length > 1) {
+        const avgRate = topContent.videos.reduce((sum, v) => sum + v.engagementRate, 0) / topContent.videos.length;
+        const underperforming = topContent.videos
+          .filter(v => v.engagementRate < avgRate)
+          .map(v => ({
+            ...v,
+            avgEngagementRate: avgRate,
+            performanceGap: avgRate > 0 ? ((avgRate - v.engagementRate) / avgRate) * 100 : 0,
+          }))
+          .sort((a, b) => b.performanceGap - a.performanceGap);
+        return underperforming.length > 0 ? underperforming : null;
+      }
+      return null;
+
+    // 2E: Duration performance
+    case "duration-performance":
+      return durationPerformance?.videos ?? null;
+
     default:
       return null;
   }
@@ -128,7 +268,6 @@ export function DashboardWidget({
   dashboardData,
   isDataLoading = false,
   config,
-  isEditing,
   onDelete,
   onConfigChange,
 }: DashboardWidgetProps) {
@@ -137,12 +276,7 @@ export function DashboardWidget({
   // Handle missing widget definition
   if (!widgetDef) {
     return (
-      <div
-        className={cn(
-          "relative rounded-lg border bg-card h-full",
-          isEditing && "ring-1 ring-border"
-        )}
-      >
+      <div className="group relative rounded-lg border bg-card h-full">
         <Card className="h-full">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -155,10 +289,8 @@ export function DashboardWidget({
             </p>
           </CardContent>
         </Card>
-        {isEditing && (
-          <WidgetEditOverlay
-            onDelete={() => onDelete?.(widget.id)}
-          />
+        {onDelete && (
+          <WidgetMenu onDelete={() => onDelete(widget.id)} />
         )}
       </div>
     );
@@ -174,7 +306,7 @@ export function DashboardWidget({
     accountId,
     period,
     config,
-    isEditing,
+    isEditing: false,
     onConfigChange: onConfigChange
       ? (newConfig) => onConfigChange(widget.id, newConfig)
       : undefined,
@@ -184,106 +316,49 @@ export function DashboardWidget({
   };
 
   return (
-    <div
-      className={cn(
-        "relative rounded-lg h-full",
-        isEditing && "ring-1 ring-border"
-      )}
-    >
+    <div className="group relative rounded-lg h-full">
       <div className="h-full">
         <WidgetComponent {...widgetProps} />
       </div>
-      {isEditing && (
-        <WidgetEditOverlay
-          widgetName={widgetDef.name}
-          onDelete={() => onDelete?.(widget.id)}
-          onSettings={() => {
-            // TODO: Open widget settings dialog
-          }}
-        />
+      {onDelete && (
+        <WidgetMenu onDelete={() => onDelete(widget.id)} />
       )}
     </div>
   );
 }
 
-interface WidgetEditOverlayProps {
-  widgetName?: string;
-  onDelete?: () => void;
-  onSettings?: () => void;
+interface WidgetMenuProps {
+  onDelete: () => void;
 }
 
-function WidgetEditOverlay({
-  widgetName,
-  onDelete,
-  onSettings,
-}: WidgetEditOverlayProps) {
+function WidgetMenu({ onDelete }: WidgetMenuProps) {
   return (
-    <TooltipProvider>
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Drag Handle Indicator - visual only, actual dragging is on the grid cell */}
-        <div className="absolute top-2 left-2 pointer-events-auto">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-md",
-                  "bg-background/80 backdrop-blur-sm border shadow-sm",
-                  "hover:bg-accent hover:text-accent-foreground",
-                  "cursor-grab active:cursor-grabbing",
-                  "transition-colors"
-                )}
-                aria-label={`Drag ${widgetName ?? "widget"}`}
-              >
-                <GripVertical className="h-4 w-4" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>Drag to reorder</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="absolute top-2 right-2 flex gap-1 pointer-events-auto">
-          {onSettings && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="h-8 w-8 bg-background/80 backdrop-blur-sm shadow-sm"
-                  onClick={onSettings}
-                >
-                  <Settings className="h-4 w-4" />
-                  <span className="sr-only">Widget settings</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Settings</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          {onDelete && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="h-8 w-8 shadow-sm"
-                  onClick={onDelete}
-                >
-                  <X className="h-4 w-4" />
-                  <span className="sr-only">Remove widget</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Remove widget</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-      </div>
-    </TooltipProvider>
+    <div
+      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 bg-background/80 backdrop-blur-sm shadow-sm"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">Widget options</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={onDelete}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Remove widget
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
 

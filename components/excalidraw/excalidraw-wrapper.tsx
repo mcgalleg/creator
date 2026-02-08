@@ -62,18 +62,48 @@ export function ExcalidrawWrapper({
     });
   }, []);
 
-  // Scroll to content helper — only works when the container is visible
+  // Scroll to content helper — only works when the container has real dimensions.
+  // Retries a few times because the canvas may not have recalculated yet after
+  // transitioning from display:none to visible.
   const scrollToContent = useCallback(() => {
     const api = excalidrawAPIRef.current;
     if (!api) return;
     const elements = api.getSceneElements();
     if (elements.length === 0) return;
 
-    api.scrollToContent(elements, {
-      fitToContent: true,
-      animate: true,
-      duration: 300,
-    });
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    const tryScroll = () => {
+      const el = containerRef.current;
+      if (!el || (el.offsetWidth === 0 && el.offsetHeight === 0)) {
+        // Container still has zero dimensions — retry
+        if (attempts < maxAttempts) {
+          attempts++;
+          setTimeout(tryScroll, 100);
+        }
+        return;
+      }
+
+      api.scrollToContent(elements, {
+        fitToContent: true,
+        animate: true,
+        duration: 300,
+      });
+
+      // Verify zoom didn't end up as NaN — if so, reset to a sane default
+      setTimeout(() => {
+        const appState = api.getAppState?.();
+        const zoomVal = appState?.zoom?.value ?? appState?.zoom;
+        if (typeof zoomVal !== "number" || !isFinite(zoomVal)) {
+          api.updateScene({
+            appState: { zoom: { value: 1 } },
+          });
+        }
+      }, 50);
+    };
+
+    tryScroll();
   }, []);
 
   // Watch for visibility changes to trigger pending scroll-to-content.

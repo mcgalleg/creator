@@ -45,7 +45,7 @@ export const engagementTrendWidgetDefinition: WidgetDefinition = {
   id: "engagement-trend",
   name: "Engagement Trends",
   description: "Area chart showing plays and likes trends over time",
-  category: "chart",
+  category: "engagement",
   icon: TrendingUp,
   component: EngagementTrendWidget,
   defaultSize: { w: 12, h: 4 },

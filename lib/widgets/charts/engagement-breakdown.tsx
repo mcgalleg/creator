@@ -53,7 +53,7 @@ export const engagementBreakdownWidgetDefinition: WidgetDefinition = {
   id: "engagement-breakdown",
   name: "Engagement Breakdown",
   description: "Pie chart showing distribution of likes, comments, shares, and saves",
-  category: "chart",
+  category: "engagement",
   icon: PieChart,
   component: EngagementBreakdownWidget,
   defaultSize: { w: 6, h: 4 },

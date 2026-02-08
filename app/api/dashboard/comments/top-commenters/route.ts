@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { comments, posts } from "@/lib/db/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, gte } from "drizzle-orm";
 import {
   withAccountAuth,
   isAuthError,
+  PERIOD_DAYS,
 } from "@/lib/dashboard-utils";
 
 /**
@@ -17,9 +18,14 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await withAccountAuth(request, { requirePeriod: false });
+    const authResult = await withAccountAuth(request);
     if (isAuthError(authResult)) return authResult;
-    const { accountId } = authResult;
+    const { accountId, period } = authResult;
+
+    const days = PERIOD_DAYS[period];
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
 
     const searchParams = request.nextUrl.searchParams;
     const limitParam = searchParams.get("limit");
@@ -47,6 +53,7 @@ export async function GET(request: NextRequest) {
       .where(
         and(
           eq(posts.accountId, accountId),
+          gte(comments.postedAt, startDate),
           sql`${comments.authorUsername} IS NOT NULL AND ${comments.authorUsername} != ''`
         )
       )

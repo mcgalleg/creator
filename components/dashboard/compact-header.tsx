@@ -1,7 +1,7 @@
 'use client';
 
 import { UserButton } from '@clerk/nextjs';
-import { Coins, HelpCircle, Settings } from 'lucide-react';
+import { Coins, Settings } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -41,20 +41,20 @@ export function CompactHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background">
-      <div className="flex h-12 md:h-12 items-center px-3 md:px-4 gap-2 md:gap-4">
+      <div className="flex h-14 md:h-14 items-center px-3 md:px-4 gap-2 md:gap-4">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
           <Image
             src="/logo.png"
             alt="Not a Bot"
-            width={100}
-            height={32}
-            className="h-7 w-auto dark:invert"
+            width={120}
+            height={38}
+            className="h-8 w-auto dark:invert"
           />
         </Link>
 
         {/* Separator - hidden on mobile */}
-        <div className="h-6 w-px bg-border hidden sm:block" />
+        <div className="h-7 w-px bg-border hidden sm:block" />
 
         {/* Account Switcher - responsive width */}
         {accountsLoading ? (
@@ -124,14 +124,6 @@ export function CompactHeader() {
             <span>{credits}</span>
           </Badge>
         )}
-
-        {/* Help Button - hidden on mobile, shown in settings menu instead */}
-        <Button variant="ghost" size="icon-sm" asChild className="hidden sm:flex min-h-[36px] min-w-[36px] md:min-h-[32px] md:min-w-[32px]">
-          <Link href="/dashboard/help">
-            <HelpCircle className="h-4 w-4" />
-            <span className="sr-only">Help</span>
-          </Link>
-        </Button>
 
         {/* Settings Button - touch-friendly sizing on mobile */}
         <Button variant="ghost" size="icon-sm" asChild className="min-h-[36px] min-w-[36px] md:min-h-[32px] md:min-w-[32px]">

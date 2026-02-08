@@ -106,9 +106,11 @@ export function useDrawingState(drawingId: number | null) {
     (newElements: readonly unknown[], newAppState: Record<string, unknown>) => {
       setElements(newElements);
 
+      const rawZoom = ((newAppState.zoom as { value?: number })?.value ?? newAppState.zoom) as number | undefined;
       const appStateToSave = {
         viewBackgroundColor: newAppState.viewBackgroundColor as string | undefined,
-        zoom: ((newAppState.zoom as { value?: number })?.value ?? newAppState.zoom) as number | undefined,
+        // Guard against NaN/Infinity zoom (can happen when canvas has zero dimensions)
+        zoom: (rawZoom != null && isFinite(rawZoom) && rawZoom > 0) ? rawZoom : undefined,
         scrollX: newAppState.scrollX as number | undefined,
         scrollY: newAppState.scrollY as number | undefined,
       };

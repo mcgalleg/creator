@@ -139,7 +139,7 @@
 
   /* Accent: Electric amber highlight */
   --accent: oklch(0.828 0.189 84.429);
-  --accent-foreground: oklch(0.205 0 0);
+  --accent-foreground: oklch(0.95 0.01 90);
 
   /* Background: Deep space black */
   --background: oklch(0.12 0.02 280);

@@ -140,6 +140,61 @@ export interface TopCommentersData {
   total: number;
 }
 
+// Growth data from /api/dashboard/growth
+export interface GrowthDataPoint {
+  date: string;
+  followers: number;
+}
+
+export interface GrowthData {
+  followerGrowth: GrowthDataPoint[];
+  summary: unknown;
+}
+
+// Posting times from /api/dashboard/posting-times
+export interface PostingTimesDayOfWeek {
+  dayName: string;
+  postCount: number;
+  totalPlays: number;
+  avgEngagementRate: number;
+}
+
+export interface PostingTimesTimeSlot {
+  dayOfWeek: number;
+  hour: number;
+  postCount: number;
+  metrics: {
+    engagementRate: number;
+    avgPlays: number;
+    totalPlays: number;
+    totalLikes: number;
+    totalComments: number;
+    totalShares: number;
+    totalSaves: number;
+  };
+  dayName: string;
+}
+
+export interface PostingTimesData {
+  summary: {
+    byDayOfWeek: PostingTimesDayOfWeek[];
+  };
+  timeSlots?: PostingTimesTimeSlot[];
+}
+
+// Duration performance from /api/dashboard/duration-performance
+export interface DurationPerformanceVideo {
+  id: number;
+  duration: number;
+  plays: number;
+  engagementRate: number;
+  description: string | null;
+}
+
+export interface DurationPerformanceData {
+  videos: DurationPerformanceVideo[];
+}
+
 // ============================================================================
 // Hook Interface
 // ============================================================================
@@ -160,6 +215,9 @@ export interface DashboardData {
   recentComments: RecentCommentsData | null;
   commentActivity: CommentActivityData | null;
   topCommenters: TopCommentersData | null;
+  postingTimes: PostingTimesData | null;
+  growth: GrowthData | null;
+  durationPerformance: DurationPerformanceData | null;
 }
 
 export interface UseDashboardDataReturn {
@@ -202,6 +260,9 @@ export function useDashboardData(
     recentComments: null,
     commentActivity: null,
     topCommenters: null,
+    postingTimes: null,
+    growth: null,
+    durationPerformance: null,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -221,6 +282,9 @@ export function useDashboardData(
         recentComments: null,
         commentActivity: null,
         topCommenters: null,
+        postingTimes: null,
+        growth: null,
+        durationPerformance: null,
       });
       setIsLoading(false);
       setError(null);
@@ -243,13 +307,16 @@ export function useDashboardData(
         topContent: `/api/dashboard/top-content?${baseParams}&limit=${topContentLimit}`,
         recentPosts: `/api/dashboard/recent-posts?${baseParams}&limit=${recentPostsLimit}`,
         breakdown: `/api/dashboard/breakdown?${baseParams}`,
-        recentComments: `/api/dashboard/comments?accountId=${accountId}`,
+        recentComments: `/api/dashboard/comments?${baseParams}`,
         commentActivity: `/api/dashboard/comments/activity?${baseParams}`,
-        topCommenters: `/api/dashboard/comments/top-commenters?accountId=${accountId}`,
+        topCommenters: `/api/dashboard/comments/top-commenters?${baseParams}`,
+        postingTimes: `/api/dashboard/posting-times?${baseParams}`,
+        growth: `/api/dashboard/growth?${baseParams}`,
+        durationPerformance: `/api/dashboard/duration-performance?${baseParams}`,
       };
 
       // Fetch all endpoints in parallel
-      const [overview, engagement, topContent, recentPosts, breakdown, recentComments, commentActivity, topCommenters] =
+      const [overview, engagement, topContent, recentPosts, breakdown, recentComments, commentActivity, topCommenters, postingTimes, growth, durationPerformance] =
         await Promise.all([
           fetchJson<OverviewData>(urls.overview),
           fetchJson<EngagementData>(urls.engagement),
@@ -259,6 +326,9 @@ export function useDashboardData(
           fetchJson<RecentCommentsData>(urls.recentComments),
           fetchJson<CommentActivityData>(urls.commentActivity),
           fetchJson<TopCommentersData>(urls.topCommenters),
+          fetchJson<PostingTimesData>(urls.postingTimes),
+          fetchJson<GrowthData>(urls.growth),
+          fetchJson<DurationPerformanceData>(urls.durationPerformance),
         ]);
 
       // Only update state if this is still the latest fetch
@@ -272,6 +342,9 @@ export function useDashboardData(
           recentComments,
           commentActivity,
           topCommenters,
+          postingTimes,
+          growth,
+          durationPerformance,
         });
         setError(null);
       }

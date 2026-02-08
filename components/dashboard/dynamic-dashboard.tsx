@@ -32,7 +32,6 @@ export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
     accounts.length > 0 ? accounts[0].id : null
   );
   const [period, setPeriod] = useState<Period>("30d");
-  const [isEditing, setIsEditing] = useState(false);
   const [showWidgetPicker, setShowWidgetPicker] = useState(false);
 
   const {
@@ -194,18 +193,16 @@ export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
           </Select>
         </div>
 
-        {/* Add Widget Button (only in edit mode) */}
-        {isEditing && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowWidgetPicker(true)}
-            className="gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add Widget
-          </Button>
-        )}
+        {/* Add Widget Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowWidgetPicker(true)}
+          className="gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Add Widget
+        </Button>
       </div>
 
       {/* Error state */}
@@ -247,8 +244,6 @@ export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
           dashboardData={dashboardData}
           isDataLoading={dataLoading}
           widgetConfigs={widgetConfigs as Record<string, Record<string, unknown>>}
-          isEditing={isEditing}
-          onEditToggle={() => setIsEditing(!isEditing)}
           onLayoutChange={handleLayoutChange}
           onWidgetDelete={handleWidgetDelete}
           onWidgetConfigChange={handleWidgetConfigChange}

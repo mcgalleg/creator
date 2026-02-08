@@ -91,38 +91,42 @@ export function DrawingSelector({
             className="group relative flex items-center"
           >
             <DropdownMenuItem
-              className={cn(
-                "flex-1 cursor-pointer pr-14",
-                selectedId === drawing.id && "bg-accent"
-              )}
+              className="flex-1 cursor-pointer pr-16"
               onClick={() => handleSelect(drawing.id)}
             >
               <Check
                 className={cn(
-                  "mr-2 size-4",
+                  "mr-2 size-4 shrink-0",
                   selectedId === drawing.id ? "opacity-100" : "opacity-0"
                 )}
               />
-              <span className="truncate">{drawing.name}</span>
+              <span
+                className={cn(
+                  "truncate",
+                  selectedId === drawing.id && "font-medium"
+                )}
+              >
+                {drawing.name}
+              </span>
             </DropdownMenuItem>
             <div
-              className="absolute right-1 flex items-center gap-0.5"
+              className="absolute right-1.5 flex items-center gap-1"
               onPointerDown={(e) => e.stopPropagation()}
             >
               <button
-                className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
                 onClick={(e) => handleRename(drawing.id, e)}
                 title="Rename"
               >
-                <Pencil className="size-3" />
+                <Pencil className="size-3.5" />
               </button>
               {canDeleteDrawing && (
                 <button
-                  className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
                   onClick={(e) => handleDelete(drawing.id, e)}
                   title="Delete"
                 >
-                  <Trash2 className="size-3" />
+                  <Trash2 className="size-3.5" />
                 </button>
               )}
             </div>

@@ -124,6 +124,45 @@ export {
   type DurationPerformancePoint,
 } from "./charts/duration-performance";
 
+// Engagement
+export {
+  TotalCommentsWidget,
+  totalCommentsWidgetDefinition,
+} from "./engagement/total-comments";
+
+export {
+  SavesRateWidget,
+  savesRateWidgetDefinition,
+} from "./engagement/saves-rate";
+
+export {
+  ViralityScoreWidget,
+  viralityScoreWidgetDefinition,
+} from "./engagement/virality-score";
+
+export {
+  CommentsPerPostWidget,
+  commentsPerPostWidgetDefinition,
+} from "./engagement/comments-per-post";
+
+export {
+  EngagementByDayWidget,
+  engagementByDayWidgetDefinition,
+  type DayEngagement,
+} from "./engagement/engagement-by-day";
+
+export {
+  FollowerEngagementRatioWidget,
+  followerEngagementRatioWidgetDefinition,
+} from "./engagement/follower-engagement-ratio";
+
+// Charts - Additional (views-distribution)
+export {
+  ViewsDistributionWidget,
+  viewsDistributionWidgetDefinition,
+  type ViewsBucket,
+} from "./charts/views-distribution";
+
 // Comments
 export {
   RecentCommentsWidget,
@@ -147,3 +186,8 @@ export {
   CommentActivityWidget,
   commentActivityWidgetDefinition,
 } from "./comments/comment-activity";
+
+export {
+  AudienceLoyaltyWidget,
+  audienceLoyaltyWidgetDefinition,
+} from "./comments/audience-loyalty";

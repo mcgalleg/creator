@@ -57,9 +57,18 @@ export function DrawingBridgeProvider({ children }: DrawingBridgeProviderProps) 
   const [hasNewContent, setHasNewContent] = useState(false);
   const subscribersRef = useRef<Set<ElementsPushedCallback>>(new Set());
   const tabSwitcherRef = useRef<(() => void) | null>(null);
+  // Buffer elements pushed before any subscriber is ready (race condition with
+  // async Excalidraw loading). Delivered when the first subscriber connects.
+  const pendingBufferRef = useRef<DrawingBridgeData[]>([]);
 
   const pushElements = useCallback((data: DrawingBridgeData) => {
     setHasNewContent(true);
+
+    if (subscribersRef.current.size === 0) {
+      // No subscribers yet — buffer for later delivery
+      pendingBufferRef.current.push(data);
+      return;
+    }
 
     subscribersRef.current.forEach((callback) => {
       try {
@@ -72,6 +81,19 @@ export function DrawingBridgeProvider({ children }: DrawingBridgeProviderProps) 
 
   const onElementsPushed = useCallback((callback: ElementsPushedCallback) => {
     subscribersRef.current.add(callback);
+
+    // Flush any buffered elements to the new subscriber
+    if (pendingBufferRef.current.length > 0) {
+      const buffered = pendingBufferRef.current.splice(0);
+      for (const data of buffered) {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error('Error flushing buffered elements:', error);
+        }
+      }
+    }
+
     return () => {
       subscribersRef.current.delete(callback);
     };

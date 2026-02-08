@@ -4,8 +4,6 @@ import * as React from "react";
 import {
   DndContext,
   DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
@@ -19,12 +17,11 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Settings2, GripVertical } from "lucide-react";
+import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BreakpointLayouts, WidgetPosition } from "@/lib/db/schema/dashboard-layouts";
 import { useBreakpoint, Breakpoint } from "@/hooks/use-breakpoint";
 import { DashboardWidget } from "./dashboard-widget";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardData } from "@/hooks/use-dashboard-data";
 
@@ -35,8 +32,6 @@ interface DashboardGridProps {
   dashboardData?: DashboardData;
   isDataLoading?: boolean;
   widgetConfigs?: Record<string, Record<string, unknown>>;
-  isEditing?: boolean;
-  onEditToggle?: () => void;
   onLayoutChange?: (layout: BreakpointLayouts) => void;
   onWidgetDelete?: (widgetId: string) => void;
   onWidgetConfigChange?: (widgetId: string, config: Record<string, unknown>) => void;
@@ -88,6 +83,7 @@ function SortableGridItem({
     transition,
     opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 1000 : 1,
+    cursor: isDragging ? "grabbing" : "grab",
   };
 
   return (
@@ -104,15 +100,12 @@ export function DashboardGrid({
   dashboardData,
   isDataLoading = false,
   widgetConfigs = {},
-  isEditing = false,
-  onEditToggle,
   onLayoutChange,
   onWidgetDelete,
   onWidgetConfigChange,
   className,
 }: DashboardGridProps) {
   const breakpoint = useBreakpoint();
-  const [activeId, setActiveId] = React.useState<string | null>(null);
 
   // Get current layout for the breakpoint
   const currentLayout = layout[breakpoint];
@@ -137,13 +130,8 @@ export function DashboardGrid({
     return maxY * gridConfig.rowHeight + (maxY - 1) * gridConfig.gap;
   }, [currentLayout, gridConfig]);
 
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  };
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveId(null);
 
     if (!over || active.id === over.id || !onLayoutChange) {
       return;
@@ -169,23 +157,10 @@ export function DashboardGrid({
     onLayoutChange(newLayout);
   };
 
-  const handleDragCancel = () => {
-    setActiveId(null);
-  };
-
-  const activeWidget = activeId
-    ? currentLayout.find((w) => w.id === activeId)
-    : null;
-
   // Empty state
   if (currentLayout.length === 0) {
     return (
       <div className={cn("relative", className)}>
-        {onEditToggle && (
-          <div className="flex justify-end mb-4">
-            <EditModeToggle isEditing={isEditing} onToggle={onEditToggle} />
-          </div>
-        )}
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center min-h-[300px] text-center">
             <GripVertical className="h-12 w-12 text-muted-foreground mb-4" />
@@ -193,7 +168,7 @@ export function DashboardGrid({
               No widgets added yet
             </p>
             <p className="text-sm text-muted-foreground mt-2">
-              Click the edit button and add widgets to customize your dashboard.
+              Click &quot;Add Widget&quot; to customize your dashboard.
             </p>
           </CardContent>
         </Card>
@@ -203,20 +178,11 @@ export function DashboardGrid({
 
   return (
     <div className={cn("relative", className)}>
-      {/* Edit Mode Toggle */}
-      {onEditToggle && (
-        <div className="flex justify-end mb-4">
-          <EditModeToggle isEditing={isEditing} onToggle={onEditToggle} />
-        </div>
-      )}
-
       {/* Grid Container */}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
       >
         <SortableContext
           items={currentLayout.map((w) => w.id)}
@@ -233,7 +199,7 @@ export function DashboardGrid({
               <SortableGridItem
                 key={widget.id}
                 id={widget.id}
-                disabled={!isEditing}
+                disabled={false}
                 gridColumn={widget.w}
                 gridRow={widget.h}
                 minHeight={widget.h * gridConfig.rowHeight}
@@ -245,7 +211,6 @@ export function DashboardGrid({
                   dashboardData={dashboardData}
                   isDataLoading={isDataLoading}
                   config={widgetConfigs[widget.id]}
-                  isEditing={isEditing}
                   onDelete={onWidgetDelete}
                   onConfigChange={onWidgetConfigChange}
                 />
@@ -254,58 +219,9 @@ export function DashboardGrid({
           </div>
         </SortableContext>
 
-        {/* Drag Overlay */}
-        <DragOverlay adjustScale={false}>
-          {activeWidget && (
-            <div
-              className="rounded-lg bg-card border-2 border-primary shadow-2xl opacity-90"
-              style={{
-                width: `calc((100% - ${(gridConfig.columns - 1) * gridConfig.gap}px) / ${gridConfig.columns} * ${activeWidget.w} + ${(activeWidget.w - 1) * gridConfig.gap}px)`,
-                height: activeWidget.h * gridConfig.rowHeight,
-              }}
-            >
-              <DashboardWidget
-                widget={activeWidget}
-                accountId={accountId}
-                period={period}
-                dashboardData={dashboardData}
-                isDataLoading={isDataLoading}
-                config={widgetConfigs[activeWidget.id]}
-                isEditing={false}
-              />
-            </div>
-          )}
-        </DragOverlay>
       </DndContext>
 
-      {/* Edit Mode Indicator */}
-      {isEditing && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
-          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg text-sm font-medium">
-            Edit Mode - Drag widgets to reorder
-          </div>
-        </div>
-      )}
     </div>
-  );
-}
-
-interface EditModeToggleProps {
-  isEditing: boolean;
-  onToggle: () => void;
-}
-
-function EditModeToggle({ isEditing, onToggle }: EditModeToggleProps) {
-  return (
-    <Button
-      variant={isEditing ? "default" : "outline"}
-      size="sm"
-      onClick={onToggle}
-      className="gap-2"
-    >
-      <Settings2 className="h-4 w-4" />
-      {isEditing ? "Done Editing" : "Edit Dashboard"}
-    </Button>
   );
 }
 

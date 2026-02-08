@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { Flame, Play, Heart, Share2, ExternalLink } from "lucide-react";
-import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,

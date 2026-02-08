@@ -78,11 +78,23 @@ export default function ExcalidrawInner({
 
   const ExcalidrawComp = excalidrawModule.Excalidraw;
 
+  // Convert zoom from DB format (plain number) to Excalidraw format ({ value: number }).
+  // Also guard against NaN/Infinity that may have been persisted.
+  const rawZoom = initialAppState?.zoom;
+  const zoomNumber = typeof rawZoom === "object" && rawZoom !== null
+    ? (rawZoom as { value?: number }).value
+    : rawZoom;
+  const safeZoom =
+    typeof zoomNumber === "number" && isFinite(zoomNumber) && zoomNumber > 0
+      ? { value: zoomNumber }
+      : undefined;
+
   const initialData = {
     elements: initialElements || [],
     appState: {
       viewBackgroundColor: "#ffffff",
       ...initialAppState,
+      ...(safeZoom ? { zoom: safeZoom } : {}),
       theme,
     },
   };

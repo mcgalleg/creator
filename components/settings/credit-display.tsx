@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Coins, ArrowRight, TrendingUp, TrendingDown, Gift } from "lucide-react";
+import { useCredits } from "@/hooks/use-credits";
 
 interface CreditTransaction {
   id: number;
@@ -21,11 +22,6 @@ interface CreditTransaction {
   amount: number;
   description: string | null;
   createdAt: string;
-}
-
-interface CreditData {
-  balance: number;
-  pricing: Record<string, { rate: number; description: string }>;
 }
 
 function formatTransactionType(type: string): string {
@@ -72,10 +68,13 @@ function TransactionIcon({ type, amount }: { type: string; amount: number }) {
 }
 
 export function CreditDisplay() {
-  const [creditData, setCreditData] = useState<CreditData | null>(null);
+  const { balance, loading: creditsLoading, error: creditsError } = useCredits();
+  const [pricing, setPricing] = useState<Record<string, { rate: number; description: string }> | null>(null);
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [extraLoading, setExtraLoading] = useState(true);
+
+  const loading = creditsLoading || extraLoading;
+  const error = creditsError;
 
   useEffect(() => {
     async function fetchData() {
@@ -85,21 +84,17 @@ export function CreditDisplay() {
           fetch("/api/credits/history?limit=3"),
         ]);
 
-        if (!creditsRes.ok) {
-          throw new Error("Failed to fetch credits");
+        if (creditsRes.ok) {
+          const credits = await creditsRes.json();
+          setPricing(credits.pricing);
         }
-
-        const credits = await creditsRes.json();
-        setCreditData(credits);
 
         if (historyRes.ok) {
           const history = await historyRes.json();
           setTransactions(history.transactions || []);
         }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load credit data");
       } finally {
-        setLoading(false);
+        setExtraLoading(false);
       }
     }
 
@@ -150,17 +145,17 @@ export function CreditDisplay() {
             <Coins className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <p className="text-4xl font-bold">{creditData?.balance ?? 0}</p>
+            <p className="text-4xl font-bold">{balance}</p>
             <p className="text-sm text-muted-foreground">Credits available</p>
           </div>
         </div>
 
         {/* Credit Pricing */}
-        {creditData?.pricing && (
+        {pricing && (
           <div className="space-y-2">
             <p className="text-sm font-medium">Credit Costs:</p>
             <div className="grid gap-2 text-sm">
-              {Object.entries(creditData.pricing).map(([key, value]) => (
+              {Object.entries(pricing).map(([key, value]) => (
                 <div
                   key={key}
                   className="flex items-center justify-between py-1 border-b border-border/50 last:border-0"
