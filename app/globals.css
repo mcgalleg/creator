@@ -588,3 +588,13 @@
 .card-content::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Excalidraw Customizations
+   Hide library button for a native, embedded look
+   ───────────────────────────────────────────────────────────────────────────── */
+.excalidraw .default-sidebar-trigger,
+.excalidraw .sidebar-trigger,
+.excalidraw [data-testid="library-button"] {
+  display: none !important;
+}

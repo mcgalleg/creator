@@ -4,7 +4,7 @@
 
 import "@excalidraw/excalidraw/index.css";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 
 export default function ExcalidrawInner({
@@ -20,21 +20,63 @@ export default function ExcalidrawInner({
   onAPIReady: (api: any) => void;
   theme: string;
 }) {
-  const [ExcalidrawComp, setExcalidrawComp] = useState<any>(null);
+  const [excalidrawModule, setExcalidrawModule] = useState<any>(null);
+  const apiRef = useRef<any>(null);
 
   useEffect(() => {
     import("@excalidraw/excalidraw").then((mod) => {
-      setExcalidrawComp(() => mod.Excalidraw);
+      setExcalidrawModule(mod);
     });
   }, []);
 
-  if (!ExcalidrawComp) {
+  const handleAPIReady = useCallback(
+    (api: any) => {
+      apiRef.current = api;
+      onAPIReady(api);
+    },
+    [onAPIReady]
+  );
+
+  const handleResetCanvas = useCallback(() => {
+    const api = apiRef.current;
+    if (!api) return;
+
+    const confirmed = window.confirm(
+      "This will clear the whole canvas. Are you sure?"
+    );
+    if (confirmed) {
+      api.updateScene({ elements: [] });
+    }
+  }, []);
+
+  // Memoize the custom menu to prevent infinite re-render loop.
+  // Excalidraw's tunnel pattern detects children changes and triggers state
+  // updates — unstable JSX references cause an update cycle.
+  const menu = useMemo(() => {
+    if (!excalidrawModule) return null;
+    const Menu = excalidrawModule.MainMenu;
+    return (
+      <Menu>
+        <Menu.DefaultItems.SaveAsImage />
+        <Menu.DefaultItems.SearchMenu />
+        <Menu.DefaultItems.Help />
+        <Menu.Item onSelect={handleResetCanvas}>
+          Reset the canvas
+        </Menu.Item>
+        <Menu.DefaultItems.ChangeCanvasBackground />
+      </Menu>
+    );
+  }, [excalidrawModule, handleResetCanvas]);
+
+  if (!excalidrawModule) {
     return (
       <div className="flex h-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
+
+  const ExcalidrawComp = excalidrawModule.Excalidraw;
 
   const initialData = {
     elements: initialElements || [],
@@ -47,7 +89,7 @@ export default function ExcalidrawInner({
 
   return (
     <ExcalidrawComp
-      excalidrawAPI={onAPIReady}
+      excalidrawAPI={handleAPIReady}
       initialData={initialData}
       onChange={onChange}
       theme={theme}
@@ -56,6 +98,8 @@ export default function ExcalidrawInner({
           loadScene: false,
         },
       }}
-    />
+    >
+      {menu}
+    </ExcalidrawComp>
   );
 }

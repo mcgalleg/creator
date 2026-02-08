@@ -1,7 +1,7 @@
 'use client';
 
 import { useChat, type UIMessage } from '@ai-sdk/react';
-import { useMemo, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 
 /**
  * Represents a UI component tree structure for rendering analytics visualizations.
@@ -82,6 +82,7 @@ export interface UseAnalyticsChatOptions {
  */
 export function useAnalyticsChat(options?: UseAnalyticsChatOptions) {
   const { onVisualizationGenerated, onDiagramGenerated } = options || {};
+  const [insufficientCredits, setInsufficientCredits] = useState(false);
   const {
     id,
     messages,
@@ -92,7 +93,11 @@ export function useAnalyticsChat(options?: UseAnalyticsChatOptions) {
     setMessages,
     regenerate,
   } = useChat({
-    // Uses default transport with /api/chat endpoint
+    onError: (error) => {
+      if (error.message?.includes('402') || (error as { status?: number }).status === 402) {
+        setInsufficientCredits(true);
+      }
+    },
   });
 
   /**
@@ -324,6 +329,7 @@ export function useAnalyticsChat(options?: UseAnalyticsChatOptions) {
     isGenerating,
     hasPendingToolCalls,
     error,
+    insufficientCredits,
 
     // Actions
     sendMessage,

@@ -1,7 +1,8 @@
 'use client';
 
 import { UserButton } from '@clerk/nextjs';
-import { Coins, HelpCircle, Settings, BarChart3 } from 'lucide-react';
+import { Coins, HelpCircle, Settings } from 'lucide-react';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
@@ -43,8 +44,13 @@ export function CompactHeader() {
       <div className="flex h-12 md:h-12 items-center px-3 md:px-4 gap-2 md:gap-4">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
-          <BarChart3 className="h-5 w-5 text-primary" />
-          <span className="text-sm font-semibold hidden sm:inline">TikTok Analytics</span>
+          <Image
+            src="/logo.png"
+            alt="Not a Bot"
+            width={100}
+            height={32}
+            className="h-7 w-auto dark:invert"
+          />
         </Link>
 
         {/* Separator - hidden on mobile */}

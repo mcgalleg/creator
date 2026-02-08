@@ -6,7 +6,7 @@ export const creditTransactions = pgTable("credit_transactions", {
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   amount: integer("amount").notNull(), // Positive for additions, negative for deductions
   type: text("type").notNull().$type<
-    "sync_posts" | "sync_comments" | "credit_hold" | "purchase" | "refund" | "signup_bonus"
+    "sync_posts" | "sync_comments" | "credit_hold" | "purchase" | "refund" | "signup_bonus" | "ai_chat"
   >(),
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

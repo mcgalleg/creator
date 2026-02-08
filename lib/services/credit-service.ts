@@ -9,7 +9,8 @@ export type CreditTransactionType =
   | "credit_hold"
   | "purchase"
   | "refund"
-  | "signup_bonus";
+  | "signup_bonus"
+  | "ai_chat";
 
 /**
  * Get current credit balance for user
@@ -70,6 +71,42 @@ export async function addCredits(
     db.insert(creditTransactions).values({
       userId,
       amount, // Positive for additions
+      type,
+      description,
+    }),
+  ]);
+
+  if (updateResult.length === 0) {
+    throw new Error("User not found");
+  }
+
+  return updateResult[0].creditBalance;
+}
+
+/**
+ * Deduct credits from user balance (simple post-hoc deduction, no hold/finalize)
+ */
+export async function deductCredits(
+  userId: string,
+  amount: number,
+  type: "ai_chat",
+  description: string
+): Promise<number> {
+  if (!amount || amount <= 0) {
+    return getUserCredits(userId);
+  }
+
+  const [updateResult] = await db.batch([
+    db.update(users)
+      .set({
+        creditBalance: sql`GREATEST(${users.creditBalance} - ${amount}, 0)`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning({ creditBalance: users.creditBalance }),
+    db.insert(creditTransactions).values({
+      userId,
+      amount: -amount,
       type,
       description,
     }),

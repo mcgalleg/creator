@@ -4,6 +4,7 @@ export const CREDIT_RATES = {
   PER_POST: 1,
   PER_COMMENT: 0.15,
   PROFILE_SYNC: 0,
+  AI_TOKENS_PER_CREDIT: 5000,
 } as const;
 
 // ─── Calculation Helpers ─────────────────────────────────────────────────────
@@ -22,6 +23,10 @@ export function calculateSyncCredits(posts: number, comments: number): number {
   return calculatePostCredits(posts) + calculateCommentCredits(comments);
 }
 
+export function calculateAiCredits(totalTokens: number): number {
+  return Math.max(1, Math.ceil(totalTokens / CREDIT_RATES.AI_TOKENS_PER_CREDIT));
+}
+
 // ─── Pricing Display ─────────────────────────────────────────────────────────
 // Per-item rates for UI display
 
@@ -37,6 +42,10 @@ export const CREDIT_PRICING_DISPLAY = {
   profile: {
     rate: CREDIT_RATES.PROFILE_SYNC,
     description: "Profile sync (free)",
+  },
+  ai_chat: {
+    rate: "~1 per message",
+    description: "AI chat (per ~5K tokens)",
   },
 } as const;
 

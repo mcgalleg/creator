@@ -36,6 +36,7 @@ function formatTransactionType(type: string): string {
     purchase: "Purchase",
     refund: "Refund",
     signup_bonus: "Signup Bonus",
+    ai_chat: "AI Chat",
   };
   return typeMap[type] || type;
 }

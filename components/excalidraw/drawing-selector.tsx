@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Plus,
-  MoreVertical,
   Pencil,
   Trash2,
   ChevronDown,
@@ -43,7 +42,6 @@ export function DrawingSelector({
   disabled = false,
 }: DrawingSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
 
   const selectedDrawing = drawings.find((d) => d.id === selectedId);
   const canDeleteDrawing = drawings.length > 1;
@@ -60,14 +58,16 @@ export function DrawingSelector({
 
   const handleRename = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     onRename(id);
-    setActiveMenuId(null);
+    setOpen(false);
   };
 
   const handleDelete = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     onDelete(id);
-    setActiveMenuId(null);
+    setOpen(false);
   };
 
   return (
@@ -75,7 +75,7 @@ export function DrawingSelector({
       <DropdownMenuTrigger asChild disabled={disabled}>
         <Button
           variant="outline"
-          className="w-[200px] justify-between"
+          className="w-[200px] justify-between dark:hover:text-foreground"
           disabled={disabled}
         >
           <span className="truncate">
@@ -92,7 +92,7 @@ export function DrawingSelector({
           >
             <DropdownMenuItem
               className={cn(
-                "flex-1 cursor-pointer pr-8",
+                "flex-1 cursor-pointer pr-14",
                 selectedId === drawing.id && "bg-accent"
               )}
               onClick={() => handleSelect(drawing.id)}
@@ -105,38 +105,27 @@ export function DrawingSelector({
               />
               <span className="truncate">{drawing.name}</span>
             </DropdownMenuItem>
-            <DropdownMenu
-              open={activeMenuId === drawing.id}
-              onOpenChange={(isOpen) =>
-                setActiveMenuId(isOpen ? drawing.id : null)
-              }
+            <div
+              className="absolute right-1 flex items-center gap-0.5"
+              onPointerDown={(e) => e.stopPropagation()}
             >
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="absolute right-1 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreVertical className="size-3" />
-                  <span className="sr-only">Drawing options</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" side="right">
-                <DropdownMenuItem onClick={(e) => handleRename(drawing.id, e)}>
-                  <Pencil className="mr-2 size-4" />
-                  Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem
+              <button
+                className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+                onClick={(e) => handleRename(drawing.id, e)}
+                title="Rename"
+              >
+                <Pencil className="size-3" />
+              </button>
+              {canDeleteDrawing && (
+                <button
+                  className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
                   onClick={(e) => handleDelete(drawing.id, e)}
-                  disabled={!canDeleteDrawing}
-                  variant="destructive"
+                  title="Delete"
                 >
-                  <Trash2 className="mr-2 size-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <Trash2 className="size-3" />
+                </button>
+              )}
+            </div>
           </div>
         ))}
         <DropdownMenuSeparator />

@@ -1,6 +1,8 @@
 import { streamText, tool, UIMessage, convertToModelMessages, stepCountIs } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { auth } from "@/lib/auth";
+import { checkCredits, deductCredits } from "@/lib/services/credit-service";
+import { calculateAiCredits } from "@/lib/credits";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { tiktokAccounts, posts, comments, accountMetricsHistory } from "@/lib/db/schema";
@@ -74,6 +76,15 @@ export async function POST(req: Request) {
       return new Response("Unauthorized", { status: 401 });
     }
 
+    // Check if user has at least 1 credit before proceeding
+    const creditCheck = await checkCredits(userId, 1);
+    if (!creditCheck.sufficient) {
+      return Response.json(
+        { error: "Insufficient credits", balance: creditCheck.balance, required: 1 },
+        { status: 402 }
+      );
+    }
+
     // Get the user's connected TikTok accounts for context
     const userAccounts = await db
       .select({
@@ -94,7 +105,19 @@ export async function POST(req: Request) {
       system:
         getAnalyticsCatalogPrompt() + additionalInstructions + EXCALIDRAW_FORMAT_REFERENCE + accountContext,
       messages: await convertToModelMessages(messages),
-      stopWhen: stepCountIs(5), // Allow multiple tool calls (fetch data → generate UI)
+      stopWhen: stepCountIs(5),
+      onFinish: async ({ totalUsage }) => {
+        const totalTokens = totalUsage.totalTokens ?? 0;
+        if (totalTokens > 0) {
+          const credits = calculateAiCredits(totalTokens);
+          await deductCredits(
+            userId,
+            credits,
+            "ai_chat",
+            `Chat: ${totalUsage.inputTokens ?? 0} input + ${totalUsage.outputTokens ?? 0} output = ${totalTokens} tokens`
+          );
+        }
+      },
       tools: {
         fetchAnalyticsData: tool({
           description:
