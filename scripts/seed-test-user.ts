@@ -23,12 +23,14 @@ async function seedTestUser() {
         name: "Test User",
         creditBalance: 1000, // Generous balance for testing
         subscriptionTier: "pro", // Pro tier for full feature access
+        trialConverted: true, // Prevent trial interference in tests
       })
       .onConflictDoUpdate({
         target: users.id,
         set: {
           creditBalance: 1000,
           subscriptionTier: "pro",
+          trialConverted: true,
         },
       });
 

@@ -4,12 +4,14 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { tiktokAccounts, users } from "@/lib/db/schema";
 import { CompactHeader } from "@/components/dashboard/compact-header";
+import { TrialBanner } from "@/components/dashboard/trial-banner";
 import { ResponsiveLayout } from "@/components/dashboard/responsive-layout";
 import { OnboardingFlow } from "@/components/onboarding";
 import { CreditsProvider } from "@/components/dashboard/credits-provider";
 import { FeatureAccessProvider } from "@/contexts/feature-context";
 import { SyncProvider } from "@/contexts/sync-context";
 import { ensureUserExists } from "@/lib/services/user-service";
+import { getTrialInfo } from "@/lib/services/trial-service";
 
 export default async function DashboardLayout({
   children,
@@ -67,12 +69,20 @@ export default async function DashboardLayout({
     };
   }
 
+  const trialInfo = userId ? await getTrialInfo(userId) : null;
+
   return (
     <FeatureAccessProvider features={features}>
       <CreditsProvider>
         <SyncProvider>
           <div className="h-screen flex flex-col overflow-hidden">
             <CompactHeader />
+            {trialInfo?.isOnTrial && trialInfo.trialEndsAt && (
+              <TrialBanner
+                trialEndsAt={trialInfo.trialEndsAt.toISOString()}
+                daysRemaining={trialInfo.daysRemaining}
+              />
+            )}
             <div className="flex-1 overflow-hidden">
               {showOnboarding ? (
                 <div className="h-full overflow-auto">

@@ -5,7 +5,8 @@ import { db } from "@/lib/db";
 import { users, syncJobs } from "@/lib/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { cancelSyncJob } from "@/lib/services/sync-service";
-import { getPolar, ingestSyncCreditEvent } from "@/lib/polar";
+import { getPolar } from "@/lib/polar";
+import { POLAR_PRODUCTS } from "@/lib/subscriptions";
 
 export async function POST(req: Request) {
   const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SIGNING_SECRET;
@@ -75,13 +76,14 @@ export async function POST(req: Request) {
 
     // Upsert user: if email exists, update the Clerk ID (user re-registered)
     // This handles both duplicate webhooks and re-registered users
-    await db.insert(users)
+    // Credits now come from Polar, so creditBalance starts at 0
+    const [upsertResult] = await db.insert(users)
       .values({
         id,
         email,
         name,
         imageUrl: image_url ?? null,
-        creditBalance: 250, // Signup bonus for new users (sync credits)
+        creditBalance: 0,
       })
       .onConflictDoUpdate({
         target: users.email,
@@ -90,9 +92,9 @@ export async function POST(req: Request) {
           name,
           imageUrl: image_url ?? null,
           updatedAt: new Date(),
-          // Note: Don't reset creditBalance - preserve existing balance
         },
-      });
+      })
+      .returning({ trialConverted: users.trialConverted });
 
     // Create Polar customer with Clerk ID as externalId
     try {
@@ -102,11 +104,28 @@ export async function POST(req: Request) {
         email,
         name: name ?? undefined,
       });
-      // Grant 250 signup bonus sync credits (negative units = granting credits)
-      await ingestSyncCreditEvent(id, -250, { type: "signup_bonus" });
+
+      // Subscribe to the free Polar product ($0/month) for baseline credits
+      if (POLAR_PRODUCTS.free) {
+        await polar.subscriptions.create({
+          productId: POLAR_PRODUCTS.free,
+          externalCustomerId: id,
+        });
+      }
     } catch (polarErr) {
       // Log but don't fail the webhook — user is created in DB regardless
       console.error(`Failed to create Polar customer for ${id}:`, polarErr);
+    }
+
+    // Start 14-day Pro trial (skip for re-registered users who already converted)
+    // Wrapped in separate try/catch so trial failure doesn't break user creation
+    try {
+      if (!upsertResult?.trialConverted) {
+        const { startTrial } = await import("@/lib/services/trial-service");
+        await startTrial(id);
+      }
+    } catch (trialErr) {
+      console.error(`Failed to start trial for ${id}:`, trialErr);
     }
 
     console.log(`Upserted user ${id} (email: ${email})`);

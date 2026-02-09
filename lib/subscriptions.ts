@@ -4,6 +4,7 @@ export type SubscriptionTier = "free" | "basic" | "pro";
 
 // Polar product ID mappings
 export const POLAR_PRODUCTS = {
+  free: process.env.NEXT_PUBLIC_POLAR_PRODUCT_FREE!,
   basic: process.env.NEXT_PUBLIC_POLAR_PRODUCT_BASIC!,
   pro: process.env.NEXT_PUBLIC_POLAR_PRODUCT_PRO!,
 };
@@ -17,24 +18,34 @@ export const POLAR_CREDIT_PRODUCTS: Record<string, string> = {
 
 // Monthly AI token allocations per tier
 export const TIER_AI_TOKENS = {
-  free: 0,
-  basic: 500_000,
-  pro: 2_000_000,
+  free: 50_000,
+  basic: 1_000_000,
+  pro: 3_000_000,
 } as const satisfies Record<SubscriptionTier, number>;
 
 // Monthly sync credit allocations per tier
 export const TIER_SYNC_CREDITS = {
-  free: 0,
-  basic: 150,
-  pro: 500,
+  free: 20,
+  basic: 250,
+  pro: 750,
 } as const satisfies Record<SubscriptionTier, number>;
 
 // Account limits per tier
 export const TIER_ACCOUNT_LIMITS = {
   free: 1,
-  basic: 3,
-  pro: 10,
+  basic: 5,
+  pro: 25,
 } as const satisfies Record<SubscriptionTier, number>;
+
+// Data retention in days per tier
+export const TIER_DATA_RETENTION = {
+  free: 7,
+  basic: 30,
+  pro: 90,
+} as const satisfies Record<SubscriptionTier, number>;
+
+// Trial configuration
+export const TRIAL_DURATION_DAYS = 14;
 
 // Credit pack definitions for Polar one-time purchases (sync credits only)
 export const CREDIT_PACKS = [
@@ -59,13 +70,15 @@ export function getTierDisplayInfo(tier: SubscriptionTier) {
       monthlyAiTokens: TIER_AI_TOKENS.free,
       monthlySyncCredits: TIER_SYNC_CREDITS.free,
       accountLimit: TIER_ACCOUNT_LIMITS.free,
+      dataRetention: TIER_DATA_RETENTION.free,
     },
     basic: {
-      name: "Basic",
+      name: "Creator",
       description: "For growing creators",
       monthlyAiTokens: TIER_AI_TOKENS.basic,
       monthlySyncCredits: TIER_SYNC_CREDITS.basic,
       accountLimit: TIER_ACCOUNT_LIMITS.basic,
+      dataRetention: TIER_DATA_RETENTION.basic,
     },
     pro: {
       name: "Pro",
@@ -73,6 +86,7 @@ export function getTierDisplayInfo(tier: SubscriptionTier) {
       monthlyAiTokens: TIER_AI_TOKENS.pro,
       monthlySyncCredits: TIER_SYNC_CREDITS.pro,
       accountLimit: TIER_ACCOUNT_LIMITS.pro,
+      dataRetention: TIER_DATA_RETENTION.pro,
     },
   } as const;
 

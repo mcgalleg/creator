@@ -213,7 +213,7 @@ test.describe("Free to Pro upgrade flow", () => {
     // Should see all three tier cards
     await expect(page.locator("text=Simple, transparent pricing")).toBeVisible();
 
-    // Pro card should have "Most Popular" badge
+    // Creator card should have "Most Popular" badge (was Pro, now Creator)
     await expect(page.locator("text=Most Popular")).toBeVisible();
 
     // Subscribe buttons should be visible (not "Sign in to Subscribe")
@@ -292,10 +292,10 @@ test.describe("Free to Pro upgrade flow", () => {
     const proBadge = page.locator('text="Pro"').first();
     await expect(proBadge).toBeVisible({ timeout: 15_000 });
 
-    // Should now show AI tokens allocation (Pro gets 2M)
+    // Should now show AI tokens allocation (Pro gets 3M)
     await expect(page.locator("text=AI tokens/month")).toBeVisible();
 
-    // Should show sync credits allocation (Pro gets 500)
+    // Should show sync credits allocation (Pro gets 750)
     await expect(page.locator("text=sync credits/month")).toBeVisible();
 
     // Should now show "Manage Subscription" button

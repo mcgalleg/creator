@@ -26,7 +26,7 @@ export function UpgradeButton({
     >
       <Link href="/pricing">
         <Sparkles className="h-4 w-4" />
-        Upgrade to Pro
+        Upgrade Now
       </Link>
     </Button>
   );

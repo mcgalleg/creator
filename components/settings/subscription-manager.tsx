@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Crown, ArrowRight, Calendar, Coins, Bot, XCircle } from "lucide-react";
+import { Crown, ArrowRight, Calendar, Clock, Coins, Bot, XCircle } from "lucide-react";
 import { getTierDisplayInfo, TIER_AI_TOKENS, TIER_SYNC_CREDITS } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/lib/subscriptions";
 
@@ -34,6 +34,8 @@ interface UserSubscriptionData {
   subscriptionStartedAt: string | null;
   subscriptionExpiresAt: string | null;
   creditsResetAt: string | null;
+  trialEndsAt: string | null;
+  trialConverted: boolean;
 }
 
 const TIER_BADGE_VARIANT: Record<SubscriptionTier, "secondary" | "default" | "outline"> = {
@@ -109,6 +111,10 @@ export function SubscriptionManager() {
   const monthlySyncCredits = TIER_SYNC_CREDITS[tier];
   const monthlyAiTokens = TIER_AI_TOKENS[tier];
   const isPaid = tier !== "free";
+  const isOnTrial =
+    !!data?.trialEndsAt &&
+    !data?.trialConverted &&
+    new Date(data.trialEndsAt) > new Date();
 
   return (
     <Card>
@@ -129,6 +135,21 @@ export function SubscriptionManager() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Trial status */}
+        {isOnTrial && data?.trialEndsAt && (
+          <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
+              <Clock className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Pro Trial Active</p>
+              <p className="text-xs text-muted-foreground">
+                Expires {formatDate(data.trialEndsAt)}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Monthly allocations */}
         <div className="flex items-center gap-3 rounded-lg border p-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
@@ -209,7 +230,7 @@ export function SubscriptionManager() {
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
-        {isPaid && (
+        {isPaid && !isOnTrial && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="ghost" className="w-full text-muted-foreground hover:text-destructive">

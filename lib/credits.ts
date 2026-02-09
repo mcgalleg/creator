@@ -50,3 +50,7 @@ export const CREDIT_PRICING_DISPLAY = {
 } as const;
 
 export const SIGNUP_BONUS_CREDITS = 250;
+
+// Trial bonus credits (Pro allocation minus Free baseline)
+export const TRIAL_BONUS_SYNC_CREDITS = 730; // pro 750 - free 20
+export const TRIAL_BONUS_AI_TOKENS = 2_950_000; // pro 3M - free 50K

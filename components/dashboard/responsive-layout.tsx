@@ -181,7 +181,7 @@ export function ResponsiveLayout({
                 )}
                 {!canAccessCanvas && (
                   <Badge variant="outline" className="ml-1 px-1.5 py-0 text-[10px] text-muted-foreground">
-                    Pro
+                    Upgrade
                   </Badge>
                 )}
               </TabsTrigger>
@@ -198,7 +198,7 @@ export function ResponsiveLayout({
                 <span>Chat</span>
                 {!canAccessChat && (
                   <Badge variant="outline" className="ml-1 px-1.5 py-0 text-[10px] text-muted-foreground">
-                    Pro
+                    Upgrade
                   </Badge>
                 )}
               </TabsTrigger>

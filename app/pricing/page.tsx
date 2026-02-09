@@ -32,6 +32,7 @@ import {
   TIER_AI_TOKENS,
   TIER_SYNC_CREDITS,
   TIER_ACCOUNT_LIMITS,
+  TIER_DATA_RETENTION,
 } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/lib/subscriptions";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -65,8 +66,8 @@ function formatTokens(tokens: number): string {
 
 const TIERS: { tier: SubscriptionTier; price: string; highlighted: boolean }[] = [
   { tier: "free", price: "Free", highlighted: false },
-  { tier: "basic", price: "$14.99/mo", highlighted: false },
-  { tier: "pro", price: "$29.99/mo", highlighted: true },
+  { tier: "basic", price: "$14.99/mo", highlighted: true },
+  { tier: "pro", price: "$29.99/mo", highlighted: false },
 ];
 
 export default function PricingPage() {
@@ -143,6 +144,7 @@ export default function PricingPage() {
               const aiTokens = TIER_AI_TOKENS[tier];
               const syncCredits = TIER_SYNC_CREDITS[tier];
               const accountLimit = TIER_ACCOUNT_LIMITS[tier];
+              const dataRetention = TIER_DATA_RETENTION[tier];
               const productId = tier !== "free" ? POLAR_PRODUCTS[tier] : null;
 
               return (
@@ -185,15 +187,23 @@ export default function PricingPage() {
                           {accountLimit === 1 ? "account" : "accounts"}
                         </span>
                       </div>
-                      {tier === "pro" && (
+                      <div className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                        <span>{dataRetention}-day data retention</span>
+                      </div>
+                      {tier !== "free" && (
                         <>
+                          <div className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span>Canvas Workspace</span>
+                          </div>
                           <div className="flex items-center gap-2">
                             <Check className="h-4 w-4 text-primary flex-shrink-0" />
                             <span>AI Analytics Assistant</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                            <span>Excalidraw Canvas</span>
+                            <span>Export Reports</span>
                           </div>
                         </>
                       )}
@@ -204,7 +214,7 @@ export default function PricingPage() {
                       <SignedOut>
                         <SignInButton mode="modal">
                           <Button variant="outline" className="w-full">
-                            Get Started
+                            Start 14-Day Pro Trial
                             <ArrowRight className="ml-2 h-4 w-4" />
                           </Button>
                         </SignInButton>

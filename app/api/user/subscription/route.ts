@@ -17,6 +17,8 @@ export async function GET() {
         subscriptionStartedAt: users.subscriptionStartedAt,
         subscriptionExpiresAt: users.subscriptionExpiresAt,
         creditsResetAt: users.creditsResetAt,
+        trialEndsAt: users.trialEndsAt,
+        trialConverted: users.trialConverted,
       })
       .from(users)
       .where(eq(users.id, userId))
@@ -28,6 +30,8 @@ export async function GET() {
         subscriptionStartedAt: null,
         subscriptionExpiresAt: null,
         creditsResetAt: null,
+        trialEndsAt: null,
+        trialConverted: false,
       });
     }
 

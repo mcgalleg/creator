@@ -11,6 +11,7 @@ import type { SubscriptionTier } from "@/lib/services/feature-service";
 export const FEATURES = {
   CANVAS: "canvas",
   ANALYTICS_ASSISTANT: "analytics_assistant",
+  EXPORT_REPORTS: "export_reports",
 } as const;
 
 export type FeatureKey = (typeof FEATURES)[keyof typeof FEATURES];
@@ -21,8 +22,8 @@ export type FeatureKey = (typeof FEATURES)[keyof typeof FEATURES];
  */
 const DEFAULT_TIER_FEATURES: Record<SubscriptionTier, FeatureKey[]> = {
   free: [],
-  basic: [],
-  pro: [FEATURES.CANVAS, FEATURES.ANALYTICS_ASSISTANT],
+  basic: [FEATURES.CANVAS, FEATURES.ANALYTICS_ASSISTANT, FEATURES.EXPORT_REPORTS],
+  pro: [FEATURES.CANVAS, FEATURES.ANALYTICS_ASSISTANT, FEATURES.EXPORT_REPORTS],
 };
 
 /**

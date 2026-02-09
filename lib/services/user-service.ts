@@ -1,17 +1,16 @@
 import { db } from "@/lib/db";
-import { users, creditTransactions } from "@/lib/db/schema";
+import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
-import { SIGNUP_BONUS_CREDITS } from "@/lib/credits";
-import { getPolar, ingestSyncCreditEvent } from "@/lib/polar";
+import { getPolar } from "@/lib/polar";
+import { POLAR_PRODUCTS } from "@/lib/subscriptions";
 
 /**
  * Ensures a user exists in the database.
  * If the user doesn't exist (e.g., webhook didn't fire in development),
- * create them with default values and grant signup bonus.
+ * create them with default values, subscribe to free Polar product, and start trial.
  *
- * Mirrors the webhook handler: creates Polar customer + ingests signup bonus
- * so that the Polar meter (source of truth) reflects the granted credits.
+ * Mirrors the webhook handler: creates Polar customer + free subscription + trial.
  */
 export async function ensureUserExists(userId: string): Promise<boolean> {
   try {
@@ -37,24 +36,16 @@ export async function ensureUserExists(userId: string): Promise<boolean> {
     const email = clerkUser.emailAddresses?.[0]?.emailAddress ?? "";
     const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || null;
 
-    // Create user with signup bonus balance (matches webhook handler)
+    // Create user with 0 balance (credits come from Polar)
     await db.insert(users).values({
       id: userId,
       email,
       name,
       imageUrl: clerkUser.imageUrl ?? null,
-      creditBalance: SIGNUP_BONUS_CREDITS,
+      creditBalance: 0,
     });
 
-    // Record audit trail
-    await db.insert(creditTransactions).values({
-      userId,
-      amount: SIGNUP_BONUS_CREDITS,
-      type: "signup_bonus",
-      description: "Welcome bonus credits",
-    });
-
-    // Create Polar customer and grant signup bonus (mirrors webhook handler)
+    // Create Polar customer, subscribe to free product, and start trial
     try {
       const polar = getPolar();
       await polar.customers.create({
@@ -62,13 +53,29 @@ export async function ensureUserExists(userId: string): Promise<boolean> {
         email,
         name: name ?? undefined,
       });
-      await ingestSyncCreditEvent(userId, -SIGNUP_BONUS_CREDITS, { type: "signup_bonus" });
+
+      // Subscribe to the free Polar product ($0/month) for baseline credits
+      if (POLAR_PRODUCTS.free) {
+        await polar.subscriptions.create({
+          productId: POLAR_PRODUCTS.free,
+          externalCustomerId: userId,
+        });
+      }
+
     } catch (polarErr) {
-      // Log but don't fail — user is created in DB with credits regardless
+      // Log but don't fail — user is created in DB regardless
       console.error(`Failed to create Polar customer for ${userId}:`, polarErr);
     }
 
-    console.log(`Created user ${userId} on-the-fly with ${SIGNUP_BONUS_CREDITS} signup bonus credits`);
+    // Start 14-day Pro trial (separate try/catch so trial failure doesn't break user creation)
+    try {
+      const { startTrial } = await import("@/lib/services/trial-service");
+      await startTrial(userId);
+    } catch (trialErr) {
+      console.error(`Failed to start trial for ${userId}:`, trialErr);
+    }
+
+    console.log(`Created user ${userId} on-the-fly with Pro trial`);
     return true;
   } catch (error) {
     console.error("Error ensuring user exists:", error);

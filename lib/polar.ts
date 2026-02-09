@@ -16,7 +16,8 @@ export function getPolar(): Polar {
 }
 
 // Product ID -> tier mapping
-export const POLAR_PRODUCT_TO_TIER: Record<string, "basic" | "pro"> = {
+export const POLAR_PRODUCT_TO_TIER: Record<string, "free" | "basic" | "pro"> = {
+  [process.env.NEXT_PUBLIC_POLAR_PRODUCT_FREE!]: "free",
   [process.env.NEXT_PUBLIC_POLAR_PRODUCT_BASIC!]: "basic",
   [process.env.NEXT_PUBLIC_POLAR_PRODUCT_PRO!]: "pro",
 };

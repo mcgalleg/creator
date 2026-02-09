@@ -24,7 +24,7 @@ const VALUE_PROPS = [
     icon: MessageSquareText,
     title: "AI Insights",
     description: "Chat with AI about your analytics to uncover trends and opportunities.",
-    badge: "Pro",
+    badge: "Included in Trial",
   },
 ];
 
