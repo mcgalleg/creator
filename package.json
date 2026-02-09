@@ -27,7 +27,6 @@
     "@json-render/react": "^0.2.0",
     "@modelcontextprotocol/sdk": "^1.25.2",
     "@neondatabase/serverless": "^1.0.2",
-    "@polar-sh/ingestion": "^0.4.2",
     "@polar-sh/nextjs": "^0.9.3",
     "@polar-sh/sdk": "^0.42.5",
     "@radix-ui/react-avatar": "^1.1.11",
