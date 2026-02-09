@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, FormEvent, useRef, useEffect, useCallback } from 'react';
-import { MessageSquare, AlertCircle } from 'lucide-react';
+import { MessageSquare, AlertCircle, X } from 'lucide-react';
 import { useAnalyticsChat } from '@/hooks/use-analytics-chat';
 import { ChatInput } from '@/components/chat/chat-input';
 import { MessageList } from '@/components/chat/message-list';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDrawingBridgeOptional } from '@/contexts/drawing-bridge-context';
+import { Button } from '@/components/ui/button';
 import type { DiagramResult } from '@/hooks/use-analytics-chat';
 
 /**
@@ -14,7 +15,7 @@ import type { DiagramResult } from '@/hooks/use-analytics-chat';
  * Visualizations render inline in the chat by default.
  * Diagrams are pushed to the Excalidraw Draw tab via the drawing bridge.
  */
-export function ChatPanel() {
+export function ChatPanel({ onClose }: { onClose?: () => void }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const drawingBridge = useDrawingBridgeOptional();
@@ -59,7 +60,18 @@ export function ChatPanel() {
       {/* Chat Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b bg-background">
         <MessageSquare className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium">Analytics Assistant</span>
+        <span className="text-sm font-medium flex-1">Analytics Assistant</span>
+        {onClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={onClose}
+            aria-label="Close chat"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {/* Chat Messages Area */}

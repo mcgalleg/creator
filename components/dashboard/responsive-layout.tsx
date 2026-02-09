@@ -236,6 +236,13 @@ export function ResponsiveLayout({
               accounts={accounts}
               hasNewDrawContent={hasNewDrawContent}
               onDrawContentViewed={handleDrawContentViewed}
+              activeTab={activeTab}
+              onTabChange={(tab) => {
+                setActiveTab(tab);
+                if (tab === 'draw') {
+                  setChatOpen(false);
+                }
+              }}
             />
           </div>
 
@@ -256,7 +263,7 @@ export function ResponsiveLayout({
                 className="w-full sm:max-w-md p-0"
                 showCloseButton={false}
               >
-                <ChatPanel />
+                <ChatPanel onClose={() => setChatOpen(false)} />
               </SheetContent>
             </Sheet>
           )}

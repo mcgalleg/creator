@@ -79,7 +79,7 @@ function WidgetCard({
           size="sm"
           variant="outline"
           onClick={onSelect}
-          className="gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="gap-1.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
         >
           <Plus className="size-3.5" />
           Add
@@ -161,14 +161,14 @@ export function WidgetPicker({
           }
           className="flex-1 min-h-0 flex flex-col"
         >
-          <TabsList className="w-full justify-start">
+          <TabsList className="w-full justify-start overflow-x-auto">
             {(
               Object.entries(CATEGORY_CONFIG) as [
                 WidgetCategory | "all",
                 (typeof CATEGORY_CONFIG)[WidgetCategory | "all"],
               ][]
             ).map(([key, { label, icon: Icon }]) => (
-              <TabsTrigger key={key} value={key} className="gap-1.5">
+              <TabsTrigger key={key} value={key} className="gap-1.5 shrink-0 flex-initial">
                 <Icon className="size-3.5" />
                 {label}
               </TabsTrigger>
