@@ -1,14 +1,17 @@
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { users, creditTransactions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
-import { addCredits } from "@/lib/services/credit-service";
 import { SIGNUP_BONUS_CREDITS } from "@/lib/credits";
+import { getPolar, ingestSyncCreditEvent } from "@/lib/polar";
 
 /**
  * Ensures a user exists in the database.
  * If the user doesn't exist (e.g., webhook didn't fire in development),
- * create them with default values.
+ * create them with default values and grant signup bonus.
+ *
+ * Mirrors the webhook handler: creates Polar customer + ingests signup bonus
+ * so that the Polar meter (source of truth) reflects the granted credits.
  */
 export async function ensureUserExists(userId: string): Promise<boolean> {
   try {
@@ -31,16 +34,39 @@ export async function ensureUserExists(userId: string): Promise<boolean> {
       return false;
     }
 
-    // Create user with zero balance, then add signup bonus with audit trail
+    const email = clerkUser.emailAddresses?.[0]?.emailAddress ?? "";
+    const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || null;
+
+    // Create user with signup bonus balance (matches webhook handler)
     await db.insert(users).values({
       id: userId,
-      email: clerkUser.emailAddresses?.[0]?.emailAddress ?? "",
-      name: [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || null,
+      email,
+      name,
       imageUrl: clerkUser.imageUrl ?? null,
-      creditBalance: 0,
+      creditBalance: SIGNUP_BONUS_CREDITS,
     });
 
-    await addCredits(userId, SIGNUP_BONUS_CREDITS, "signup_bonus", "Welcome bonus credits");
+    // Record audit trail
+    await db.insert(creditTransactions).values({
+      userId,
+      amount: SIGNUP_BONUS_CREDITS,
+      type: "signup_bonus",
+      description: "Welcome bonus credits",
+    });
+
+    // Create Polar customer and grant signup bonus (mirrors webhook handler)
+    try {
+      const polar = getPolar();
+      await polar.customers.create({
+        externalId: userId,
+        email,
+        name: name ?? undefined,
+      });
+      await ingestSyncCreditEvent(userId, -SIGNUP_BONUS_CREDITS, { type: "signup_bonus" });
+    } catch (polarErr) {
+      // Log but don't fail — user is created in DB with credits regardless
+      console.error(`Failed to create Polar customer for ${userId}:`, polarErr);
+    }
 
     console.log(`Created user ${userId} on-the-fly with ${SIGNUP_BONUS_CREDITS} signup bonus credits`);
     return true;

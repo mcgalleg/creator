@@ -16,7 +16,6 @@ interface AccountConnectBarProps {
 export function AccountConnectBar({
   onProfileFound,
   connectedUsernames,
-  isLoadingAccounts,
 }: AccountConnectBarProps) {
   const [username, setUsername] = useState("");
   const [isChecking, setIsChecking] = useState(false);

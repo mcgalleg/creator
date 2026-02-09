@@ -1,3 +1,4 @@
-// Re-export from context for convenient hook access
-export { useFeatures, FeatureProvider } from "@/contexts/feature-context";
-export type { FeatureKey, SubscriptionTier } from "@/lib/services/feature-service";
+// Re-export feature access hook from context
+export { useHasFeature, useHasFeatureOptional, FeatureAccessProvider } from "@/contexts/feature-context";
+export type { FeatureKey } from "@/lib/auth";
+export type { SubscriptionTier } from "@/lib/services/feature-service";

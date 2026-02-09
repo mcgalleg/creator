@@ -1,6 +1,4 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -14,35 +12,22 @@ interface UpgradeButtonProps {
   size?: 'default' | 'sm' | 'lg';
 }
 
-/**
- * UpgradeButton component that navigates to the subscription settings page.
- *
- * @example
- * ```tsx
- * <UpgradeButton />
- * <UpgradeButton variant="outline" size="sm" />
- * ```
- */
 export function UpgradeButton({
   className,
   variant = 'default',
   size = 'default',
 }: UpgradeButtonProps) {
-  const router = useRouter();
-
-  const handleClick = () => {
-    router.push('/dashboard/settings?tab=subscription');
-  };
-
   return (
     <Button
       variant={variant}
       size={size}
-      onClick={handleClick}
+      asChild
       className={cn(className)}
     >
-      <Sparkles className="h-4 w-4" />
-      Upgrade to Pro
+      <Link href="/pricing">
+        <Sparkles className="h-4 w-4" />
+        Upgrade to Pro
+      </Link>
     </Button>
   );
 }

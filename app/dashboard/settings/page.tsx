@@ -1,40 +1,15 @@
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { auth, isAuthBypassed } from "@/lib/auth";
 import { Settings } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { AccountInfo } from "@/components/settings/account-info";
+import { SubscriptionManager } from "@/components/settings/subscription-manager";
 import { CreditDisplay } from "@/components/settings/credit-display";
 import { ConnectedAccountsPreview } from "@/components/settings/connected-accounts-preview";
-import { DangerZone } from "@/components/settings/danger-zone";
 
 export const metadata = {
   title: "Settings | Creator Analytics",
   description: "Manage your account settings and preferences",
 };
-
-function AccountInfoSkeleton() {
-  return (
-    <Card>
-      <CardHeader>
-        <Skeleton className="h-6 w-40" />
-        <Skeleton className="h-4 w-60 mt-1" />
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-start gap-6">
-          <Skeleton className="h-20 w-20 rounded-full" />
-          <div className="space-y-4 flex-1">
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="h-4 w-48" />
-            <Skeleton className="h-4 w-40" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 export default async function SettingsPage() {
   const { userId } = await auth();
@@ -62,24 +37,15 @@ export default async function SettingsPage() {
 
         <Separator />
 
-        {/* Account Info Section */}
+        {/* Subscription */}
         <section>
-          <Suspense fallback={<AccountInfoSkeleton />}>
-            <AccountInfo />
-          </Suspense>
+          <SubscriptionManager />
         </section>
 
         {/* Credit Balance and Connected Accounts - Side by side on larger screens */}
         <section className="grid gap-6 md:grid-cols-2">
           <CreditDisplay />
           <ConnectedAccountsPreview />
-        </section>
-
-        <Separator />
-
-        {/* Danger Zone */}
-        <section>
-          <DangerZone />
         </section>
       </div>
     </div>

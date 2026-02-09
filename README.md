@@ -153,7 +153,7 @@ State expires after configurable timeouts (2 minutes for connections, 15 minutes
 
 ### Database Schema
 
-- **users** - User profiles with subscription tier (free/pro/enterprise)
+- **users** - User profiles with subscription tier (free/basic/pro)
 - **tiktok_accounts** - Connected TikTok accounts
 - **posts** - Synced TikTok videos with engagement metrics
 - **comments** - Video comments (optional sync)

@@ -12,8 +12,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useDrawingBridge, useDrawingBridgeOptional, DrawingBridgeProvider } from '@/contexts/drawing-bridge-context';
-import { useFeatures } from '@/contexts/feature-context';
-import { FeatureGate } from '@/components/feature-gate';
+import { useHasFeature } from '@/contexts/feature-context';
 import { UpgradePrompt } from '@/components/upgrade-prompt';
 
 // Dynamically import ExcalidrawView to avoid loading Excalidraw until needed
@@ -71,10 +70,17 @@ export function ResponsiveLayout({
 }: ResponsiveLayoutProps) {
   const [tabletTab, setTabletTab] = useState<'dashboard' | 'draw' | 'chat'>('dashboard');
   const [chatOpen, setChatOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
-  const { hasAccess } = useFeatures();
-  const canAccessChat = hasAccess("analytics_assistant");
-  const canAccessCanvas = hasAccess("canvas");
+  const canAccessChat = useHasFeature("analytics_assistant");
+  const canAccessCanvas = useHasFeature("canvas");
+
+  // Defer Tabs rendering until after hydration to prevent Radix ID mismatches
+  // caused by dynamic imports (ssr:false) creating different trees on server vs client
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional for hydration handling
+    setMounted(true);
+  }, []);
 
   // Check if we're on a sub-page (accounts, settings) that needs to render children
   const isMainDashboard = pathname === '/dashboard';
@@ -111,6 +117,15 @@ export function ResponsiveLayout({
     return (
       <div className="h-full overflow-auto p-6">
         {children}
+      </div>
+    );
+  }
+
+  // Show skeleton until after hydration to prevent Radix ID mismatches
+  if (!mounted) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -193,24 +208,20 @@ export function ResponsiveLayout({
             </TabsContent>
             {/* Force mount draw so it can receive element push events even when not visible */}
             <TabsContent value="draw" className="flex-1 mt-0 overflow-hidden data-[state=inactive]:hidden" forceMount>
-              <FeatureGate
-                feature="canvas"
-                fallback={
-                  <div className="flex items-center justify-center h-full">
-                    <UpgradePrompt feature="canvas" />
-                  </div>
-                }
-              >
+              {canAccessCanvas ? (
                 <ExcalidrawView />
-              </FeatureGate>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <UpgradePrompt feature="canvas" />
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="chat" className="flex-1 mt-0 overflow-hidden">
-              <FeatureGate
-                feature="analytics_assistant"
-                fallback={<UpgradePrompt feature="analytics_assistant" compact />}
-              >
+              {canAccessChat ? (
                 <ChatPanel />
-              </FeatureGate>
+              ) : (
+                <UpgradePrompt feature="analytics_assistant" compact />
+              )}
             </TabsContent>
           </Tabs>
         </DrawingBridgeProvider>
@@ -229,7 +240,7 @@ export function ResponsiveLayout({
           </div>
 
           {/* Floating chat button - only show if user has access */}
-          <FeatureGate feature="analytics_assistant">
+          {canAccessChat && (
             <Sheet open={chatOpen} onOpenChange={setChatOpen}>
               <SheetTrigger asChild>
                 <Button
@@ -248,7 +259,7 @@ export function ResponsiveLayout({
                 <ChatPanel />
               </SheetContent>
             </Sheet>
-          </FeatureGate>
+          )}
         </DrawingBridgeProvider>
       </div>
     </>

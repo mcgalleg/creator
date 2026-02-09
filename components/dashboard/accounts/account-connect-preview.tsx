@@ -41,10 +41,10 @@ export function AccountConnectPreview({
   const [customImportConfig, setCustomImportConfig] = useState<PostImportConfig | null>(null);
   const [customImportCost, setCustomImportCost] = useState<number | null>(null);
 
-  const defaultPostsCost = 25;
-  const selectedCost = importPosts ? (customImportCost ?? defaultPostsCost) : 0;
+  const selectedCost = importPosts && customImportConfig ? customImportCost ?? 0 : 0;
   const hasEnoughCredits = userCreditBalance >= selectedCost;
   const isFreeOption = selectedCost === 0;
+  const needsConfiguration = importPosts && !customImportConfig;
 
   const handleImportConfig = (config: PostImportConfig, estimatedCost: number) => {
     setCustomImportConfig(config);
@@ -80,9 +80,22 @@ export function AccountConnectPreview({
 
   const handleImportToggle = (wantsPosts: boolean) => {
     setImportPosts(wantsPosts);
-    if (!wantsPosts) {
+    if (wantsPosts) {
+      // Force configuration dialog open when selecting import
+      if (!customImportConfig) {
+        setShowImportDialog(true);
+      }
+    } else {
       setCustomImportConfig(null);
       setCustomImportCost(null);
+    }
+  };
+
+  const handleImportDialogClose = () => {
+    setShowImportDialog(false);
+    // If they dismiss without configuring, revert to "Connect only"
+    if (!customImportConfig) {
+      setImportPosts(false);
     }
   };
 
@@ -189,26 +202,32 @@ export function AccountConnectPreview({
               </div>
             </div>
             <Badge variant="outline" className="shrink-0">
-              {customImportConfig ? `${customImportCost}` : `~${defaultPostsCost}`} credits
+              {customImportConfig ? `${customImportCost} credits` : "Paid"}
             </Badge>
           </button>
 
           {importPosts && (
             <div className="px-4 pb-4 pt-0">
-              <button
-                type="button"
-                onClick={() => setShowImportDialog(true)}
-                className="text-sm text-primary hover:underline flex items-center gap-1.5"
-              >
-                <Settings2 className="size-3.5" />
-                {customImportConfig ? "Edit import options" : "Configure what to import"}
-              </button>
-              {customImportConfig && (
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  {customImportConfig.mode === "latest" && `${customImportConfig.postsLimit} latest posts`}
-                  {customImportConfig.mode === "date_range" && `Posts from ${customImportConfig.dateRangePreset?.replace("_", " ")}`}
-                  {customImportConfig.mode === "top_performers" && `Top ${customImportConfig.topCount} posts`}
-                  {customImportConfig.includeComments && " + comments"}
+              {customImportConfig ? (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    {customImportConfig.mode === "latest" && `${customImportConfig.postsLimit} latest posts`}
+                    {customImportConfig.mode === "date_range" && `Posts from ${customImportConfig.dateRangePreset?.replace("_", " ")}`}
+                    {customImportConfig.mode === "top_performers" && `Top ${customImportConfig.topCount} posts`}
+                    {customImportConfig.includeComments && " + comments"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowImportDialog(true)}
+                    className="text-sm text-primary hover:underline flex items-center gap-1.5 mt-1.5"
+                  >
+                    <Settings2 className="size-3.5" />
+                    Edit import options
+                  </button>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Choose how many posts and what data to import
                 </p>
               )}
             </div>
@@ -232,7 +251,7 @@ export function AccountConnectPreview({
       {/* Action Button */}
       <Button
         onClick={handleConnect}
-        disabled={isConnecting || (!hasEnoughCredits && !isFreeOption)}
+        disabled={isConnecting || needsConfiguration || (!hasEnoughCredits && !isFreeOption)}
         className="w-full"
       >
         {isConnecting ? (
@@ -240,6 +259,8 @@ export function AccountConnectPreview({
             <Loader2 className="size-4 animate-spin" />
             Connecting...
           </>
+        ) : needsConfiguration ? (
+          "Configure import to continue"
         ) : isFreeOption ? (
           "Connect Account"
         ) : (
@@ -250,7 +271,7 @@ export function AccountConnectPreview({
       {/* Post Import Dialog for configuring import options */}
       <PostImportDialog
         isOpen={showImportDialog}
-        onClose={() => setShowImportDialog(false)}
+        onClose={handleImportDialogClose}
         accountUsername={profile.username}
         totalPosts={profile.videoCount}
         userCreditBalance={userCreditBalance}

@@ -5,6 +5,8 @@ import { tiktokAccounts } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { validateUsername, estimateSyncCost, startSync } from "@/lib/services/sync-service";
 import { checkCredits } from "@/lib/services/credit-service";
+import { getUserTier } from "@/lib/services/feature-service";
+import { TIER_ACCOUNT_LIMITS } from "@/lib/subscriptions";
 
 // Type for import options
 type ImportOption = "profile_only" | "profile_posts" | "profile_posts_comments";
@@ -111,6 +113,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "This account is already connected" },
         { status: 409 }
+      );
+    }
+
+    // Enforce account limit based on subscription tier
+    const tier = await getUserTier(userId);
+    const accountLimit = TIER_ACCOUNT_LIMITS[tier];
+    if (existingAccount.length >= accountLimit) {
+      return NextResponse.json(
+        {
+          error: "Account limit reached",
+          message: `Your ${tier} plan allows up to ${accountLimit} connected ${accountLimit === 1 ? "account" : "accounts"}. Upgrade to connect more.`,
+          limit: accountLimit,
+          current: existingAccount.length,
+        },
+        { status: 403 }
       );
     }
 

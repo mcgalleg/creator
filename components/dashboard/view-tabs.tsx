@@ -6,8 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { LayoutDashboard, Pencil, Lock, Loader2 } from "lucide-react";
 import { DynamicDashboard } from "./dynamic-dashboard";
-import { useFeatures } from "@/contexts/feature-context";
-import { FeatureGate } from "@/components/feature-gate";
+import { useHasFeature } from "@/contexts/feature-context";
 import { useDrawingBridgeOptional } from "@/contexts/drawing-bridge-context";
 
 // Dynamically import ExcalidrawView to avoid loading Excalidraw until needed
@@ -40,8 +39,7 @@ export function ViewTabs({
   activeTab,
   onTabChange,
 }: ViewTabsProps) {
-  const { hasAccess } = useFeatures();
-  const canAccessCanvas = hasAccess("canvas");
+  const canAccessCanvas = useHasFeature("canvas");
   const drawingBridge = useDrawingBridgeOptional();
 
   // Register tab switcher so "View in Draw" buttons can programmatically switch tabs
@@ -107,11 +105,11 @@ export function ViewTabs({
       </TabsContent>
 
       {/* Force mount draw so it can receive element push events even when not visible */}
-      <FeatureGate feature="canvas">
+      {canAccessCanvas && (
         <TabsContent value="draw" className="flex-1 mt-0 overflow-hidden data-[state=inactive]:hidden" forceMount>
           <ExcalidrawView />
         </TabsContent>
-      </FeatureGate>
+      )}
     </Tabs>
   );
 }

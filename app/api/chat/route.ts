@@ -1,14 +1,18 @@
 import { streamText, tool, UIMessage, convertToModelMessages, stepCountIs } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
-import { auth } from "@/lib/auth";
-import { checkCredits, deductCredits } from "@/lib/services/credit-service";
-import { calculateAiCredits } from "@/lib/credits";
+import { auth, hasFeature } from "@/lib/auth";
+import { checkCredits } from "@/lib/services/credit-service";
+import { ingestAiTokenEvent } from "@/lib/polar";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { creditTransactions } from "@/lib/db/schema/credits";
 import { tiktokAccounts, posts, comments, accountMetricsHistory } from "@/lib/db/schema";
 import { eq, desc, and, gte, sql, inArray } from "drizzle-orm";
 import { getAnalyticsCatalogPrompt } from "@/lib/catalog";
 import { createDiagramTool, EXCALIDRAW_FORMAT_REFERENCE } from "@/lib/ai-tools/excalidraw-tools";
+
+// Create model for AI chat
+const model = anthropic(process.env.ANTHROPIC_MODEL || "claude-haiku-4-5");
 
 // Helper function to get time range filter
 function getTimeRangeDate(timeRange: string): Date | null {
@@ -76,6 +80,15 @@ export async function POST(req: Request) {
       return new Response("Unauthorized", { status: 401 });
     }
 
+    // Check feature access via DB tier lookup
+    const canChat = await hasFeature("analytics_assistant");
+    if (!canChat) {
+      return Response.json(
+        { error: "Feature not available on your plan" },
+        { status: 403 }
+      );
+    }
+
     // Check if user has at least 1 credit before proceeding
     const creditCheck = await checkCredits(userId, 1);
     if (!creditCheck.sufficient) {
@@ -101,7 +114,7 @@ export async function POST(req: Request) {
         : "\n\nThe user has no connected TikTok accounts yet. Suggest they connect an account to see their analytics.";
 
     const result = streamText({
-      model: anthropic(process.env.ANTHROPIC_MODEL || "claude-haiku-4-5"),
+      model,
       system:
         getAnalyticsCatalogPrompt() + additionalInstructions + EXCALIDRAW_FORMAT_REFERENCE + accountContext,
       messages: await convertToModelMessages(messages),
@@ -109,13 +122,19 @@ export async function POST(req: Request) {
       onFinish: async ({ totalUsage }) => {
         const totalTokens = totalUsage.totalTokens ?? 0;
         if (totalTokens > 0) {
-          const credits = calculateAiCredits(totalTokens);
-          await deductCredits(
+          // Ingest token event to Polar for metering (fire-and-forget)
+          ingestAiTokenEvent(userId, totalTokens, {
+            inputTokens: totalUsage.inputTokens ?? 0,
+            outputTokens: totalUsage.outputTokens ?? 0,
+          }).catch((err) => console.error("Polar AI token ingestion failed:", err));
+
+          // Record in local audit log for UI display
+          await db.insert(creditTransactions).values({
             userId,
-            credits,
-            "ai_chat",
-            `Chat: ${totalUsage.inputTokens ?? 0} input + ${totalUsage.outputTokens ?? 0} output = ${totalTokens} tokens`
-          );
+            amount: -totalTokens,
+            type: "ai_chat",
+            description: `Chat: ${totalUsage.inputTokens ?? 0} in + ${totalUsage.outputTokens ?? 0} out = ${totalTokens} tokens`,
+          });
         }
       },
       tools: {

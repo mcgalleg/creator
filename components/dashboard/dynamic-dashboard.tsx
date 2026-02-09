@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useOnSyncCompleted, useSync } from "@/contexts/sync-context";
 import { UserCircle, RefreshCw, Plus } from "lucide-react";
+import Link from "next/link";
 import {
   Select,
   SelectContent,
@@ -55,6 +57,15 @@ export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
     accountId: selectedAccountId,
     period,
   });
+
+  const { isSyncing } = useSync();
+
+  // Auto-refetch dashboard data when a sync completes
+  useOnSyncCompleted(useCallback(() => refetchData(), [refetchData]));
+
+  // Show skeletons while syncing and dashboard has no data yet
+  const hasData = (dashboardData.recentPosts?.total ?? 0) > 0;
+  const showSkeleton = dataLoading || (isSyncing && !hasData);
 
   // Update selected account if accounts list changes
   useEffect(() => {
@@ -154,6 +165,12 @@ export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
         <p className="text-sm text-muted-foreground mt-2 max-w-md">
           Connect a TikTok account to see your analytics, engagement trends, and content performance.
         </p>
+        <Button asChild className="mt-4 gap-2">
+          <Link href="/dashboard/accounts">
+            <Plus className="h-4 w-4" />
+            Connect Account
+          </Link>
+        </Button>
       </div>
     );
   }
@@ -234,7 +251,7 @@ export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
       )}
 
       {/* Loading state */}
-      {layoutLoading ? (
+      {layoutLoading || showSkeleton ? (
         <DashboardLoadingSkeleton />
       ) : (
         <DashboardGrid

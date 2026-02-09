@@ -2,6 +2,7 @@
 
 import { useChat, type UIMessage } from '@ai-sdk/react';
 import { useMemo, useCallback, useEffect, useRef, useState } from 'react';
+import { useCredits } from '@/hooks/use-credits';
 
 /**
  * Represents a UI component tree structure for rendering analytics visualizations.
@@ -83,6 +84,7 @@ export interface UseAnalyticsChatOptions {
 export function useAnalyticsChat(options?: UseAnalyticsChatOptions) {
   const { onVisualizationGenerated, onDiagramGenerated } = options || {};
   const [insufficientCredits, setInsufficientCredits] = useState(false);
+  const { refresh: refreshCredits } = useCredits();
   const {
     id,
     messages,
@@ -93,6 +95,10 @@ export function useAnalyticsChat(options?: UseAnalyticsChatOptions) {
     setMessages,
     regenerate,
   } = useChat({
+    onFinish: () => {
+      // Refresh credit/token balance after AI response completes
+      refreshCredits();
+    },
     onError: (error) => {
       if (error.message?.includes('402') || (error as { status?: number }).status === 402) {
         setInsufficientCredits(true);

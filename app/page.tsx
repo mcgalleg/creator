@@ -16,14 +16,14 @@ import {
   Zap,
 } from "lucide-react";
 import { LazyPixelBlastBg } from "@/components/backgrounds/lazy-pixel-blast-bg";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { AccentColorPicker } from "@/components/accent-color-picker";
 
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-background font-sans">
       {/* Navigation */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+        <div className="flex h-16 items-center justify-between px-3 md:px-4">
           <div className="flex items-center gap-2">
             <Image
               src="/logo.png"
@@ -35,7 +35,7 @@ export default function Home() {
             />
           </div>
           <nav className="flex items-center gap-4">
-            <ThemeToggle />
+            <AccentColorPicker />
             <SignedOut>
               <SignInButton mode="modal">
                 <Button variant="ghost" size="sm">
@@ -61,7 +61,7 @@ export default function Home() {
           {/* PixelBlast as absolute background */}
           <div className="absolute inset-0 z-0 overflow-hidden">
             <LazyPixelBlastBg
-              color="#F59E0B"
+              useThemeColor
               className="h-full w-full"
             />
           </div>
@@ -72,7 +72,7 @@ export default function Home() {
           </Badge>
           <h1 className="relative z-10 mx-auto max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
             Understand Your TikTok Performance with{" "}
-            <span className="bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary/80 via-primary to-primary/60 bg-clip-text text-transparent">
               AI-Powered Insights
             </span>
           </h1>
@@ -123,8 +123,8 @@ export default function Home() {
             <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <Card className="relative overflow-hidden">
                 <CardHeader>
-                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-amber-500/10">
-                    <MessageSquareText className="size-6 text-amber-500" />
+                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                    <MessageSquareText className="size-6 text-primary" />
                   </div>
                   <CardTitle className="text-lg">AI Analytics Copilot</CardTitle>
                   <CardDescription>
@@ -136,8 +136,8 @@ export default function Home() {
 
               <Card className="relative overflow-hidden">
                 <CardHeader>
-                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-amber-500/10">
-                    <Sparkles className="size-6 text-amber-500" />
+                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                    <Sparkles className="size-6 text-primary" />
                   </div>
                   <CardTitle className="text-lg">Streaming UI</CardTitle>
                   <CardDescription>
@@ -149,8 +149,8 @@ export default function Home() {
 
               <Card className="relative overflow-hidden">
                 <CardHeader>
-                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-amber-500/10">
-                    <Users className="size-6 text-amber-500" />
+                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                    <Users className="size-6 text-primary" />
                   </div>
                   <CardTitle className="text-lg">Multi-Account Support</CardTitle>
                   <CardDescription>
@@ -162,8 +162,8 @@ export default function Home() {
 
               <Card className="relative overflow-hidden">
                 <CardHeader>
-                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-amber-500/10">
-                    <Coins className="size-6 text-amber-500" />
+                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary/10">
+                    <Coins className="size-6 text-primary" />
                   </div>
                   <CardTitle className="text-lg">Credit-Based Sync</CardTitle>
                   <CardDescription>
@@ -193,7 +193,7 @@ export default function Home() {
 
             <div className="mt-16 grid gap-8 md:grid-cols-3">
               <div className="relative flex flex-col items-center text-center">
-                <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-amber-500 text-2xl font-bold text-white">
+                <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
                   1
                 </div>
                 <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-muted">
@@ -209,7 +209,7 @@ export default function Home() {
               </div>
 
               <div className="relative flex flex-col items-center text-center">
-                <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-amber-500 text-2xl font-bold text-white">
+                <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
                   2
                 </div>
                 <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-muted">
@@ -226,7 +226,7 @@ export default function Home() {
               </div>
 
               <div className="relative flex flex-col items-center text-center">
-                <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-amber-500 text-2xl font-bold text-white">
+                <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
                   3
                 </div>
                 <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-muted">
@@ -284,7 +284,7 @@ export default function Home() {
         {/* CTA Section */}
         <section className="py-24">
           <div className="container mx-auto max-w-6xl px-4">
-            <Card className="overflow-hidden bg-gradient-to-br from-amber-500/5 via-amber-500/10 to-orange-500/5">
+            <Card className="overflow-hidden bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
               <CardContent className="flex flex-col items-center p-12 text-center">
                 <Badge variant="secondary" className="mb-4">
                   Start Today

@@ -46,7 +46,6 @@ interface AccountCommentsTabProps {
 
 export function AccountCommentsTab({
   accountId,
-  accountUsername,
   activeCommentJobs,
   onSyncStarted,
   userCreditBalance = 0,

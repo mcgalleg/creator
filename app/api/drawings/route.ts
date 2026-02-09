@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { auth, hasFeature } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { drawings } from "@/lib/db/schema";
@@ -15,6 +15,15 @@ export async function GET() {
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check feature access via Clerk has() (DB fallback in bypass mode)
+    const canDraw = await hasFeature("canvas");
+    if (!canDraw) {
+      return NextResponse.json(
+        { error: "Feature not available on your plan" },
+        { status: 403 }
+      );
     }
 
     let userDrawings = await db
@@ -59,6 +68,15 @@ export async function POST(request: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check feature access via Clerk has() (DB fallback in bypass mode)
+    const canDraw = await hasFeature("canvas");
+    if (!canDraw) {
+      return NextResponse.json(
+        { error: "Feature not available on your plan" },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();

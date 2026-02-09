@@ -1,5 +1,7 @@
 "use client";
 
+// Internal hook — consumed by SyncProvider only. Import useSync() from contexts instead.
+
 import { useState, useCallback, useEffect, useRef } from "react";
 
 export interface TikTokAccount {
@@ -234,7 +236,6 @@ export function useAccounts(): UseAccountsReturn {
 
         return data;
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to connect account";
         throw err;
       } finally {
         setConnecting(false);

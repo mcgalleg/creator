@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { auth, hasFeature } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { drawings } from "@/lib/db/schema";
@@ -18,6 +18,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const canDraw = await hasFeature("canvas");
+    if (!canDraw) {
+      return NextResponse.json(
+        { error: "Feature not available on your plan" },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;
@@ -57,6 +65,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const canDraw = await hasFeature("canvas");
+    if (!canDraw) {
+      return NextResponse.json(
+        { error: "Feature not available on your plan" },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;
@@ -147,6 +163,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const canDraw = await hasFeature("canvas");
+    if (!canDraw) {
+      return NextResponse.json(
+        { error: "Feature not available on your plan" },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;

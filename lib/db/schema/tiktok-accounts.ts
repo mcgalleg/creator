@@ -1,4 +1,4 @@
-import { pgTable, text, integer, bigint, timestamp, serial, boolean, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, bigint, timestamp, serial, boolean, uniqueIndex } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
 export const tiktokAccounts = pgTable("tiktok_accounts", {

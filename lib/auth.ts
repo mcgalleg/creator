@@ -3,6 +3,27 @@ import {
   currentUser as clerkCurrentUser,
 } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
+import type { SubscriptionTier } from "@/lib/services/feature-service";
+
+/**
+ * Feature key constants and type, used by Clerk has() and bypass-mode fallback.
+ */
+export const FEATURES = {
+  CANVAS: "canvas",
+  ANALYTICS_ASSISTANT: "analytics_assistant",
+} as const;
+
+export type FeatureKey = (typeof FEATURES)[keyof typeof FEATURES];
+
+/**
+ * Default feature access by tier. Used as fallback in BYPASS_AUTH mode
+ * and as reference when syncing features to Clerk metadata.
+ */
+const DEFAULT_TIER_FEATURES: Record<SubscriptionTier, FeatureKey[]> = {
+  free: [],
+  basic: [],
+  pro: [FEATURES.CANVAS, FEATURES.ANALYTICS_ASSISTANT],
+};
 
 /**
  * Test user ID used when BYPASS_AUTH is enabled.
@@ -102,4 +123,26 @@ export async function currentUser() {
 
   // Normal Clerk user lookup
   return clerkCurrentUser();
+}
+
+/**
+ * Server-side feature check using DB tier as single source of truth.
+ *
+ * Checks the user's subscription tier from the DB against DEFAULT_TIER_FEATURES.
+ * This replaces the previous Clerk-based feature gating to support Polar billing.
+ */
+export async function hasFeature(featureKey: FeatureKey): Promise<boolean> {
+  const { getUserTier } = await import("@/lib/services/feature-service");
+
+  let userId: string | null;
+  if (process.env.BYPASS_AUTH === "true") {
+    userId = await getTestUserId();
+  } else {
+    const authObj = await clerkAuth();
+    userId = authObj.userId;
+  }
+
+  if (!userId) return false;
+  const tier = await getUserTier(userId);
+  return DEFAULT_TIER_FEATURES[tier].includes(featureKey);
 }

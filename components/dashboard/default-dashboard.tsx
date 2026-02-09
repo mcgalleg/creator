@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { UserCircle, RefreshCw } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { useOnSyncCompleted, useSync } from "@/contexts/sync-context";
+import { UserCircle, RefreshCw, Plus } from "lucide-react";
+import Link from "next/link";
 import {
   Select,
   SelectContent,
@@ -41,6 +43,15 @@ export function DefaultDashboard({ accounts }: DefaultDashboardProps) {
     period,
   });
 
+  const { isSyncing } = useSync();
+
+  // Auto-refetch dashboard data when a sync completes
+  useOnSyncCompleted(useCallback(() => refetch(), [refetch]));
+
+  // Show skeletons while syncing and dashboard has no data yet
+  const hasData = (data.recentPosts?.total ?? 0) > 0;
+  const showSkeleton = isLoading || (isSyncing && !hasData);
+
   // Empty state when no accounts
   if (accounts.length === 0) {
     return (
@@ -52,6 +63,12 @@ export function DefaultDashboard({ accounts }: DefaultDashboardProps) {
         <p className="text-sm text-muted-foreground mt-2 max-w-md">
           Connect a TikTok account to see your analytics, engagement trends, and content performance.
         </p>
+        <Button asChild className="mt-4 gap-2">
+          <Link href="/dashboard/accounts">
+            <Plus className="h-4 w-4" />
+            Connect Account
+          </Link>
+        </Button>
       </div>
     );
   }
@@ -116,7 +133,7 @@ export function DefaultDashboard({ accounts }: DefaultDashboardProps) {
       )}
 
       {/* Loading state */}
-      {isLoading ? (
+      {showSkeleton ? (
         <DashboardLoadingSkeleton />
       ) : (
         <>

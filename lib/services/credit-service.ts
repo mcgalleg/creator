@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { users, creditTransactions } from "@/lib/db/schema";
 import { eq, desc, sql, and, gte } from "drizzle-orm";
 import { CREDIT_PRICING_DISPLAY } from "@/lib/credits";
+import { ingestSyncCreditEvent, getPolarMeterBalances } from "@/lib/polar";
 
 export type CreditTransactionType =
   | "sync_posts"
@@ -10,10 +11,12 @@ export type CreditTransactionType =
   | "purchase"
   | "refund"
   | "signup_bonus"
-  | "ai_chat";
+  | "ai_chat"
+  | "subscription_renewal"
+  | "credit_pack_purchase";
 
 /**
- * Get current credit balance for user
+ * Get current credit balance for user (sync credits from local cache)
  */
 export async function getUserCredits(userId: string): Promise<number> {
   const result = await db
@@ -30,7 +33,7 @@ export async function getUserCredits(userId: string): Promise<number> {
 }
 
 /**
- * Verify user has sufficient balance
+ * Verify user has sufficient sync credit balance
  */
 export async function checkCredits(
   userId: string,
@@ -46,45 +49,58 @@ export async function checkCredits(
 }
 
 /**
- * Add credits to user balance (used by purchase flow)
+ * Sync the local creditBalance cache from Polar meter balances.
+ * Polar meters are the source of truth; this updates the local DB cache.
+ */
+export async function syncCreditBalance(userId: string): Promise<number> {
+  const balances = await getPolarMeterBalances(userId);
+
+  const [updateResult] = await db
+    .update(users)
+    .set({
+      creditBalance: Math.max(0, balances.syncCredits),
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId))
+    .returning({ creditBalance: users.creditBalance });
+
+  if (!updateResult) {
+    // User doesn't exist locally yet (e.g. webhook arrived before provisioning)
+    return 0;
+  }
+
+  return updateResult.creditBalance;
+}
+
+/**
+ * Add credits to user balance. Syncs from Polar meters (source of truth).
+ * Called from webhooks when Polar grants credits.
  */
 export async function addCredits(
   userId: string,
   amount: number,
-  type: "purchase" | "refund" | "signup_bonus",
+  type: "purchase" | "refund" | "signup_bonus" | "subscription_renewal" | "credit_pack_purchase",
   description: string
 ): Promise<number> {
-  // No-op for zero or negative amounts
   if (!amount || amount <= 0) {
     return getUserCredits(userId);
   }
 
-  // Atomic update + transaction record
-  const [updateResult] = await db.batch([
-    db.update(users)
-      .set({
-        creditBalance: sql`${users.creditBalance} + ${amount}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId))
-      .returning({ creditBalance: users.creditBalance }),
-    db.insert(creditTransactions).values({
-      userId,
-      amount, // Positive for additions
-      type,
-      description,
-    }),
-  ]);
+  // Record the audit log entry
+  await db.insert(creditTransactions).values({
+    userId,
+    amount,
+    type,
+    description,
+  });
 
-  if (updateResult.length === 0) {
-    throw new Error("User not found");
-  }
-
-  return updateResult[0].creditBalance;
+  // Sync from Polar (source of truth) to update local cache
+  return syncCreditBalance(userId);
 }
 
 /**
- * Deduct credits from user balance (simple post-hoc deduction, no hold/finalize)
+ * Deduct credits from user balance (simple post-hoc deduction, no hold/finalize).
+ * For ai_chat: Polar LLM Strategy auto-ingests token events, so we only update local cache + audit log.
  */
 export async function deductCredits(
   userId: string,
@@ -96,6 +112,8 @@ export async function deductCredits(
     return getUserCredits(userId);
   }
 
+  // AI chat: Polar LLM Strategy handles ingestion automatically.
+  // Just update local cache + write audit log.
   const [updateResult] = await db.batch([
     db.update(users)
       .set({
@@ -120,19 +138,19 @@ export async function deductCredits(
 }
 
 /**
- * Hold credits in escrow (deducts from balance, can be finalized or refunded)
+ * Hold credits in escrow (deducts from local cache, can be finalized or refunded).
+ * Holds work on the local cache only. Polar event is ingested on finalization.
  */
 export async function holdCredits(
   userId: string,
   amount: number,
   description: string
 ): Promise<number> {
-  // No-op for zero or negative amounts
   if (!amount || amount <= 0) {
     return getUserCredits(userId);
   }
 
-  // Atomic check-and-deduct: WHERE clause ensures sufficient balance
+  // Atomic check-and-deduct on local cache
   const [balanceUpdate] = await db.batch([
     db.update(users)
       .set({
@@ -160,13 +178,8 @@ export async function holdCredits(
 
 /**
  * Finalize a credit hold, adjusting for actual usage.
- * The hold already deducted `held` from the user's balance.
- * This function settles the difference:
- * - If actual < held: refunds (held - actual) back to user
- * - If actual > held: deducts (actual - held) additionally
- * - If actual === held: no balance change needed
- *
- * Records a settlement transaction for the audit trail.
+ * The hold already deducted `held` from the user's local cache.
+ * This function settles the difference and ingests the Polar sync-credits event.
  */
 export async function finalizeCredits(
   userId: string,
@@ -177,8 +190,13 @@ export async function finalizeCredits(
 ): Promise<void> {
   const difference = held - actual;
 
+  // Ingest the actual usage to Polar (source of truth)
+  if (actual > 0) {
+    await ingestSyncCreditEvent(userId, actual, { type });
+  }
+
   if (difference > 0) {
-    // Refund the overestimate back to the user
+    // Overestimate — refund overage to local cache, record actual usage
     await db.batch([
       db.update(users)
         .set({
@@ -188,13 +206,13 @@ export async function finalizeCredits(
         .where(eq(users.id, userId)),
       db.insert(creditTransactions).values({
         userId,
-        amount: difference,
-        type: "refund",
-        description: `Settled hold: used ${actual} of ${held} held. ${description}`,
+        amount: -actual,
+        type,
+        description,
       }),
     ]);
   } else if (difference < 0) {
-    // Deduct the additional amount beyond the hold, clamping balance to 0
+    // Underestimate — charge additional from local cache, record actual usage
     const additionalAmount = -difference;
 
     await db.batch([
@@ -206,36 +224,34 @@ export async function finalizeCredits(
         .where(eq(users.id, userId)),
       db.insert(creditTransactions).values({
         userId,
-        amount: -additionalAmount,
+        amount: -actual,
         type,
-        description: `Additional charge beyond hold: used ${actual} of ${held} held. ${description}`,
+        description,
       }),
     ]);
   } else {
-    // Exact match — record for audit completeness
+    // Exact match — no balance adjustment needed, record actual usage
     await db.insert(creditTransactions).values({
       userId,
-      amount: 0,
+      amount: -actual,
       type,
-      description: `Settled hold: used ${actual} of ${held} held (exact match). ${description}`,
+      description,
     });
   }
 }
 
 /**
- * Refund a full credit hold back to the user
+ * Refund a full credit hold back to the user (local cache only, no Polar event)
  */
 export async function refundHold(
   userId: string,
   amount: number,
   description: string
 ): Promise<number> {
-  // No-op for zero or negative amount
   if (amount <= 0) {
     return getUserCredits(userId);
   }
 
-  // Atomic refund + transaction record
   const [updateResult] = await db.batch([
     db.update(users)
       .set({
@@ -286,7 +302,10 @@ export async function getCreditHistory(
       createdAt: creditTransactions.createdAt,
     })
     .from(creditTransactions)
-    .where(eq(creditTransactions.userId, userId))
+    .where(and(
+      eq(creditTransactions.userId, userId),
+      sql`${creditTransactions.type} != 'credit_hold'`
+    ))
     .orderBy(desc(creditTransactions.createdAt))
     .limit(limit)
     .offset(offset);

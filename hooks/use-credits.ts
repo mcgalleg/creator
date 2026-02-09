@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, createContext, useContext } from "rea
 
 interface CreditsState {
   balance: number;
+  aiTokens: number | null;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -27,6 +28,7 @@ export function useCredits(): CreditsState {
 
 function useCreditsInternal(): CreditsState {
   const [balance, setBalance] = useState<number>(0);
+  const [aiTokens, setAiTokens] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +45,7 @@ function useCreditsInternal(): CreditsState {
       }
 
       setBalance(data.balance);
+      setAiTokens(data.aiTokens ?? null);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch credits";
       setError(message);
@@ -58,6 +61,7 @@ function useCreditsInternal(): CreditsState {
 
   return {
     balance,
+    aiTokens,
     loading,
     error,
     refresh: fetchCredits,

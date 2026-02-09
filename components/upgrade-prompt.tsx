@@ -17,7 +17,7 @@ interface UpgradePromptProps {
 const FEATURE_INFO = {
   canvas: {
     title: 'Canvas Workspace',
-    description: 'Create custom visualizations and save your favorite analytics to a personal workspace.',
+    description: 'Upgrade to the Pro plan to create custom visualizations and save your favorite analytics to a personal workspace.',
     icon: Palette,
     benefits: [
       'Pin visualizations from chat',
@@ -27,7 +27,7 @@ const FEATURE_INFO = {
   },
   analytics_assistant: {
     title: 'AI Analytics Assistant',
-    description: 'Get AI-powered insights and ask questions about your TikTok analytics in natural language.',
+    description: 'Upgrade to the Pro plan to get AI-powered insights and ask questions about your TikTok analytics in natural language.',
     icon: MessageSquare,
     benefits: [
       'Natural language queries',

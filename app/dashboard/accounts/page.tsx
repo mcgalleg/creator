@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { CreditBalanceDisplay } from "@/components/dashboard/credit-balance-display";
 import {
   AccountCompactCard,
@@ -8,7 +8,8 @@ import {
   AccountDetailPanel,
   type TikTokProfile,
 } from "@/components/dashboard/accounts";
-import { useAccounts, type SyncOptions } from "@/hooks/use-accounts";
+import type { SyncOptions } from "@/hooks/use-accounts";
+import { useSync } from "@/contexts/sync-context";
 import { useCredits } from "@/hooks/use-credits";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,8 +19,8 @@ import type { PostImportConfig } from "@/components/dashboard/post-import-dialog
 export default function AccountsPage() {
   const {
     accounts,
-    loading,
-    error,
+    accountsLoading: loading,
+    accountsError: error,
     connectAccount,
     disconnectAccount,
     triggerSync,
@@ -29,7 +30,7 @@ export default function AccountsPage() {
     connecting,
     syncing,
     disconnecting,
-  } = useAccounts();
+  } = useSync();
 
   const { balance: creditBalance, loading: creditsLoading, refresh: refreshCredits } = useCredits();
 
@@ -43,22 +44,6 @@ export default function AccountsPage() {
   const panelOpen =
     (panelMode === "detail" && selectedAccountId !== null && !!selectedAccount) ||
     (panelMode === "connect" && connectProfile !== null);
-
-  // Auto-refresh credits when syncs complete
-  const hadActiveJobsRef = useRef(false);
-  const totalActiveJobs = Object.values(syncData).reduce(
-    (sum, data) => sum + (data?.activeJobs?.length ?? 0),
-    0
-  );
-
-  useEffect(() => {
-    if (totalActiveJobs > 0) {
-      hadActiveJobsRef.current = true;
-    } else if (hadActiveJobsRef.current) {
-      hadActiveJobsRef.current = false;
-      refreshCredits();
-    }
-  }, [totalActiveJobs, refreshCredits]);
 
   // Note: if selectedAccount is deleted, panelOpen becomes false via derived state,
   // and handlePanelOpenChange(false) resets selectedAccountId when Sheet closes.

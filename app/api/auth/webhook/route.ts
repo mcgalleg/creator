@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { users, syncJobs } from "@/lib/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { cancelSyncJob } from "@/lib/services/sync-service";
+import { getPolar, ingestSyncCreditEvent } from "@/lib/polar";
 
 export async function POST(req: Request) {
   const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SIGNING_SECRET;
@@ -80,7 +81,7 @@ export async function POST(req: Request) {
         email,
         name,
         imageUrl: image_url ?? null,
-        creditBalance: 100, // Signup bonus for new users
+        creditBalance: 250, // Signup bonus for new users (sync credits)
       })
       .onConflictDoUpdate({
         target: users.email,
@@ -92,6 +93,21 @@ export async function POST(req: Request) {
           // Note: Don't reset creditBalance - preserve existing balance
         },
       });
+
+    // Create Polar customer with Clerk ID as externalId
+    try {
+      const polar = getPolar();
+      await polar.customers.create({
+        externalId: id,
+        email,
+        name: name ?? undefined,
+      });
+      // Grant 250 signup bonus sync credits (negative units = granting credits)
+      await ingestSyncCreditEvent(id, -250, { type: "signup_bonus" });
+    } catch (polarErr) {
+      // Log but don't fail the webhook — user is created in DB regardless
+      console.error(`Failed to create Polar customer for ${id}:`, polarErr);
+    }
 
     console.log(`Upserted user ${id} (email: ${email})`);
   }

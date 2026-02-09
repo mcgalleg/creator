@@ -46,8 +46,12 @@ export default function ExcalidrawInner({
     );
     if (confirmed) {
       api.updateScene({ elements: [] });
+      // Programmatic updateScene doesn't trigger the onChange callback,
+      // so explicitly notify the parent to persist the empty state.
+      const currentAppState = api.getAppState();
+      onChange?.([], currentAppState);
     }
-  }, []);
+  }, [onChange]);
 
   // Memoize the custom menu to prevent infinite re-render loop.
   // Excalidraw's tunnel pattern detects children changes and triggers state

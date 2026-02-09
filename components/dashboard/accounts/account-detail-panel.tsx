@@ -81,7 +81,6 @@ export function AccountDetailPanel({
   const syncedPosts = stats?.syncedPosts ?? 0;
   const activeJobs = syncData?.activeJobs ?? [];
   const postsSyncing = activeJobs.some((j) => j.type === "posts" || j.type === "full");
-  const commentsSyncing = activeJobs.some((j) => j.type === "comments");
   const activeCommentJobs = activeJobs.filter((j) => j.type === "comments");
 
   const handlePostImport = (config: PostImportConfig) => {

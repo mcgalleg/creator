@@ -1,14 +1,14 @@
-import { auth, isAuthBypassed } from "@/lib/auth";
+import { auth, isAuthBypassed, hasFeature, FEATURES } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { tiktokAccounts } from "@/lib/db/schema";
+import { tiktokAccounts, users } from "@/lib/db/schema";
 import { CompactHeader } from "@/components/dashboard/compact-header";
 import { ResponsiveLayout } from "@/components/dashboard/responsive-layout";
+import { OnboardingFlow } from "@/components/onboarding";
 import { CreditsProvider } from "@/components/dashboard/credits-provider";
-import { FeatureProvider } from "@/contexts/feature-context";
-import { getUserFeatures, getUserTier } from "@/lib/services/feature-service";
-import type { FeatureKey, SubscriptionTier } from "@/lib/services/feature-service";
+import { FeatureAccessProvider } from "@/contexts/feature-context";
+import { SyncProvider } from "@/contexts/sync-context";
 import { ensureUserExists } from "@/lib/services/user-service";
 
 export default async function DashboardLayout({
@@ -28,7 +28,7 @@ export default async function DashboardLayout({
     await ensureUserExists(userId);
   }
 
-  // Fetch user's TikTok accounts for the layout
+  // Fetch user's TikTok accounts and onboarding status
   const accounts = userId
     ? await db
         .select({
@@ -39,32 +39,54 @@ export default async function DashboardLayout({
         .where(eq(tiktokAccounts.userId, userId))
     : [];
 
-  // Fetch user tier and features server-side
-  let tier: SubscriptionTier = "free";
-  let features: Record<FeatureKey, boolean> = {
+  const userRecord = userId
+    ? await db
+        .select({ onboardingCompletedAt: users.onboardingCompletedAt })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1)
+    : [];
+
+  const onboardingCompletedAt = userRecord[0]?.onboardingCompletedAt ?? null;
+  const showOnboarding = accounts.length === 0 && !onboardingCompletedAt;
+
+  // Resolve feature access server-side via Clerk has() (DB fallback in bypass mode)
+  let features: Record<string, boolean> = {
     canvas: false,
     analytics_assistant: false,
   };
 
   if (userId) {
-    [tier, features] = await Promise.all([
-      getUserTier(userId),
-      getUserFeatures(userId),
+    const [canvasAccess, chatAccess] = await Promise.all([
+      hasFeature(FEATURES.CANVAS),
+      hasFeature(FEATURES.ANALYTICS_ASSISTANT),
     ]);
+    features = {
+      canvas: canvasAccess,
+      analytics_assistant: chatAccess,
+    };
   }
 
   return (
-    <FeatureProvider tier={tier} features={features}>
+    <FeatureAccessProvider features={features}>
       <CreditsProvider>
-        <div className="h-screen flex flex-col overflow-hidden">
-          <CompactHeader />
-          <div className="flex-1 overflow-hidden">
-            <ResponsiveLayout accounts={accounts}>
-              {children}
-            </ResponsiveLayout>
+        <SyncProvider>
+          <div className="h-screen flex flex-col overflow-hidden">
+            <CompactHeader />
+            <div className="flex-1 overflow-hidden">
+              {showOnboarding ? (
+                <div className="h-full overflow-auto">
+                  <OnboardingFlow />
+                </div>
+              ) : (
+                <ResponsiveLayout accounts={accounts}>
+                  {children}
+                </ResponsiveLayout>
+              )}
+            </div>
           </div>
-        </div>
+        </SyncProvider>
       </CreditsProvider>
-    </FeatureProvider>
+    </FeatureAccessProvider>
   );
 }

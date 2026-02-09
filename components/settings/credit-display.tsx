@@ -13,8 +13,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Coins, ArrowRight, TrendingUp, TrendingDown, Gift } from "lucide-react";
+import { Coins, ArrowRight, TrendingUp, TrendingDown, Gift, Calendar, Sparkles } from "lucide-react";
 import { useCredits } from "@/hooks/use-credits";
+import { TIER_SYNC_CREDITS, TIER_AI_TOKENS } from "@/lib/subscriptions";
+import type { SubscriptionTier } from "@/lib/subscriptions";
+
+interface SubscriptionInfo {
+  subscriptionTier: SubscriptionTier;
+  creditsResetAt: string | null;
+}
 
 interface CreditTransaction {
   id: number;
@@ -28,7 +35,6 @@ function formatTransactionType(type: string): string {
   const typeMap: Record<string, string> = {
     sync_posts: "Posts Sync",
     sync_comments: "Comments Sync",
-    credit_hold: "Credit Hold",
     purchase: "Purchase",
     refund: "Refund",
     signup_bonus: "Signup Bonus",
@@ -68,9 +74,10 @@ function TransactionIcon({ type, amount }: { type: string; amount: number }) {
 }
 
 export function CreditDisplay() {
-  const { balance, loading: creditsLoading, error: creditsError } = useCredits();
+  const { balance, aiTokens, loading: creditsLoading, error: creditsError } = useCredits();
   const [pricing, setPricing] = useState<Record<string, { rate: number; description: string }> | null>(null);
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
+  const [subInfo, setSubInfo] = useState<SubscriptionInfo | null>(null);
   const [extraLoading, setExtraLoading] = useState(true);
 
   const loading = creditsLoading || extraLoading;
@@ -79,9 +86,10 @@ export function CreditDisplay() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [creditsRes, historyRes] = await Promise.all([
+        const [creditsRes, historyRes, subRes] = await Promise.all([
           fetch("/api/credits"),
           fetch("/api/credits/history?limit=3"),
+          fetch("/api/user/subscription"),
         ]);
 
         if (creditsRes.ok) {
@@ -92,6 +100,10 @@ export function CreditDisplay() {
         if (historyRes.ok) {
           const history = await historyRes.json();
           setTransactions(history.transactions || []);
+        }
+
+        if (subRes.ok) {
+          setSubInfo(await subRes.json());
         }
       } finally {
         setExtraLoading(false);
@@ -140,15 +152,63 @@ export function CreditDisplay() {
         <CardDescription>Your available credits for syncing</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <Coins className="h-8 w-8 text-primary" />
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+              <Sparkles className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <p className="text-4xl font-bold">
+                {aiTokens !== null
+                  ? aiTokens >= 1_000_000
+                    ? `${(aiTokens / 1_000_000).toFixed(1)}M`
+                    : aiTokens >= 1000
+                      ? `${Math.round(aiTokens / 1000)}K`
+                      : aiTokens
+                  : "—"}
+              </p>
+              <p className="text-sm text-muted-foreground">AI tokens remaining</p>
+            </div>
           </div>
-          <div>
-            <p className="text-4xl font-bold">{balance}</p>
-            <p className="text-sm text-muted-foreground">Credits available</p>
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+              <Coins className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <p className="text-4xl font-bold">{balance}</p>
+              <p className="text-sm text-muted-foreground">Sync credits available</p>
+            </div>
           </div>
         </div>
+
+        {/* Monthly allocations & reset */}
+        {subInfo && (TIER_SYNC_CREDITS[subInfo.subscriptionTier] > 0 || TIER_AI_TOKENS[subInfo.subscriptionTier] > 0) && (
+          <div className="flex items-center gap-3 rounded-lg border p-3">
+            <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="text-sm space-y-0.5">
+              {TIER_AI_TOKENS[subInfo.subscriptionTier] > 0 && (
+                <p>
+                  <span className="font-medium">
+                    {TIER_AI_TOKENS[subInfo.subscriptionTier].toLocaleString()} AI tokens/month
+                  </span>
+                </p>
+              )}
+              {TIER_SYNC_CREDITS[subInfo.subscriptionTier] > 0 && (
+                <p>
+                  <span className="font-medium">
+                    {TIER_SYNC_CREDITS[subInfo.subscriptionTier].toLocaleString()} sync credits/month
+                  </span>
+                </p>
+              )}
+              <p className="text-muted-foreground">
+                {subInfo.subscriptionTier.charAt(0).toUpperCase() + subInfo.subscriptionTier.slice(1)} plan
+                {subInfo.creditsResetAt && (
+                  <> &middot; Resets {formatDate(subInfo.creditsResetAt)}</>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Credit Pricing */}
         {pricing && (
@@ -205,7 +265,7 @@ export function CreditDisplay() {
       </CardContent>
       <CardFooter>
         <Button asChild className="w-full">
-          <Link href="/pricing">
+          <Link href="/pricing#credits">
             Purchase Credits
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>

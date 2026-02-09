@@ -221,6 +221,18 @@ export function InlinePostSelector({
         enableSorting: false,
       },
       {
+        accessorKey: "postedAt",
+        header: () => <SortHeader label="Posted" columnKey="postedAt" currentSortBy={sortBy} currentSortDir={sortDir} onSort={handleSort} />,
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground tabular-nums whitespace-nowrap">
+            {row.original.postedAt
+              ? new Date(row.original.postedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" })
+              : "\u2014"}
+          </span>
+        ),
+        enableSorting: false,
+      },
+      {
         accessorKey: "comments",
         header: () => <SortHeader label="Comments" columnKey="comments" currentSortBy={sortBy} currentSortDir={sortDir} onSort={handleSort} />,
         cell: ({ row }) => (
@@ -282,6 +294,11 @@ export function InlinePostSelector({
                 <MessageCircle className="size-3" />
                 {formatNumber(row.original.comments)}
               </span>
+              {row.original.postedAt && (
+                <span className="tabular-nums">
+                  {new Date(row.original.postedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" })}
+                </span>
+              )}
             </div>
           </div>
         ),

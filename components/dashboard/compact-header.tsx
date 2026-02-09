@@ -1,7 +1,7 @@
 'use client';
 
 import { UserButton } from '@clerk/nextjs';
-import { Coins, Settings } from 'lucide-react';
+import { Coins, Settings, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -15,13 +15,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useAccounts } from '@/hooks/use-accounts';
+import { useSync } from '@/contexts/sync-context';
+import { AccentColorPicker } from '@/components/accent-color-picker';
+import { Loader2 } from 'lucide-react';
 
 export function CompactHeader() {
-  const { balance: credits, loading: creditsLoading } = useCredits();
+  const { balance: credits, aiTokens, loading: creditsLoading } = useCredits();
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const { accounts, loading: accountsLoading } = useAccounts();
+  const { accounts, accountsLoading, isSyncing } = useSync();
 
   // Prevent hydration mismatch with Clerk UserButton
   useEffect(() => {
@@ -40,16 +42,16 @@ export function CompactHeader() {
   );
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background">
-      <div className="flex h-14 md:h-14 items-center px-3 md:px-4 gap-2 md:gap-4">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-16 items-center px-3 md:px-4 gap-2 md:gap-4">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
           <Image
             src="/logo.png"
             alt="Not a Bot"
             width={120}
-            height={38}
-            className="h-8 w-auto dark:invert"
+            height={40}
+            className="h-16 pb-2 w-auto dark:invert"
           />
         </Link>
 
@@ -61,7 +63,7 @@ export function CompactHeader() {
           <div className="w-[120px] sm:w-[160px] h-[36px] md:h-[32px] bg-muted animate-pulse rounded-md" />
         ) : accounts.length === 0 ? (
           <Button variant="outline" size="sm" asChild className="w-[120px] sm:w-[160px] min-h-[36px] md:min-h-[32px]">
-            <Link href="/dashboard/settings">Connect Account</Link>
+            <Link href="/dashboard/accounts">Connect Account</Link>
           </Button>
         ) : accounts.length === 1 ? (
           <div className="flex items-center gap-2 px-3 py-1 text-sm font-medium">
@@ -117,13 +119,32 @@ export function CompactHeader() {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Credits Badge - always visible */}
+        {/* Sync Indicator */}
+        {isSyncing && (
+          <Badge variant="outline" className="gap-1 shrink-0 text-xs md:text-sm animate-pulse">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Syncing
+          </Badge>
+        )}
+
+        {/* AI Tokens Badge */}
+        {!creditsLoading && aiTokens !== null && (
+          <Badge variant="secondary" className="gap-1 shrink-0 text-xs md:text-sm">
+            <Sparkles className="h-3 w-3" />
+            <span>{aiTokens >= 1000 ? `${Math.round(aiTokens / 1000)}K` : aiTokens}</span>
+          </Badge>
+        )}
+
+        {/* Sync Credits Badge */}
         {!creditsLoading && (
           <Badge variant="secondary" className="gap-1 shrink-0 text-xs md:text-sm">
             <Coins className="h-3 w-3" />
             <span>{credits}</span>
           </Badge>
         )}
+
+        {/* Theme & Accent Color - defer to avoid hydration mismatch with Radix IDs */}
+        {mounted && <AccentColorPicker />}
 
         {/* Settings Button - touch-friendly sizing on mobile */}
         <Button variant="ghost" size="icon-sm" asChild className="min-h-[36px] min-w-[36px] md:min-h-[32px] md:min-w-[32px]">

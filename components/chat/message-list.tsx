@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Pencil, Check, Loader2 } from 'lucide-react';
 import { MarkdownRenderer } from './markdown-renderer';
 import { VisualizationReference } from './visualization-reference';
-import { useFeaturesOptional } from '@/contexts/feature-context';
+import { useHasFeatureOptional } from '@/contexts/feature-context';
 
 interface MessageListProps {
   messages: UIMessage[];
@@ -103,8 +103,7 @@ function getPinnableChildren(tree: UITree): UITree[] {
  */
 function DiagramCreatedCard({ title }: { title: string }) {
   const drawingBridge = useDrawingBridgeOptional();
-  const featureContext = useFeaturesOptional();
-  const hasCanvasAccess = featureContext?.hasAccess("canvas") ?? false;
+  const hasCanvasAccess = useHasFeatureOptional("canvas");
 
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-background/50 p-3">
@@ -136,12 +135,10 @@ interface PinButtonProps {
   variant?: 'default' | 'inline';
 }
 
-function PinButton({ uiTree, label, size = 'sm', variant = 'default' }: PinButtonProps) {
+function PinButton({ size = 'sm', variant = 'default' }: PinButtonProps) {
   const drawingBridge = useDrawingBridgeOptional();
-  const featureContext = useFeaturesOptional();
+  const hasCanvasAccess = useHasFeatureOptional("canvas");
   const [status, setStatus] = useState<'idle' | 'pinning' | 'pinned'>('idle');
-
-  const hasCanvasAccess = featureContext?.hasAccess("canvas") ?? false;
 
   if (!drawingBridge || !hasCanvasAccess) {
     return null;

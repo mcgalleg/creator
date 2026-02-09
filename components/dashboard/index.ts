@@ -1,4 +1,3 @@
-export { SyncStatus } from "./sync-status";
 export { PinButton } from "./pin-button";
 export { PinnedGrid } from "./pinned-grid";
 export { Sidebar } from "./sidebar";

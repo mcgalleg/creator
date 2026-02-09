@@ -11,10 +11,10 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 
 const TEST_USERS = [
-  { id: "test_user_api", email: "api@test.example.com", name: "API Tester", creditBalance: 5000 },
-  { id: "test_user_ui", email: "ui@test.example.com", name: "UI Tester", creditBalance: 5000 },
-  { id: "test_user_edge", email: "edge@test.example.com", name: "Edge Tester", creditBalance: 5 },
-  { id: "test_user_123", email: "test@example.com", name: "Test User", creditBalance: 1000 },
+  { id: "test_user_api", email: "api@test.example.com", name: "API Tester", creditBalance: 5000, subscriptionTier: "pro" as const, onboardingCompletedAt: new Date() },
+  { id: "test_user_ui", email: "ui@test.example.com", name: "UI Tester", creditBalance: 5000, subscriptionTier: "pro" as const, onboardingCompletedAt: new Date() },
+  { id: "test_user_edge", email: "edge@test.example.com", name: "Edge Tester", creditBalance: 5, subscriptionTier: "pro" as const, onboardingCompletedAt: new Date() },
+  { id: "test_user_123", email: "test@example.com", name: "Test User", creditBalance: 1000, subscriptionTier: "pro" as const, onboardingCompletedAt: null },
 ];
 
 async function seedTestUsers() {
@@ -27,7 +27,7 @@ async function seedTestUsers() {
         .values(user)
         .onConflictDoUpdate({
           target: users.id,
-          set: { creditBalance: user.creditBalance, name: user.name },
+          set: { creditBalance: user.creditBalance, name: user.name, subscriptionTier: user.subscriptionTier, onboardingCompletedAt: user.onboardingCompletedAt },
         });
 
       console.log(`  ${user.id}: ${user.creditBalance} credits (${user.name})`);

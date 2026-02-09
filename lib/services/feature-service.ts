@@ -1,20 +1,8 @@
 import { db } from "@/lib/db";
-import { users, featureFlags, userFeatureOverrides } from "@/lib/db/schema";
-import { eq, and, or, isNull, gt } from "drizzle-orm";
+import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
-export const FEATURES = {
-  CANVAS: "canvas",
-  ANALYTICS_ASSISTANT: "analytics_assistant",
-} as const;
-
-export type FeatureKey = (typeof FEATURES)[keyof typeof FEATURES];
-export type SubscriptionTier = "free" | "pro" | "enterprise";
-
-const DEFAULT_TIER_FEATURES: Record<SubscriptionTier, FeatureKey[]> = {
-  free: [],
-  pro: [FEATURES.CANVAS, FEATURES.ANALYTICS_ASSISTANT],
-  enterprise: [FEATURES.CANVAS, FEATURES.ANALYTICS_ASSISTANT],
-};
+export type SubscriptionTier = "free" | "basic" | "pro";
 
 /**
  * Get user's subscription tier from the database
@@ -31,83 +19,6 @@ export async function getUserTier(userId: string): Promise<SubscriptionTier> {
   }
 
   return result[0].subscriptionTier as SubscriptionTier;
-}
-
-/**
- * Check if a user has access to a specific feature
- * Priority: user override > feature flag tier settings > default tier features
- */
-export async function hasFeatureAccess(
-  userId: string,
-  featureKey: FeatureKey
-): Promise<boolean> {
-  // 1. Check userFeatureOverrides first (with expiration handling)
-  const override = await db
-    .select({ enabled: userFeatureOverrides.enabled })
-    .from(userFeatureOverrides)
-    .where(
-      and(
-        eq(userFeatureOverrides.userId, userId),
-        eq(userFeatureOverrides.featureKey, featureKey),
-        or(
-          isNull(userFeatureOverrides.expiresAt),
-          gt(userFeatureOverrides.expiresAt, new Date())
-        )
-      )
-    )
-    .limit(1);
-
-  if (override.length > 0) {
-    return override[0].enabled;
-  }
-
-  // Get user's tier
-  const tier = await getUserTier(userId);
-
-  // 2. Check featureFlags table for tier-based access
-  const featureFlag = await db
-    .select({
-      defaultEnabled: featureFlags.defaultEnabled,
-      enabledForTiers: featureFlags.enabledForTiers,
-    })
-    .from(featureFlags)
-    .where(eq(featureFlags.key, featureKey))
-    .limit(1);
-
-  if (featureFlag.length > 0) {
-    const flag = featureFlag[0];
-    const enabledTiers = flag.enabledForTiers as string[];
-
-    // Check if user's tier is in the enabled tiers list
-    if (enabledTiers.includes(tier)) {
-      return true;
-    }
-
-    // Check default enabled status
-    return flag.defaultEnabled;
-  }
-
-  // 3. Fall back to DEFAULT_TIER_FEATURES
-  return DEFAULT_TIER_FEATURES[tier].includes(featureKey);
-}
-
-/**
- * Get all features and their access status for a user
- */
-export async function getUserFeatures(
-  userId: string
-): Promise<Record<FeatureKey, boolean>> {
-  const featureKeys = Object.values(FEATURES);
-  const result: Record<string, boolean> = {};
-
-  // Check access for each feature
-  await Promise.all(
-    featureKeys.map(async (key) => {
-      result[key] = await hasFeatureAccess(userId, key);
-    })
-  );
-
-  return result as Record<FeatureKey, boolean>;
 }
 
 /**
@@ -142,16 +53,13 @@ export function getTierDetails(tier: SubscriptionTier): {
         "Export reports",
       ],
     },
-    enterprise: {
-      name: "Enterprise",
-      description: "Full-featured analytics for teams and agencies",
+    basic: {
+      name: "Basic",
+      description: "Essential analytics for growing creators",
       features: [
-        "Everything in Pro",
-        "Unlimited connected accounts",
-        "Unlimited data retention",
-        "Team collaboration",
-        "API access",
-        "Priority support",
+        "Basic dashboard metrics",
+        "Up to 3 connected accounts",
+        "14-day data retention",
       ],
     },
   };

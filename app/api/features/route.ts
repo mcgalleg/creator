@@ -1,6 +1,6 @@
-import { auth } from "@/lib/auth";
+import { auth, hasFeature, FEATURES } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { getUserFeatures, getUserTier } from "@/lib/services/feature-service";
+import { getUserTier } from "@/lib/services/feature-service";
 
 export async function GET() {
   try {
@@ -10,14 +10,18 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const [tier, features] = await Promise.all([
+    const [tier, canvas, analyticsAssistant] = await Promise.all([
       getUserTier(userId),
-      getUserFeatures(userId),
+      hasFeature(FEATURES.CANVAS),
+      hasFeature(FEATURES.ANALYTICS_ASSISTANT),
     ]);
 
     return NextResponse.json({
       tier,
-      features,
+      features: {
+        canvas,
+        analytics_assistant: analyticsAssistant,
+      },
     });
   } catch (error) {
     console.error("Error fetching features:", error);

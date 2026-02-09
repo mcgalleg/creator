@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
+import { shadcn } from "@clerk/themes";
 import { Geist, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AccentColorProvider } from "@/contexts/accent-color-context";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -29,8 +31,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
+    <ClerkProvider appearance={{ theme: shadcn }}>
+      <html lang="en" data-accent="amber" suppressHydrationWarning>
+        <head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `(function(){try{var a=localStorage.getItem('accent-color');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}})()`,
+            }}
+          />
+        </head>
         <body
           className={`${geistSans.variable} ${jetbrainsMono.variable} antialiased`}
         >
@@ -40,8 +49,10 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
-            <Toaster />
+            <AccentColorProvider>
+              {children}
+              <Toaster />
+            </AccentColorProvider>
           </ThemeProvider>
         </body>
       </html>
