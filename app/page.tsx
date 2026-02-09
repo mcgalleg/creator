@@ -15,8 +15,8 @@ import {
   ArrowRight,
   Zap,
 } from "lucide-react";
-import { LazyPixelBlastBg } from "@/components/backgrounds/lazy-pixel-blast-bg";
 import { AccentColorPicker } from "@/components/accent-color-picker";
+import { TutorialPlayer } from "@/components/remotion/Player";
 
 export default function Home() {
   return (
@@ -57,51 +57,54 @@ export default function Home() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative container mx-auto max-w-6xl px-4 py-24 text-center md:py-32">
-          {/* PixelBlast as absolute background */}
-          <div className="absolute inset-0 z-0 overflow-hidden">
-            <LazyPixelBlastBg
-              useThemeColor
-              className="h-full w-full"
-            />
+        <section className="py-16 md:py-24">
+          <div className="container mx-auto max-w-6xl px-4">
+            <div className="flex flex-col items-center text-center">
+              <Badge variant="secondary" className="mb-4">
+                <Sparkles className="mr-1 size-3" />
+                AI-Powered Analytics
+              </Badge>
+              <h1 className="mx-auto max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+                Understand Your TikTok Performance with{" "}
+                <span className="bg-gradient-to-r from-primary/80 via-primary to-primary/60 bg-clip-text text-transparent">
+                  AI-Powered Insights
+                </span>
+              </h1>
+              <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
+                Ask questions in plain English and get instant, actionable insights about your TikTok
+                analytics. Beautiful visualizations generated on-the-fly, powered by AI.
+              </p>
+              <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                <SignedOut>
+                  <SignUpButton mode="modal">
+                    <Button size="lg" className="gap-2">
+                      Start Free Trial
+                      <ArrowRight className="size-4" />
+                    </Button>
+                  </SignUpButton>
+                </SignedOut>
+                <Link href="/dashboard">
+                  <Button variant="outline" size="lg" className="gap-2">
+                    <SignedIn>Go to Dashboard</SignedIn>
+                    <SignedOut>View Demo</SignedOut>
+                    <ArrowRight className="size-4" />
+                  </Button>
+                </Link>
+              </div>
+              <SignedOut>
+                <p className="mt-4 text-sm text-muted-foreground">
+                  No credit card required. 100 free credits to get started.
+                </p>
+              </SignedOut>
+            </div>
+
+            {/* Video showcase */}
+            <div className="mx-auto mt-12 max-w-5xl">
+              <div className="overflow-hidden rounded-xl border shadow-2xl">
+                <TutorialPlayer />
+              </div>
+            </div>
           </div>
-          {/* Content - above PixelBlast */}
-          <Badge variant="secondary" className="relative z-10 mb-4">
-            <Sparkles className="mr-1 size-3" />
-            AI-Powered Analytics
-          </Badge>
-          <h1 className="relative z-10 mx-auto max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
-            Understand Your TikTok Performance with{" "}
-            <span className="bg-gradient-to-r from-primary/80 via-primary to-primary/60 bg-clip-text text-transparent">
-              AI-Powered Insights
-            </span>
-          </h1>
-          <p className="relative z-10 mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
-            Ask questions in plain English and get instant, actionable insights about your TikTok
-            analytics. Beautiful visualizations generated on-the-fly, powered by AI.
-          </p>
-          <div className="relative z-10 mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <SignedOut>
-              <SignUpButton mode="modal">
-                <Button size="lg" className="gap-2">
-                  Start Free Trial
-                  <ArrowRight className="size-4" />
-                </Button>
-              </SignUpButton>
-            </SignedOut>
-            <Link href="/dashboard">
-              <Button variant="outline" size="lg" className="gap-2">
-                <SignedIn>Go to Dashboard</SignedIn>
-                <SignedOut>View Demo</SignedOut>
-                <ArrowRight className="size-4" />
-              </Button>
-            </Link>
-          </div>
-          <SignedOut>
-            <p className="relative z-10 mt-4 text-sm text-muted-foreground">
-              No credit card required. 100 free credits to get started.
-            </p>
-          </SignedOut>
         </section>
 
         {/* Features Section */}
