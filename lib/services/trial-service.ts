@@ -12,6 +12,17 @@ import { syncCreditBalance } from "@/lib/services/credit-service";
  * Local credit balance syncs on first GET /api/credits via sync-on-read.
  */
 export async function startTrial(userId: string): Promise<void> {
+  // Guard against double invocation (race between Clerk webhook and ensureUserExists)
+  const existing = await db
+    .select({ trialEndsAt: users.trialEndsAt })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (existing.length > 0 && existing[0].trialEndsAt) {
+    return; // Trial already started
+  }
+
   const trialEndsAt = new Date();
   trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DURATION_DAYS);
 
@@ -24,11 +35,12 @@ export async function startTrial(userId: string): Promise<void> {
     })
     .where(eq(users.id, userId));
 
-  // Ingest bonus credits (Pro minus Free baseline) to Polar meters
-  await ingestSyncCreditEvent(userId, TRIAL_BONUS_SYNC_CREDITS, {
+  // Grant bonus credits (Pro minus Free baseline) to Polar meters.
+  // Negative values = credit grants in Polar's meter system.
+  await ingestSyncCreditEvent(userId, -TRIAL_BONUS_SYNC_CREDITS, {
     type: "trial_bonus",
   });
-  await ingestAiTokenEvent(userId, TRIAL_BONUS_AI_TOKENS, {
+  await ingestAiTokenEvent(userId, -TRIAL_BONUS_AI_TOKENS, {
     type: "trial_bonus",
   });
 }
