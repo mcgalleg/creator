@@ -7,6 +7,7 @@ import { ChatInput } from '@/components/chat/chat-input';
 import { MessageList } from '@/components/chat/message-list';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDrawingBridgeOptional } from '@/contexts/drawing-bridge-context';
+import { useSyncOptional } from '@/contexts/sync-context';
 import { Button } from '@/components/ui/button';
 import type { DiagramResult } from '@/hooks/use-analytics-chat';
 
@@ -19,6 +20,7 @@ export function ChatPanel({ onClose }: { onClose?: () => void }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const drawingBridge = useDrawingBridgeOptional();
+  const syncContext = useSyncOptional();
 
   const handleDiagramGenerated = useCallback((diagram: DiagramResult) => {
     if (drawingBridge) {
@@ -38,6 +40,7 @@ export function ChatPanel({ onClose }: { onClose?: () => void }) {
     error,
     getMessageText,
   } = useAnalyticsChat({
+    selectedAccountId: syncContext?.selectedAccountId,
     onDiagramGenerated: handleDiagramGenerated,
   });
 

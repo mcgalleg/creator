@@ -7,6 +7,7 @@ import { MessageList } from './message-list';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, MessageSquare } from 'lucide-react';
+import { useSyncOptional } from '@/contexts/sync-context';
 
 /**
  * Main chat interface component that combines all chat pieces.
@@ -16,6 +17,7 @@ import { AlertCircle, MessageSquare } from 'lucide-react';
 export function ChatContainer() {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const syncContext = useSyncOptional();
 
   const {
     messages,
@@ -25,7 +27,9 @@ export function ChatContainer() {
     uiTrees,
     error,
     getMessageText,
-  } = useAnalyticsChat();
+  } = useAnalyticsChat({
+    selectedAccountId: syncContext?.selectedAccountId,
+  });
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

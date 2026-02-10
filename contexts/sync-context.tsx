@@ -6,6 +6,7 @@ import {
   useCallback,
   useRef,
   useEffect,
+  useState,
   type ReactNode,
 } from "react";
 import { useAccounts } from "@/hooks/use-accounts";
@@ -47,6 +48,10 @@ export interface SyncContextValue {
   totalActiveJobs: number;
   activeJobsFor: (accountId: number) => SyncJob[];
 
+  // Currently selected account (shared across header, chat, etc.)
+  selectedAccountId: number | null;
+  setSelectedAccountId: (id: number | null) => void;
+
   // Event: subscribe to sync completion (returns unsubscribe fn)
   onSyncCompleted: (callback: SyncCompletedCallback) => () => void;
 }
@@ -79,6 +84,21 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   } = useAccounts();
 
   const { refresh: refreshCredits } = useCredits();
+
+  // Selected account state (shared across header, chat, etc.)
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
+
+  // Auto-select first account when accounts load and nothing is selected
+  useEffect(() => {
+    if (accounts.length > 0 && selectedAccountId === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional initialization from async data
+      setSelectedAccountId(accounts[0].id);
+    }
+    // If the selected account was disconnected, fall back to first
+    if (selectedAccountId !== null && accounts.length > 0 && !accounts.some(a => a.id === selectedAccountId)) {
+      setSelectedAccountId(accounts[0].id);
+    }
+  }, [accounts, selectedAccountId]);
 
   // Subscriber pattern (same as DrawingBridgeProvider)
   const subscribersRef = useRef<Set<SyncCompletedCallback>>(new Set());
@@ -164,6 +184,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     connecting,
     syncing,
     disconnecting,
+    selectedAccountId,
+    setSelectedAccountId,
     isSyncing,
     totalActiveJobs,
     activeJobsFor,

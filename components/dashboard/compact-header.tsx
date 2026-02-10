@@ -21,9 +21,8 @@ import { Loader2 } from 'lucide-react';
 
 export function CompactHeader() {
   const { balance: credits, aiTokens, loading: creditsLoading } = useCredits();
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const { accounts, accountsLoading, isSyncing } = useSync();
+  const { accounts, accountsLoading, isSyncing, selectedAccountId, setSelectedAccountId } = useSync();
 
   // Brief delay before showing credits so Polar meter balances settle after signup
   const [creditsSettled, setCreditsSettled] = useState(false);
@@ -36,14 +35,9 @@ export function CompactHeader() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Derive the effective selected account ID
-  // If no account is explicitly selected but accounts exist, use the first one
-  const effectiveSelectedAccountId = selectedAccountId ||
-    (accounts.length > 0 ? String(accounts[0].id) : null);
-
   // Get the currently selected account
   const selectedAccount = accounts.find(
-    (acc) => String(acc.id) === effectiveSelectedAccountId
+    (acc) => acc.id === selectedAccountId
   );
 
   return (
@@ -83,7 +77,7 @@ export function CompactHeader() {
             <span className="truncate">@{selectedAccount?.username}</span>
           </div>
         ) : (
-          <Select value={effectiveSelectedAccountId || ''} onValueChange={setSelectedAccountId}>
+          <Select value={selectedAccountId?.toString() ?? ''} onValueChange={(v) => setSelectedAccountId(Number(v))}>
             <SelectTrigger size="sm" className="w-[120px] sm:w-[160px] min-h-[36px] md:min-h-[32px]">
               <SelectValue placeholder="Select account">
                 {selectedAccount && (

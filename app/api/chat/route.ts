@@ -72,7 +72,7 @@ Example flow:
 
 export async function POST(req: Request) {
   try {
-    const { messages }: { messages: UIMessage[] } = await req.json();
+    const { messages, selectedAccountId }: { messages: UIMessage[]; selectedAccountId?: number } = await req.json();
 
     // Authenticate the user
     const { userId } = await auth();
@@ -108,10 +108,18 @@ export async function POST(req: Request) {
       .from(tiktokAccounts)
       .where(eq(tiktokAccounts.userId, userId));
 
-    const accountContext =
-      userAccounts.length > 0
-        ? `\n\nThe user has ${userAccounts.length} connected TikTok account(s): ${userAccounts.map((a) => `@${a.username} (${a.displayName || a.username})`).join(", ")}.`
-        : "\n\nThe user has no connected TikTok accounts yet. Suggest they connect an account to see their analytics.";
+    const activeAccount = selectedAccountId
+      ? userAccounts.find((a) => a.id === selectedAccountId)
+      : null;
+
+    let accountContext: string;
+    if (userAccounts.length === 0) {
+      accountContext = "\n\nThe user has no connected TikTok accounts yet. Suggest they connect an account to see their analytics.";
+    } else if (activeAccount) {
+      accountContext = `\n\nThe user has ${userAccounts.length} connected TikTok account(s): ${userAccounts.map((a) => `@${a.username} (${a.displayName || a.username})`).join(", ")}. The user is currently viewing @${activeAccount.username} (${activeAccount.displayName || activeAccount.username}, account ID ${activeAccount.id}). Unless the user asks about a different account or all accounts, focus queries on this account by passing accountIds: ["${activeAccount.id}"].`;
+    } else {
+      accountContext = `\n\nThe user has ${userAccounts.length} connected TikTok account(s): ${userAccounts.map((a) => `@${a.username} (${a.displayName || a.username})`).join(", ")}.`;
+    }
 
     const result = streamText({
       model,
