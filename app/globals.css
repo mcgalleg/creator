@@ -701,53 +701,6 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Pin Button Animations
-   ───────────────────────────────────────────────────────────────────────────── */
-
-.pin-button {
-  transition: transform 0.15s ease, background-color 0.15s ease, color 0.2s ease;
-}
-
-.pin-button:hover:not(:disabled) {
-  transform: scale(1.02);
-}
-
-.pin-button:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-/* Pin success animation */
-@keyframes pin-success {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-.pin-button-success {
-  animation: pin-success 0.3s ease-out;
-}
-
-/* Pin icon rotation animation */
-@keyframes pin-rotate {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(-45deg);
-  }
-}
-
-.pin-button:hover .pin-icon {
-  animation: pin-rotate 0.2s ease-out forwards;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
    Loading & Skeleton Animations
    ───────────────────────────────────────────────────────────────────────────── */
 
@@ -902,11 +855,6 @@
   & table {
     background: var(--background);
   }
-}
-
-/* Inline pin button styling - consistent backdrop */
-.pin-button {
-  backdrop-filter: blur(8px);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
