@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
+import { useCurrentFrame, useVideoConfig, spring, interpolate, Easing } from "remotion";
 
 type Entrance =
   | { type: "slideIn"; from: "left" | "right" | "top" | "bottom"; distance?: number }
@@ -47,7 +47,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
     frame,
     [startFrame, startFrame + durationFrames],
     [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) }
   );
 
   const exitProgress =
@@ -69,7 +69,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
         style={{
           display: "flex",
           flexWrap: "wrap",
-          gap: "0 8px",
+          gap: "0 16px",
           justifyContent: "center",
           alignItems: "center",
           ...style,
@@ -86,7 +86,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
           const wordY = interpolate(
             frame,
             [wordStart, wordStart + 12],
-            [15, 0],
+            [30, 0],
             { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
           );
           let exitOpacity = 1;
@@ -124,7 +124,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
       <div style={{ position: "relative", ...style }}>
         {chars.map((char, i) => {
           const angle = seededRandom(i) * Math.PI * 2;
-          const dist = 80 + seededRandom(i + 100) * 200;
+          const dist = 160 + seededRandom(i + 100) * 400;
           const rot = (seededRandom(i + 200) - 0.5) * 360;
           const tx = Math.cos(angle) * dist * exitProgress;
           const ty = Math.sin(angle) * dist * exitProgress;
@@ -154,7 +154,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
 
   switch (entrance.type) {
     case "slideIn": {
-      const dist = entrance.distance ?? 100;
+      const dist = entrance.distance ?? 200;
       const axis =
         entrance.from === "left" || entrance.from === "right" ? "X" : "Y";
       const sign =
@@ -220,7 +220,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
         const axis =
           exit.to === "left" || exit.to === "right" ? "X" : "Y";
         const sign = exit.to === "right" || exit.to === "bottom" ? 1 : -1;
-        const offset = interpolate(exitProgress, [0, 1], [0, sign * 100]);
+        const offset = interpolate(exitProgress, [0, 1], [0, sign * 200]);
         exitTransform = `translate${axis}(${offset}px)`;
         exitOpacity = interpolate(exitProgress, [0.7, 1], [1, 0], {
           extrapolateLeft: "clamp",

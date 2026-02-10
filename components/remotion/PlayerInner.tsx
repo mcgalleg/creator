@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback } from "react";
 import { Player, PlayerRef } from "@remotion/player";
 import { PromoVideo } from "./PromoVideo";
 import {
@@ -14,15 +14,12 @@ export default function PlayerInner() {
   const playerRef = useRef<PlayerRef>(null);
   const [muted, setMuted] = useState(true);
 
-  useEffect(() => {
-    playerRef.current?.mute();
-  }, []);
-
-  const toggleMute = useCallback(() => {
+  const toggleMute = useCallback((e: React.MouseEvent) => {
     const player = playerRef.current;
     if (!player) return;
     if (player.isMuted()) {
       player.unmute();
+      player.play(e);
       setMuted(false);
     } else {
       player.mute();
@@ -41,6 +38,7 @@ export default function PlayerInner() {
         fps={FPS}
         loop
         autoPlay
+        initiallyMuted
         controls={false}
         style={{
           width: "100%",
@@ -48,7 +46,7 @@ export default function PlayerInner() {
         }}
       />
       <button
-        onClick={toggleMute}
+        onClickCapture={toggleMute}
         style={{
           position: "absolute",
           bottom: 12,

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
+import { useCurrentFrame, useVideoConfig, spring, interpolate, Easing } from "remotion";
 import { ACCENT, FONT_SANS, SPRING_BOUNCY } from "../constants";
 
 interface GlowButtonProps {
@@ -24,7 +24,7 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
     frame,
     [startFrame, startFrame + 20],
     [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
   );
 
   const scaleRaw = spring({
@@ -38,15 +38,15 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
   const glowSpread = interpolate(
     Math.sin(frame * 0.1),
     [-1, 1],
-    [0, 12]
+    [0, 24]
   );
 
   return (
     <div
       style={{
         borderRadius: 999,
-        border: `2px solid ${glowColor}`,
-        padding: "12px 32px",
+        border: `4px solid ${glowColor}`,
+        padding: "24px 64px",
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
@@ -59,7 +59,7 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
     >
       <span
         style={{
-          fontSize: 16,
+          fontSize: 32,
           fontWeight: 600,
           color: glowColor,
         }}

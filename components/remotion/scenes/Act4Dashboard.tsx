@@ -22,12 +22,12 @@ const ChatEmptyState: React.FC = () => (
       alignItems: "center",
       justifyContent: "center",
       height: "100%",
-      gap: 6,
+      gap: 12,
     }}
   >
     <svg
-      width="32"
-      height="32"
+      width="64"
+      height="64"
       viewBox="0 0 24 24"
       fill="none"
       stroke={TEXT_MUTED}
@@ -39,7 +39,7 @@ const ChatEmptyState: React.FC = () => (
     </svg>
     <span
       style={{
-        fontSize: 13,
+        fontSize: 26,
         color: TEXT_MUTED,
         fontFamily: FONT_SANS,
         fontWeight: 500,
@@ -49,7 +49,7 @@ const ChatEmptyState: React.FC = () => (
     </span>
     <span
       style={{
-        fontSize: 11,
+        fontSize: 22,
         color: TEXT_MUTED,
         fontFamily: FONT_SANS,
         opacity: 0.6,
@@ -67,8 +67,8 @@ const DashboardContent: React.FC = () => (
       style={{
         display: "flex",
         flexWrap: "wrap",
-        gap: 12,
-        padding: 16,
+        gap: 24,
+        padding: 32,
       }}
     >
       <MockMetricCard
@@ -103,7 +103,7 @@ const DashboardContent: React.FC = () => (
     </div>
 
     {/* Area chart */}
-    <div style={{ padding: "0 16px", marginTop: 12 }}>
+    <div style={{ padding: "0 32px", marginTop: 24 }}>
       <MockAreaChart startFrame={50} durationFrames={80} />
     </div>
   </div>
@@ -114,8 +114,8 @@ export const Act4Dashboard: React.FC = () => {
     <AbsoluteFill>
       <CameraMove
         keyframes={[
-          { frame: 0, rotateX: 2, rotateY: 3, scale: 1.02, translateX: -10, translateY: -5 },
-          { frame: 90, rotateX: 1, rotateY: -2, scale: 1.0, translateX: 10, translateY: 5 },
+          { frame: 0, rotateX: 2, rotateY: 3, scale: 1.02, translateX: -20, translateY: -10 },
+          { frame: 90, rotateX: 1, rotateY: -2, scale: 1.0, translateX: 20, translateY: 10 },
           { frame: 180, rotateX: 1.5, rotateY: 1, scale: 1.01, translateX: 0, translateY: 0 },
         ]}
       >

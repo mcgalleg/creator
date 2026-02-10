@@ -20,7 +20,7 @@ const seededRandom = (seed: number) => ((seed * 9301 + 49297) % 233280) / 233280
 
 // Generate a wobbly rect path with seeded offsets
 function wobblyRect(x: number, y: number, w: number, h: number, seed: number): string {
-  const wobble = (s: number) => (seededRandom(s) - 0.5) * 4;
+  const wobble = (s: number) => (seededRandom(s) - 0.5) * 8;
   const tl = { x: x + wobble(seed), y: y + wobble(seed + 1) };
   const tr = { x: x + w + wobble(seed + 2), y: y + wobble(seed + 3) };
   const br = { x: x + w + wobble(seed + 4), y: y + h + wobble(seed + 5) };
@@ -30,7 +30,7 @@ function wobblyRect(x: number, y: number, w: number, h: number, seed: number): s
 
 // Generate a wobbly diamond path
 function wobblyDiamond(x: number, y: number, w: number, h: number, seed: number): string {
-  const wobble = (s: number) => (seededRandom(s) - 0.5) * 3;
+  const wobble = (s: number) => (seededRandom(s) - 0.5) * 6;
   const cx = x + w / 2;
   const cy = y + h / 2;
   const top = { x: cx + wobble(seed), y: y + wobble(seed + 1) };
@@ -42,15 +42,15 @@ function wobblyDiamond(x: number, y: number, w: number, h: number, seed: number)
 
 // Arrow path with slight curve
 function arrowPath(x1: number, y1: number, x2: number, y2: number, seed: number): string {
-  const midX = (x1 + x2) / 2 + (seededRandom(seed) - 0.5) * 20;
-  const midY = (y1 + y2) / 2 + (seededRandom(seed + 1) - 0.5) * 20;
+  const midX = (x1 + x2) / 2 + (seededRandom(seed) - 0.5) * 40;
+  const midY = (y1 + y2) / 2 + (seededRandom(seed + 1) - 0.5) * 40;
   return `M ${x1},${y1} Q ${midX},${midY} ${x2},${y2}`;
 }
 
 // Arrowhead path
 function arrowHead(x1: number, y1: number, x2: number, y2: number): string {
   const angle = Math.atan2(y2 - y1, x2 - x1);
-  const headLen = 10;
+  const headLen = 20;
   const a1 = angle + Math.PI * 0.8;
   const a2 = angle - Math.PI * 0.8;
   const hx1 = x2 + headLen * Math.cos(a1);
@@ -79,7 +79,7 @@ export const MockExcalidrawCanvas: React.FC<MockExcalidrawCanvasProps> = ({
         width: "100%",
         height: "100%",
         background: "#FFFFFF",
-        borderRadius: 8,
+        borderRadius: 16,
         position: "relative",
         overflow: "hidden",
       }}
@@ -90,8 +90,8 @@ export const MockExcalidrawCanvas: React.FC<MockExcalidrawCanvasProps> = ({
         preserveAspectRatio="none"
       >
         <defs>
-          <pattern id="gridDots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-            <circle cx="10" cy="10" r="1" fill="#e0e0e0" />
+          <pattern id="gridDots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+            <circle cx="20" cy="20" r="2" fill="#e0e0e0" />
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill="url(#gridDots)" />
@@ -100,7 +100,7 @@ export const MockExcalidrawCanvas: React.FC<MockExcalidrawCanvasProps> = ({
       {/* Elements */}
       <svg
         style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
-        viewBox="0 0 660 440"
+        viewBox="0 0 1320 880"
       >
         {elements.map((el, i) => {
           if (i > visibleUpTo) return null;
@@ -128,16 +128,16 @@ export const MockExcalidrawCanvas: React.FC<MockExcalidrawCanvasProps> = ({
                   d={path}
                   fill="none"
                   stroke="#333"
-                  strokeWidth={2}
+                  strokeWidth={4}
                   strokeDasharray={evolved.strokeDasharray}
                   strokeDashoffset={evolved.strokeDashoffset}
                 />
                 {progress >= 1 && (
                   <text
                     x={el.x + el.w / 2}
-                    y={el.y + el.h / 2 + 4}
+                    y={el.y + el.h / 2 + 8}
                     textAnchor="middle"
-                    fontSize={12}
+                    fontSize={24}
                     fontFamily={FONT_SANS}
                     fill="#333"
                   >
@@ -168,16 +168,16 @@ export const MockExcalidrawCanvas: React.FC<MockExcalidrawCanvasProps> = ({
                   d={path}
                   fill="none"
                   stroke="#333"
-                  strokeWidth={2}
+                  strokeWidth={4}
                   strokeDasharray={evolved.strokeDasharray}
                   strokeDashoffset={evolved.strokeDashoffset}
                 />
                 {progress >= 1 && (
                   <text
                     x={el.x + el.w / 2}
-                    y={el.y + el.h / 2 + 4}
+                    y={el.y + el.h / 2 + 8}
                     textAnchor="middle"
-                    fontSize={11}
+                    fontSize={22}
                     fontFamily={FONT_SANS}
                     fill="#333"
                   >
@@ -198,7 +198,7 @@ export const MockExcalidrawCanvas: React.FC<MockExcalidrawCanvasProps> = ({
                   d={path}
                   fill="none"
                   stroke="#333"
-                  strokeWidth={2}
+                  strokeWidth={4}
                   strokeDasharray={evolved.strokeDasharray}
                   strokeDashoffset={evolved.strokeDashoffset}
                 />
@@ -207,16 +207,16 @@ export const MockExcalidrawCanvas: React.FC<MockExcalidrawCanvasProps> = ({
                     d={head}
                     fill="none"
                     stroke="#333"
-                    strokeWidth={2}
+                    strokeWidth={4}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                 )}
                 {el.label && progress >= 1 && (
                   <text
-                    x={(el.x1 + el.x2) / 2 + 8}
-                    y={(el.y1 + el.y2) / 2 - 4}
-                    fontSize={10}
+                    x={(el.x1 + el.x2) / 2 + 16}
+                    y={(el.y1 + el.y2) / 2 - 8}
+                    fontSize={20}
                     fontFamily={FONT_SANS}
                     fill="#666"
                   >

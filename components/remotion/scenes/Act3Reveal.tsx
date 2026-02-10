@@ -6,6 +6,7 @@ import {
   useVideoConfig,
   spring,
   interpolate,
+  Easing,
   AbsoluteFill,
   Sequence,
   Img,
@@ -13,9 +14,8 @@ import {
 } from "remotion";
 import { KineticText } from "../primitives/KineticText";
 import { CameraMove } from "../primitives/CameraMove";
+import { BackgroundAmbient } from "../primitives/BackgroundAmbient";
 import {
-  BG_DARK,
-  BG_DARK_2,
   TEXT_PRIMARY,
   TEXT_MUTED,
   FONT_SANS,
@@ -46,12 +46,12 @@ export const Act3Reveal: React.FC = () => {
   });
   const morphT = Math.min(logoMorphSpring, 1);
 
-  // Logo dimensions: 120px centered -> 24px top-left
-  const logoHeight = interpolate(morphT, [0, 1], [120, 24]);
+  // Logo dimensions: 240px centered -> 48px top-left
+  const logoHeight = interpolate(morphT, [0, 1], [240, 48]);
   const logoCenterX = COMP_WIDTH / 2;
-  const logoCenterY = COMP_HEIGHT / 2 - 20;
-  const logoFinalX = 12 + 12;
-  const logoFinalY = 8 + 12;
+  const logoCenterY = COMP_HEIGHT / 2 - 40;
+  const logoFinalX = 24 + 24;
+  const logoFinalY = 16 + 24;
   const logoX = interpolate(morphT, [0, 1], [logoCenterX, logoFinalX]);
   const logoY = interpolate(morphT, [0, 1], [logoCenterY, logoFinalY]);
 
@@ -60,7 +60,7 @@ export const Act3Reveal: React.FC = () => {
     frame,
     [80, 100],
     [0, 0.15],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) }
   );
 
   // Text layer fade out (F70-85)
@@ -68,7 +68,7 @@ export const Act3Reveal: React.FC = () => {
     frame,
     [70, 85],
     [1, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) }
   );
 
   // AppShell full opacity (F120-140)
@@ -76,7 +76,7 @@ export const Act3Reveal: React.FC = () => {
     frame,
     [120, 140],
     [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) }
   );
 
   const chatSplitX = COMP_WIDTH * CHAT_WIDTH_RATIO;
@@ -85,17 +85,15 @@ export const Act3Reveal: React.FC = () => {
     <CameraMove
       keyframes={[
         { frame: 0, rotateX: 0, rotateY: 0, scale: 1, translateX: 0, translateY: 0 },
-        { frame: 100, rotateX: 0, rotateY: 0, scale: 1, translateX: 0, translateY: 0 },
+        { frame: 80, rotateX: 0, rotateY: 0, scale: 1, translateX: 0, translateY: 0 },
+        { frame: 110, rotateX: 1, rotateY: -1.5, scale: 1.01, translateX: 0, translateY: 0 },
+        { frame: 130, rotateX: 1.8, rotateY: -2.5, scale: 1.015, translateX: 0, translateY: 0 },
         { frame: 140, rotateX: 2, rotateY: -3, scale: 1.02, translateX: 0, translateY: 0 },
         { frame: 160, rotateX: 1.5, rotateY: -1.5, scale: 1.01, translateX: 0, translateY: 0 },
       ]}
     >
-      <AbsoluteFill
-        style={{
-          background: `linear-gradient(135deg, ${BG_DARK} 0%, ${BG_DARK_2} 100%)`,
-          fontFamily: FONT_SANS,
-        }}
-      >
+      <AbsoluteFill style={{ fontFamily: FONT_SANS }}>
+        <BackgroundAmbient />
         {/* Layer 1: Text ("Meet" + subtitle) */}
       <AbsoluteFill style={{ opacity: textFade }}>
         {/* "Meet" text — positioned above the logo */}
@@ -105,7 +103,7 @@ export const Act3Reveal: React.FC = () => {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              paddingBottom: 240,
+              paddingBottom: 480,
             }}
           >
             <KineticText
@@ -114,11 +112,11 @@ export const Act3Reveal: React.FC = () => {
               durationFrames={12}
               entrance={{ type: "fadeIn" }}
               style={{
-                fontSize: 16,
+                fontSize: 32,
                 fontWeight: 400,
                 color: TEXT_MUTED,
                 textTransform: "uppercase",
-                letterSpacing: 3,
+                letterSpacing: 6,
               }}
             />
           </AbsoluteFill>
@@ -131,16 +129,16 @@ export const Act3Reveal: React.FC = () => {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              paddingTop: 100,
+              paddingTop: 200,
             }}
           >
             <KineticText
               text="AI-Powered TikTok Analytics"
               startFrame={0}
               durationFrames={12}
-              entrance={{ type: "slideIn", from: "bottom", distance: 40 }}
+              entrance={{ type: "slideIn", from: "bottom", distance: 80 }}
               style={{
-                fontSize: 20,
+                fontSize: 40,
                 fontWeight: 500,
                 color: TEXT_PRIMARY,
                 textAlign: "center",
@@ -204,13 +202,13 @@ export const Act3Reveal: React.FC = () => {
             borderBottom: "1px solid #27272a",
             display: "flex",
             alignItems: "center",
-            paddingLeft: 48,
-            gap: 12,
+            paddingLeft: 96,
+            gap: 24,
           }}
         >
           <span
             style={{
-              fontSize: 13,
+              fontSize: 26,
               fontWeight: 600,
               color: TEXT_PRIMARY,
               opacity: 0.8,
@@ -236,7 +234,7 @@ export const Act3Reveal: React.FC = () => {
         >
           <span
             style={{
-              fontSize: 12,
+              fontSize: 24,
               color: TEXT_MUTED,
               opacity: 0.5,
             }}
@@ -263,28 +261,28 @@ export const Act3Reveal: React.FC = () => {
               borderBottom: "1px solid #27272a",
               display: "flex",
               alignItems: "center",
-              paddingLeft: 12,
-              gap: 16,
+              paddingLeft: 24,
+              gap: 32,
             }}
           >
             <span
               style={{
-                fontSize: 11,
+                fontSize: 22,
                 fontWeight: 500,
                 color: TEXT_PRIMARY,
                 borderBottom: "2px solid #F59E0B",
-                paddingBottom: 6,
-                lineHeight: "30px",
+                paddingBottom: 12,
+                lineHeight: "60px",
               }}
             >
               Dashboard
             </span>
             <span
               style={{
-                fontSize: 11,
+                fontSize: 22,
                 fontWeight: 400,
                 color: TEXT_MUTED,
-                lineHeight: "30px",
+                lineHeight: "60px",
               }}
             >
               Draw

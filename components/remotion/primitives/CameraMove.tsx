@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useCurrentFrame, interpolate, AbsoluteFill } from "remotion";
+import { useCurrentFrame, interpolate, Easing, AbsoluteFill } from "remotion";
 
 interface CameraKeyframe {
   frame: number;
@@ -21,12 +21,12 @@ interface CameraMoveProps {
 export const CameraMove: React.FC<CameraMoveProps> = ({
   children,
   keyframes,
-  perspective = 1000,
+  perspective = 2000,
 }) => {
   const frame = useCurrentFrame();
 
   const frames = keyframes.map((k) => k.frame);
-  const clamp = { extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const };
+  const clamp = { extrapolateLeft: "clamp" as const, extrapolateRight: "clamp" as const, easing: Easing.inOut(Easing.cubic) };
 
   const rotateX = interpolate(frame, frames, keyframes.map((k) => k.rotateX ?? 0), clamp);
   const rotateY = interpolate(frame, frames, keyframes.map((k) => k.rotateY ?? 0), clamp);

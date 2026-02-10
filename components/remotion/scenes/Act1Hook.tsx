@@ -3,9 +3,8 @@
 import React from "react";
 import { AbsoluteFill, Sequence } from "remotion";
 import { KineticText } from "../primitives/KineticText";
+import { BackgroundAmbient } from "../primitives/BackgroundAmbient";
 import {
-  BG_DARK,
-  BG_DARK_2,
   ACCENT,
   TEXT_PRIMARY,
   TEXT_MUTED,
@@ -14,14 +13,10 @@ import {
 
 export const Act1Hook: React.FC = () => {
   return (
-    <AbsoluteFill
-      style={{
-        background: `linear-gradient(135deg, ${BG_DARK} 0%, ${BG_DARK_2} 100%)`,
-        fontFamily: FONT_SANS,
-      }}
-    >
-      {/* Line 1: "You pour your heart into every video." */}
-      <Sequence from={0} durationInFrames={35}>
+    <AbsoluteFill style={{ fontFamily: FONT_SANS }}>
+      <BackgroundAmbient />
+      {/* Line 1: "You pour your heart into every video." — extended to 55 frames */}
+      <Sequence from={0} durationInFrames={55}>
         <AbsoluteFill
           style={{
             display: "flex",
@@ -33,23 +28,23 @@ export const Act1Hook: React.FC = () => {
             text="You pour your heart into every video."
             startFrame={0}
             durationFrames={20}
-            exitFrame={25}
+            exitFrame={40}
             exitDurationFrames={10}
             entrance={{ type: "slideIn", from: "left" }}
             exit={{ type: "slideOut", to: "right" }}
             style={{
-              fontSize: 44,
+              fontSize: 88,
               fontWeight: 600,
               color: TEXT_PRIMARY,
               textAlign: "center",
-              padding: "0 40px",
+              padding: "0 80px",
             }}
           />
         </AbsoluteFill>
       </Sequence>
 
-      {/* Line 2: "Hours of filming. Editing. Posting." */}
-      <Sequence from={35} durationInFrames={40}>
+      {/* Line 2: "Hours of filming. Editing. Posting." — 10-frame breathing pause after line 1 */}
+      <Sequence from={65} durationInFrames={40}>
         <AbsoluteFill
           style={{
             display: "flex",
@@ -66,24 +61,24 @@ export const Act1Hook: React.FC = () => {
             entrance={{ type: "wordByWord", delayPerWord: 8 }}
             exit={{ type: "fadeOut" }}
             style={{
-              fontSize: 38,
+              fontSize: 76,
               fontWeight: 500,
               color: TEXT_PRIMARY,
               textAlign: "center",
-              padding: "0 40px",
+              padding: "0 80px",
             }}
           />
         </AbsoluteFill>
       </Sequence>
 
       {/* Line 3: "But do you really know..." */}
-      <Sequence from={80} durationInFrames={80}>
+      <Sequence from={110} durationInFrames={80}>
         <AbsoluteFill
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            paddingBottom: 40,
+            paddingBottom: 80,
           }}
         >
           <KineticText
@@ -92,24 +87,24 @@ export const Act1Hook: React.FC = () => {
             durationFrames={25}
             entrance={{ type: "fadeIn" }}
             style={{
-              fontSize: 30,
+              fontSize: 60,
               fontWeight: 400,
               color: TEXT_MUTED,
               textAlign: "center",
-              padding: "0 40px",
+              padding: "0 80px",
             }}
           />
         </AbsoluteFill>
       </Sequence>
 
-      {/* Line 4: "...what's working?" */}
-      <Sequence from={100} durationInFrames={60}>
+      {/* Line 4: "...what's working?" — less extreme scaleIn */}
+      <Sequence from={125} durationInFrames={65}>
         <AbsoluteFill
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            paddingTop: 30,
+            paddingTop: 60,
           }}
         >
           <KineticText
@@ -118,10 +113,10 @@ export const Act1Hook: React.FC = () => {
             durationFrames={25}
             exitFrame={45}
             exitDurationFrames={15}
-            entrance={{ type: "scaleIn", from: 0.05, bounce: true }}
+            entrance={{ type: "scaleIn", from: 0.3, bounce: true }}
             exit={{ type: "scatter" }}
             style={{
-              fontSize: 60,
+              fontSize: 120,
               fontWeight: 700,
               color: ACCENT,
               textAlign: "center",

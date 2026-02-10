@@ -5,9 +5,8 @@ import { AbsoluteFill, Sequence } from "remotion";
 import { KineticText } from "../primitives/KineticText";
 import { TypewriterText } from "../primitives/TypewriterText";
 import { FloatingDataPoint } from "../primitives/FloatingDataPoint";
+import { BackgroundAmbient } from "../primitives/BackgroundAmbient";
 import {
-  BG_DARK,
-  BG_DARK_2,
   ACCENT,
   TEXT_PRIMARY,
   CHART_BLUE,
@@ -24,12 +23,8 @@ export const Act2Discovery: React.FC = () => {
   const cy = COMP_HEIGHT / 2;
 
   return (
-    <AbsoluteFill
-      style={{
-        background: `linear-gradient(135deg, ${BG_DARK} 0%, ${BG_DARK_2} 100%)`,
-        fontFamily: FONT_SANS,
-      }}
-    >
+    <AbsoluteFill style={{ fontFamily: FONT_SANS }}>
+      <BackgroundAmbient />
       {/* Typewriter: "Your data has a story." */}
       <Sequence from={0} durationInFrames={55}>
         <AbsoluteFill
@@ -44,7 +39,7 @@ export const Act2Discovery: React.FC = () => {
             startFrame={0}
             charsPerFrame={0.5}
             style={{
-              fontSize: 38,
+              fontSize: 76,
               fontWeight: 600,
               color: TEXT_PRIMARY,
             }}
@@ -59,9 +54,9 @@ export const Act2Discovery: React.FC = () => {
             value="142K"
             centerX={cx}
             centerY={cy}
-            radiusX={180}
-            radiusY={120}
-            speed={0.07}
+            radiusX={420}
+            radiusY={280}
+            speed={0.05}
             phase={0}
             startFrame={0}
             exitFrame={125}
@@ -71,8 +66,8 @@ export const Act2Discovery: React.FC = () => {
             value="24.5K"
             centerX={cx}
             centerY={cy}
-            radiusX={180}
-            radiusY={120}
+            radiusX={360}
+            radiusY={240}
             speed={0.07}
             phase={Math.PI / 2}
             startFrame={0}
@@ -83,9 +78,9 @@ export const Act2Discovery: React.FC = () => {
             value="8.2%"
             centerX={cx}
             centerY={cy}
-            radiusX={180}
-            radiusY={120}
-            speed={0.07}
+            radiusX={300}
+            radiusY={200}
+            speed={0.09}
             phase={Math.PI}
             startFrame={0}
             exitFrame={125}
@@ -95,8 +90,8 @@ export const Act2Discovery: React.FC = () => {
             value="+47"
             centerX={cx}
             centerY={cy}
-            radiusX={180}
-            radiusY={120}
+            radiusX={360}
+            radiusY={240}
             speed={0.07}
             phase={(3 * Math.PI) / 2}
             startFrame={0}
@@ -106,14 +101,14 @@ export const Act2Discovery: React.FC = () => {
         </AbsoluteFill>
       </Sequence>
 
-      {/* "Hidden patterns." */}
+      {/* "Hidden patterns." — above center, blur entrance */}
       <Sequence from={55} durationInFrames={30}>
         <AbsoluteFill
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            paddingTop: 60,
+            paddingBottom: 160,
           }}
         >
           <KineticText
@@ -122,10 +117,10 @@ export const Act2Discovery: React.FC = () => {
             durationFrames={15}
             exitFrame={20}
             exitDurationFrames={10}
-            entrance={{ type: "fadeIn" }}
+            entrance={{ type: "blur", from: 20, to: 0 }}
             exit={{ type: "fadeOut" }}
             style={{
-              fontSize: 34,
+              fontSize: 68,
               fontWeight: 500,
               color: TEXT_PRIMARY,
               textAlign: "center",
@@ -134,13 +129,14 @@ export const Act2Discovery: React.FC = () => {
         </AbsoluteFill>
       </Sequence>
 
-      {/* "Untapped potential." */}
+      {/* "Untapped potential." — below center, slide from bottom */}
       <Sequence from={85} durationInFrames={35}>
         <AbsoluteFill
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            paddingTop: 160,
           }}
         >
           <KineticText
@@ -149,10 +145,10 @@ export const Act2Discovery: React.FC = () => {
             durationFrames={15}
             exitFrame={20}
             exitDurationFrames={15}
-            entrance={{ type: "scaleIn", from: 0 }}
+            entrance={{ type: "slideIn", from: "bottom", distance: 120 }}
             exit={{ type: "scaleOut", to: 0 }}
             style={{
-              fontSize: 36,
+              fontSize: 72,
               fontWeight: 600,
               color: TEXT_PRIMARY,
               textAlign: "center",
@@ -176,7 +172,7 @@ export const Act2Discovery: React.FC = () => {
               flexWrap: "wrap",
               justifyContent: "center",
               alignItems: "baseline",
-              gap: "0 10px",
+              gap: "0 20px",
             }}
           >
             <KineticText
@@ -185,7 +181,7 @@ export const Act2Discovery: React.FC = () => {
               durationFrames={40}
               entrance={{ type: "wordByWord", delayPerWord: 7 }}
               style={{
-                fontSize: 36,
+                fontSize: 72,
                 fontWeight: 500,
                 color: TEXT_PRIMARY,
               }}
@@ -196,10 +192,10 @@ export const Act2Discovery: React.FC = () => {
               durationFrames={20}
               entrance={{ type: "scaleIn", from: 0.3, bounce: true }}
               style={{
-                fontSize: 48,
+                fontSize: 96,
                 fontWeight: 700,
                 color: ACCENT,
-                marginLeft: 4,
+                marginLeft: 8,
               }}
             />
           </div>

@@ -9,7 +9,7 @@ interface SkeletonPulseProps {
 }
 
 const WIDTHS = ["100%", "85%", "70%"];
-const HEIGHTS = [12, 8];
+const HEIGHTS = [24, 16];
 
 export const SkeletonPulse: React.FC<SkeletonPulseProps> = ({
   lines = 3,
@@ -32,14 +32,14 @@ export const SkeletonPulse: React.FC<SkeletonPulseProps> = ({
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, opacity: fadeIn }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16, opacity: fadeIn }}>
       {Array.from({ length: lines }).map((_, i) => (
         <div
           key={i}
           style={{
             width: WIDTHS[i % WIDTHS.length],
             height: HEIGHTS[i % HEIGHTS.length],
-            borderRadius: 4,
+            borderRadius: 8,
             background: "rgba(255,255,255,0.08)",
             opacity: pulse,
           }}

@@ -25,13 +25,13 @@ interface AppShellProps {
 
 // Inline SVG icon paths
 const MessageSquareIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   </svg>
 );
 
 const GridIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="7" height="7" />
     <rect x="14" y="3" width="7" height="7" />
     <rect x="3" y="14" width="7" height="7" />
@@ -40,19 +40,19 @@ const GridIcon = () => (
 );
 
 const PencilIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
   </svg>
 );
 
 const SparklesIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
   </svg>
 );
 
 const CoinsIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="8" cy="8" r="6" />
     <path d="M18.09 10.37A6 6 0 1 1 10.34 18" />
     <path d="M7 6h1v4" />
@@ -60,7 +60,7 @@ const CoinsIcon = () => (
 );
 
 const SendIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m22 2-7 20-4-9-9-4Z" />
     <path d="M22 2 11 13" />
   </svg>
@@ -82,7 +82,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   // Tab underline position: 0 = dashboard, 1 = draw
   const tabPos = tabTransitionProgress ?? (activeTab === "dashboard" ? 0 : 1);
-  const underlineLeft = interpolate(tabPos, [0, 1], [0, 80]);
+  const underlineLeft = interpolate(tabPos, [0, 1], [0, 160]);
 
   return (
     <div
@@ -104,7 +104,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 12px",
+          padding: "0 24px",
           borderBottom: `1px solid ${borderColor}`,
           flexShrink: 0,
         }}
@@ -113,25 +113,25 @@ export const AppShell: React.FC<AppShellProps> = ({
         <Img
           src={staticFile("logo.png")}
           style={{
-            height: 24,
+            height: 48,
             objectFit: "contain",
             filter: "invert(1)",
           }}
         />
         {/* Right: badges + avatar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <SparklesIcon />
-            <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 500 }}>47</span>
+            <span style={{ fontSize: 22, color: TEXT_MUTED, fontWeight: 500 }}>47</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <CoinsIcon />
-            <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 500 }}>1000</span>
+            <span style={{ fontSize: 22, color: TEXT_MUTED, fontWeight: 500 }}>1000</span>
           </div>
           <div
             style={{
-              width: 24,
-              height: 24,
+              width: 48,
+              height: 48,
               borderRadius: "50%",
               background: "linear-gradient(135deg, #6366f1, #a855f7)",
             }}
@@ -154,29 +154,29 @@ export const AppShell: React.FC<AppShellProps> = ({
           {/* Chat header */}
           <div
             style={{
-              padding: "8px 10px",
+              padding: "16px 20px",
               borderBottom: `1px solid ${borderColor}`,
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: 12,
               flexShrink: 0,
             }}
           >
             <MessageSquareIcon />
-            <span style={{ fontSize: 12, fontWeight: 600, color: TEXT_PRIMARY }}>
+            <span style={{ fontSize: 24, fontWeight: 600, color: TEXT_PRIMARY }}>
               Analytics Assistant
             </span>
           </div>
 
           {/* Chat content area */}
-          <div style={{ flex: 1, overflow: "hidden", padding: 8 }}>
+          <div style={{ flex: 1, overflow: "hidden", padding: 16 }}>
             {chatContent}
           </div>
 
           {/* Chat input bar */}
           <div
             style={{
-              padding: "6px 8px",
+              padding: "12px 16px",
               borderTop: `1px solid ${borderColor}`,
               flexShrink: 0,
             }}
@@ -185,14 +185,14 @@ export const AppShell: React.FC<AppShellProps> = ({
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 6,
-                padding: "6px 8px",
-                borderRadius: 8,
+                gap: 12,
+                padding: "12px 16px",
+                borderRadius: 16,
                 border: chatInputFocused
-                  ? `1.5px solid ${ACCENT}`
-                  : `1px solid ${borderColor}`,
+                  ? `3px solid ${ACCENT}`
+                  : `2px solid ${borderColor}`,
                 boxShadow: chatInputFocused
-                  ? `0 0 8px ${ACCENT}40`
+                  ? `0 0 16px ${ACCENT}40`
                   : "none",
                 background: "rgba(255,255,255,0.03)",
               }}
@@ -200,7 +200,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               <span
                 style={{
                   flex: 1,
-                  fontSize: 11,
+                  fontSize: 22,
                   color: chatInputText ? TEXT_PRIMARY : TEXT_MUTED,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -225,18 +225,18 @@ export const AppShell: React.FC<AppShellProps> = ({
               borderBottom: `1px solid ${borderColor}`,
               position: "relative",
               flexShrink: 0,
-              paddingLeft: 8,
+              paddingLeft: 16,
             }}
           >
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 4,
-                padding: "0 12px",
+                gap: 8,
+                padding: "0 24px",
                 height: "100%",
                 color: activeTab === "dashboard" || tabPos < 0.5 ? TEXT_PRIMARY : TEXT_MUTED,
-                fontSize: 12,
+                fontSize: 24,
                 fontWeight: 500,
                 cursor: "default",
               }}
@@ -248,11 +248,11 @@ export const AppShell: React.FC<AppShellProps> = ({
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 4,
-                padding: "0 12px",
+                gap: 8,
+                padding: "0 24px",
                 height: "100%",
                 color: activeTab === "draw" || tabPos >= 0.5 ? TEXT_PRIMARY : TEXT_MUTED,
-                fontSize: 12,
+                fontSize: 24,
                 fontWeight: 500,
                 cursor: "default",
               }}
@@ -262,10 +262,10 @@ export const AppShell: React.FC<AppShellProps> = ({
               {showNewBadge && (
                 <span
                   style={{
-                    fontSize: 9,
+                    fontSize: 18,
                     fontWeight: 700,
                     color: ACCENT,
-                    marginLeft: 2,
+                    marginLeft: 4,
                   }}
                 >
                   New
@@ -278,11 +278,11 @@ export const AppShell: React.FC<AppShellProps> = ({
               style={{
                 position: "absolute",
                 bottom: 0,
-                left: 8 + underlineLeft,
-                width: 72,
-                height: 2,
+                left: 16 + underlineLeft,
+                width: 144,
+                height: 4,
                 background: ACCENT,
-                borderRadius: 1,
+                borderRadius: 2,
               }}
             />
           </div>

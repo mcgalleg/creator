@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
+import { useCurrentFrame, useVideoConfig, spring, interpolate, Easing } from "remotion";
 import { TEXT_PRIMARY, TEXT_MUTED, FONT_SANS, SPRING_SNAPPY } from "../constants";
 
 interface MockMetricCardProps {
@@ -15,14 +15,14 @@ interface MockMetricCardProps {
 
 // Inline TrendingUp SVG path
 const TrendingUpIcon: React.FC<{ color: string }> = ({ color }) => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
     <polyline points="16 7 22 7 22 13" />
   </svg>
 );
 
 const TrendingDownIcon: React.FC<{ color: string }> = ({ color }) => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="22 17 13.5 8.5 8.5 13.5 2 7" />
     <polyline points="16 17 22 17 22 11" />
   </svg>
@@ -50,7 +50,7 @@ export const MockMetricCard: React.FC<MockMetricCardProps> = ({
     frame,
     [startFrame, startFrame + 10],
     [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
   );
 
   const changeColor =
@@ -65,18 +65,18 @@ export const MockMetricCard: React.FC<MockMetricCardProps> = ({
       style={{
         background: "#18181b",
         border: "1px solid rgba(255,255,255,0.08)",
-        borderRadius: 12,
-        padding: 12,
+        borderRadius: 24,
+        padding: 24,
         opacity,
         transform: `scale(${scale})`,
-        width: "calc(50% - 8px)",
+        width: "calc(50% - 16px)",
         boxSizing: "border-box",
         fontFamily: FONT_SANS,
       }}
     >
       <div
         style={{
-          fontSize: 11,
+          fontSize: 22,
           color: TEXT_MUTED,
           fontWeight: 500,
         }}
@@ -85,10 +85,10 @@ export const MockMetricCard: React.FC<MockMetricCardProps> = ({
       </div>
       <div
         style={{
-          fontSize: 20,
+          fontSize: 40,
           color: color || TEXT_PRIMARY,
           fontWeight: 700,
-          marginTop: 4,
+          marginTop: 8,
         }}
       >
         {value}
@@ -98,13 +98,13 @@ export const MockMetricCard: React.FC<MockMetricCardProps> = ({
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 3,
-            marginTop: 4,
+            gap: 6,
+            marginTop: 8,
           }}
         >
           {changeType === "up" && <TrendingUpIcon color={changeColor} />}
           {changeType === "down" && <TrendingDownIcon color={changeColor} />}
-          <span style={{ fontSize: 11, color: changeColor, fontWeight: 500 }}>
+          <span style={{ fontSize: 22, color: changeColor, fontWeight: 500 }}>
             {change}
           </span>
         </div>

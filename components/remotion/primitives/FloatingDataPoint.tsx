@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useCurrentFrame, interpolate } from "remotion";
+import { useCurrentFrame, interpolate, Easing } from "remotion";
 import { TEXT_PRIMARY, FONT_SANS } from "../constants";
 
 interface FloatingDataPointProps {
@@ -39,7 +39,7 @@ export const FloatingDataPoint: React.FC<FloatingDataPointProps> = ({
     frame,
     [startFrame, startFrame + 15],
     [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
   );
 
   // After exitFrame, converge radius to 0
@@ -78,7 +78,7 @@ export const FloatingDataPoint: React.FC<FloatingDataPointProps> = ({
           left: pos.x,
           top: pos.y,
           transform: "translate(-50%, -50%)",
-          fontSize: 14,
+          fontSize: 28,
           fontWeight: 700,
           fontFamily: FONT_SANS,
           color: glowColor,
@@ -100,17 +100,17 @@ export const FloatingDataPoint: React.FC<FloatingDataPointProps> = ({
           left: current.x,
           top: current.y,
           transform: "translate(-50%, -50%)",
-          fontSize: 16,
+          fontSize: 32,
           fontWeight: 700,
           fontFamily: FONT_SANS,
           color: TEXT_PRIMARY,
           opacity: fadeIn,
           whiteSpace: "nowrap",
-          boxShadow: `0 0 12px ${glowColor}, 0 0 24px ${glowColor}40`,
+          boxShadow: `0 0 24px ${glowColor}, 0 0 48px ${glowColor}40`,
           background: "rgba(15, 15, 17, 0.7)",
-          padding: "4px 10px",
-          borderRadius: 8,
-          border: `1px solid ${glowColor}40`,
+          padding: "8px 20px",
+          borderRadius: 16,
+          border: `2px solid ${glowColor}40`,
           ...style,
         }}
       >

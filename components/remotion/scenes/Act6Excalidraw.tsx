@@ -18,31 +18,38 @@ import {
 const DRAW_PROMPT = "create: draw me an engagement plan";
 
 const FLOWCHART_ELEMENTS = [
-  { type: "rect" as const, x: 160, y: 30, w: 160, h: 50, label: "Content Strategy", fill: EXCALIDRAW_BLUE },
-  { type: "arrow" as const, x1: 240, y1: 80, x2: 240, y2: 110 },
-  { type: "rect" as const, x: 120, y: 110, w: 240, h: 45, label: "Post Mon/Wed/Fri 6PM", fill: EXCALIDRAW_GREEN },
-  { type: "arrow" as const, x1: 360, y1: 132, x2: 400, y2: 132 },
-  { type: "rect" as const, x: 400, y: 110, w: 260, h: 45, label: "Top Topics: Cooking, Travel", fill: EXCALIDRAW_AMBER },
-  { type: "diamond" as const, x: 180, y: 180, w: 140, h: 70, label: "Engage > 8%?", fill: "#f5f5f5" },
-  { type: "arrow" as const, x1: 130, y1: 215, x2: 60, y2: 260, label: "No" },
-  { type: "arrow" as const, x1: 320, y1: 215, x2: 390, y2: 260, label: "Yes" },
-  { type: "rect" as const, x: 350, y: 260, w: 130, h: 40, label: "Scale Up", fill: EXCALIDRAW_GREEN },
-  { type: "rect" as const, x: 10, y: 260, w: 140, h: 40, label: "Pivot Topic", fill: EXCALIDRAW_RED },
+  { type: "rect" as const, x: 320, y: 60, w: 320, h: 100, label: "Content Strategy", fill: EXCALIDRAW_BLUE },
+  { type: "arrow" as const, x1: 480, y1: 160, x2: 480, y2: 220 },
+  { type: "rect" as const, x: 240, y: 220, w: 480, h: 90, label: "Post Mon/Wed/Fri 6PM", fill: EXCALIDRAW_GREEN },
+  { type: "arrow" as const, x1: 720, y1: 264, x2: 800, y2: 264 },
+  { type: "rect" as const, x: 800, y: 220, w: 520, h: 90, label: "Top Topics: Cooking, Travel", fill: EXCALIDRAW_AMBER },
+  { type: "diamond" as const, x: 360, y: 360, w: 280, h: 140, label: "Engage > 8%?", fill: "#f5f5f5" },
+  { type: "arrow" as const, x1: 260, y1: 430, x2: 120, y2: 520, label: "No" },
+  { type: "arrow" as const, x1: 640, y1: 430, x2: 780, y2: 520, label: "Yes" },
+  { type: "rect" as const, x: 700, y: 520, w: 260, h: 80, label: "Scale Up", fill: EXCALIDRAW_GREEN },
+  { type: "rect" as const, x: 20, y: 520, w: 280, h: 80, label: "Pivot Topic", fill: EXCALIDRAW_RED },
 ];
 
-// Frame ranges for each element's draw animation (shifted +30 for prompt typing)
-const ELEMENT_TIMING: Array<[number, number]> = [
-  [55, 80],   // 0: Content Strategy rect
-  [80, 92],   // 1: arrow down
-  [92, 118],  // 2: Post schedule box
-  [118, 135], // 3: arrow right
-  [135, 162], // 4: Top Topics box
-  [162, 182], // 5: diamond decision
-  [182, 196], // 6: No arrow
-  [196, 210], // 7: Yes arrow
-  [210, 235], // 8: Scale Up box
-  [235, 260], // 9: Pivot Topic box
-];
+// Speed ramp: first 3 elements at normal pace, remaining accelerate (snowball effect)
+function computeElementTiming(): Array<[number, number]> {
+  const timing: Array<[number, number]> = [];
+  let currentFrame = 55; // After prompt typing
+
+  for (let i = 0; i < FLOWCHART_ELEMENTS.length; i++) {
+    let duration: number;
+    if (i < 3) {
+      duration = 25; // Normal speed for first 3 elements
+    } else {
+      // Accelerate: each subsequent element draws faster, minimum 8 frames
+      duration = Math.max(8, 20 - (i - 3) * 2);
+    }
+    timing.push([currentFrame, currentFrame + duration]);
+    currentFrame += duration;
+  }
+  return timing;
+}
+
+const ELEMENT_TIMING = computeElementTiming();
 
 // Determine visibleUpTo and drawProgress from frame
 function getDrawState(frame: number): { visibleUpTo: number; drawProgress: number } {
@@ -109,10 +116,10 @@ export const Act6Excalidraw: React.FC = () => {
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
-  // Glow pulse on completed flowchart (F260-280)
+  // Glow pulse on completed flowchart (F220-240)
   const glowIntensity = interpolate(
     frame,
-    [260, 270, 280],
+    [220, 230, 240],
     [0, 1, 0],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
@@ -121,21 +128,21 @@ export const Act6Excalidraw: React.FC = () => {
 
   // Chat content: prompt typing then user bubble
   const chatContent = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, height: "100%", justifyContent: "flex-end" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16, height: "100%", justifyContent: "flex-end" }}>
       {/* User message bubble after typing completes */}
       {showPromptBubble && (
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <div
             style={{
               backgroundColor: ACCENT,
-              borderRadius: 12,
-              padding: "8px 14px",
+              borderRadius: 24,
+              padding: "16px 28px",
               maxWidth: "90%",
               transform: `scale(${promptBubbleScaleVal})`,
               transformOrigin: "bottom right",
             }}
           >
-            <span style={{ fontSize: 12, color: "white", fontWeight: 500, lineHeight: 1.3 }}>
+            <span style={{ fontSize: 24, color: "white", fontWeight: 500, lineHeight: 1.3 }}>
               {/* Highlight "draw me" and "engagement plan" */}
               <span>create: </span>
               <span style={{ fontWeight: 700, textDecoration: "underline", textDecorationColor: "rgba(255,255,255,0.5)" }}>draw me</span>
@@ -164,7 +171,7 @@ export const Act6Excalidraw: React.FC = () => {
             justifyContent: "center",
           }}
         >
-          <span style={{ fontSize: 12, color: TEXT_MUTED }}>Dashboard</span>
+          <span style={{ fontSize: 24, color: TEXT_MUTED }}>Dashboard</span>
         </div>
       )}
 
@@ -181,10 +188,10 @@ export const Act6Excalidraw: React.FC = () => {
         {/* Drawing selector header */}
         <div
           style={{
-            height: 32,
+            height: 64,
             display: "flex",
             alignItems: "center",
-            padding: "0 10px",
+            padding: "0 20px",
             borderBottom: "1px solid rgba(0,0,0,0.08)",
             background: "#fafafa",
             opacity: selectorOpacity,
@@ -195,20 +202,20 @@ export const Act6Excalidraw: React.FC = () => {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              padding: "4px 10px",
-              borderRadius: 6,
+              gap: 12,
+              padding: "8px 20px",
+              borderRadius: 12,
               border: "1px solid #e0e0e0",
               background: "#fff",
             }}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
             </svg>
-            <span style={{ fontSize: 11, fontWeight: 500, color: "#333", fontFamily: FONT_SANS }}>
+            <span style={{ fontSize: 22, fontWeight: 500, color: "#333", fontFamily: FONT_SANS }}>
               Engagement Plan
             </span>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m6 9 6 6 6-6" />
             </svg>
           </div>
@@ -220,7 +227,7 @@ export const Act6Excalidraw: React.FC = () => {
             flex: 1,
             position: "relative",
             boxShadow: glowIntensity > 0
-              ? `inset 0 0 ${20 * glowIntensity}px rgba(245, 158, 11, ${0.15 * glowIntensity})`
+              ? `inset 0 0 ${40 * glowIntensity}px rgba(245, 158, 11, ${0.15 * glowIntensity})`
               : "none",
           }}
         >
@@ -239,19 +246,17 @@ export const Act6Excalidraw: React.FC = () => {
       <CameraMove
         keyframes={[
           // F0: Zoom into chat panel to see prompt typing
-          { frame: 0, rotateX: 0.5, rotateY: 1, scale: 1.4, translateX: 190, translateY: -80 },
+          { frame: 0, rotateX: 0.5, rotateY: 1, scale: 1.4, translateX: 380, translateY: -160 },
           // F30: Hold on chat to see the prompt bubble
-          { frame: 30, scale: 1.4, translateX: 190, translateY: -80, rotateY: 1.5, rotateX: 0.5 },
+          { frame: 30, scale: 1.4, translateX: 380, translateY: -160, rotateY: 1.5, rotateX: 0.5 },
           // F50: Quick shift to canvas area to watch diagram draw
-          { frame: 50, scale: 1.05, translateX: -30, translateY: 0, rotateY: -1, rotateX: 1 },
-          // F120: Gentle drift while drawing continues
-          { frame: 120, rotateX: 1.5, rotateY: -2, scale: 1.03, translateX: -20, translateY: -10 },
-          // F200: Slow drift as bottom elements draw
-          { frame: 200, rotateX: 1, rotateY: 1, scale: 1.02, translateX: 10, translateY: -5 },
-          // F270: Settle to overview after glow
-          { frame: 280, rotateX: 0.5, rotateY: 0.5, scale: 1.01, translateX: 0, translateY: 0 },
-          // F320: Rest
-          { frame: 320, rotateX: 0, rotateY: 0, scale: 1.0, translateX: 0, translateY: 0 },
+          { frame: 50, scale: 1.05, translateX: -60, translateY: 0, rotateY: -1, rotateX: 1 },
+          // F120: Gentle drift while drawing accelerates
+          { frame: 120, rotateX: 1.5, rotateY: -2, scale: 1.03, translateX: -40, translateY: -20 },
+          // F200: Settle to overview as glow begins
+          { frame: 200, rotateX: 0.5, rotateY: 0.5, scale: 1.01, translateX: 0, translateY: 0 },
+          // F240: Rest
+          { frame: 240, rotateX: 0, rotateY: 0, scale: 1.0, translateX: 0, translateY: 0 },
         ]}
       >
         <AppShell

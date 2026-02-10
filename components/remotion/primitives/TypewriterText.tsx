@@ -44,7 +44,7 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
         <span
           style={{
             opacity: isComplete ? cursorOpacity : 1,
-            marginLeft: 1,
+            marginLeft: 2,
           }}
         >
           {"\u258C"}

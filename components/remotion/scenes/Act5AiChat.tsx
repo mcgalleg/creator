@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate, Easing } from "remotion";
 import { AppShell } from "../primitives/AppShell";
 import { MockMetricCard } from "../primitives/MockMetricCard";
 import { MockAreaChart } from "../primitives/MockAreaChart";
@@ -26,8 +26,8 @@ const QUERY_TEXT = "What are my top performing videos?";
 const BotIcon: React.FC = () => (
   <div
     style={{
-      width: 22,
-      height: 22,
+      width: 44,
+      height: 44,
       borderRadius: "50%",
       background: "#7c3aed",
       display: "flex",
@@ -37,8 +37,8 @@ const BotIcon: React.FC = () => (
     }}
   >
     <svg
-      width="12"
-      height="12"
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
       fill="none"
       stroke="white"
@@ -54,8 +54,8 @@ const BotIcon: React.FC = () => (
 // Pencil icon for Pin to Canvas button
 const PencilSmallIcon: React.FC = () => (
   <svg
-    width="12"
-    height="12"
+    width="24"
+    height="24"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -82,14 +82,14 @@ const ChatContent: React.FC = () => {
     : 0;
   const userBubbleScaleVal = interpolate(userBubbleScale, [0, 1], [0.9, 1]);
 
-  // --- Skeleton (F70-85) ---
-  const showSkeleton = frame >= 70 && frame < 85;
+  // --- Skeleton (F70-95, extended from 15 to 25 frames) ---
+  const showSkeleton = frame >= 70 && frame < 95;
 
-  // --- AI response (F85+) ---
-  const showAiResponse = frame >= 85;
+  // --- AI response (F95+, shifted +10) ---
+  const showAiResponse = frame >= 95;
   const aiResponseScale = showAiResponse
     ? spring({
-        frame: frame - 85,
+        frame: frame - 95,
         fps,
         config: { damping: 14 },
       })
@@ -101,7 +101,7 @@ const ChatContent: React.FC = () => {
     frame,
     [130, 142],
     [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
   );
 
   // Button click effect at F155
@@ -129,7 +129,7 @@ const ChatContent: React.FC = () => {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: 8,
+        gap: 16,
         height: "100%",
         fontFamily: FONT_SANS,
         overflow: "hidden",
@@ -157,15 +157,15 @@ const ChatContent: React.FC = () => {
           <div
             style={{
               backgroundColor: ACCENT,
-              borderRadius: 12,
-              padding: "8px 14px",
+              borderRadius: 24,
+              padding: "16px 28px",
               maxWidth: "85%",
               transform: `scale(${userBubbleScaleVal})`,
             }}
           >
             <span
               style={{
-                fontSize: 13,
+                fontSize: 26,
                 color: "white",
                 fontWeight: 500,
                 lineHeight: 1.3,
@@ -179,7 +179,7 @@ const ChatContent: React.FC = () => {
 
       {/* Skeleton loading */}
       {showSkeleton && (
-        <div style={{ padding: "4px 0" }}>
+        <div style={{ padding: "8px 0" }}>
           <SkeletonPulse lines={3} startFrame={70} />
         </div>
       )}
@@ -189,7 +189,7 @@ const ChatContent: React.FC = () => {
         <div
           style={{
             display: "flex",
-            gap: 6,
+            gap: 12,
             alignItems: "flex-start",
             transform: `scale(${aiScaleVal})`,
             transformOrigin: "top left",
@@ -199,28 +199,28 @@ const ChatContent: React.FC = () => {
           <div
             style={{
               background: "#1e1e2e",
-              borderRadius: 12,
-              padding: "10px 14px",
+              borderRadius: 24,
+              padding: "20px 28px",
               maxWidth: "85%",
               display: "flex",
               flexDirection: "column",
-              gap: 6,
+              gap: 12,
             }}
           >
             <TypewriterText
               text="Here's your top performing content analysis:"
-              startFrame={85}
+              startFrame={95}
               charsPerFrame={0.8}
               showCursor={false}
               style={{
-                fontSize: 12,
+                fontSize: 24,
                 color: TEXT_PRIMARY,
                 lineHeight: 1.4,
               }}
             />
-            {frame >= 100 && (
-              <div style={{ marginTop: 4 }}>
-                <MockLineChart startFrame={100} durationFrames={30} />
+            {frame >= 110 && (
+              <div style={{ marginTop: 8 }}>
+                <MockLineChart startFrame={110} durationFrames={30} />
               </div>
             )}
           </div>
@@ -233,7 +233,7 @@ const ChatContent: React.FC = () => {
           style={{
             display: "flex",
             justifyContent: "flex-start",
-            paddingLeft: 28,
+            paddingLeft: 56,
             opacity: pinOpacity,
           }}
         >
@@ -241,16 +241,16 @@ const ChatContent: React.FC = () => {
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 4,
+              gap: 8,
               border: `1px solid rgba(255,255,255,${0.15 + pinGlow * 0.5})`,
-              borderRadius: 8,
-              padding: "4px 10px",
+              borderRadius: 16,
+              padding: "8px 20px",
               color: TEXT_MUTED,
-              fontSize: 11,
+              fontSize: 22,
               fontFamily: FONT_SANS,
               transform: `scale(${pinScale})`,
               boxShadow: pinGlow > 0
-                ? `0 0 8px ${ACCENT}${Math.round(pinGlow * 80).toString(16).padStart(2, "0")}`
+                ? `0 0 16px ${ACCENT}${Math.round(pinGlow * 80).toString(16).padStart(2, "0")}`
                 : "none",
             }}
           >
@@ -270,8 +270,8 @@ const StaticDashboardContent: React.FC = () => (
       style={{
         display: "flex",
         flexWrap: "wrap",
-        gap: 12,
-        padding: 16,
+        gap: 24,
+        padding: 32,
       }}
     >
       <MockMetricCard
@@ -304,7 +304,7 @@ const StaticDashboardContent: React.FC = () => (
         startFrame={-100}
       />
     </div>
-    <div style={{ padding: "0 16px", marginTop: 12 }}>
+    <div style={{ padding: "0 32px", marginTop: 24 }}>
       <MockAreaChart startFrame={-200} durationFrames={80} />
     </div>
   </div>
@@ -315,7 +315,7 @@ export const Act5AiChat: React.FC = () => {
 
   // Compute the typewriter text progress for the input field display
   const elapsed = Math.max(0, frame - 10);
-  const charsToShow = Math.min(QUERY_TEXT.length, Math.floor(elapsed * 0.9));
+  const charsToShow = Math.min(QUERY_TEXT.length, Math.floor(elapsed * 0.5));
   const typedText = frame >= 10 && frame < 55 ? QUERY_TEXT.slice(0, charsToShow) : "";
 
   return (
@@ -325,16 +325,16 @@ export const Act5AiChat: React.FC = () => {
           // Start: normal view
           { frame: 0, scale: 1.0, translateX: 0, translateY: 0, rotateY: 1, rotateX: 1 },
           // F10: Zoom into chat input (bottom-left) to watch typing
-          { frame: 10, scale: 1.5, translateX: 200, translateY: -100, rotateY: 2, rotateX: 0.5 },
+          { frame: 10, scale: 1.5, translateX: 400, translateY: -200, rotateY: 2, rotateX: 0.5 },
           // F50: Hold on chat input through typing
-          { frame: 50, scale: 1.5, translateX: 200, translateY: -100, rotateY: 2, rotateX: 0.5 },
+          { frame: 50, scale: 1.5, translateX: 400, translateY: -200, rotateY: 2, rotateX: 0.5 },
           // F65: Quick shift up to chat response area (top of chat panel)
-          { frame: 65, scale: 1.4, translateX: 180, translateY: 60, rotateY: 2, rotateX: 1 },
+          { frame: 65, scale: 1.4, translateX: 360, translateY: 120, rotateY: 2, rotateX: 1 },
           // F100: Hold on response while chart renders
-          { frame: 100, scale: 1.4, translateX: 180, translateY: 60, rotateY: 2, rotateX: 1 },
+          { frame: 100, scale: 1.4, translateX: 360, translateY: 120, rotateY: 2, rotateX: 1 },
           // F130: Zoom back out to show full UI + pin button
           { frame: 130, scale: 1.0, translateX: 0, translateY: 0, rotateY: -2, rotateX: 1 },
-          { frame: 180, scale: 1.0, translateX: -10, translateY: 0, rotateY: -1, rotateX: 0.5 },
+          { frame: 180, scale: 1.0, translateX: -20, translateY: 0, rotateY: -1, rotateX: 0.5 },
         ]}
       >
         <AppShell

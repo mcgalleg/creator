@@ -9,3 +9,4 @@ export { MockExcalidrawCanvas } from "./MockExcalidrawCanvas";
 export { SkeletonPulse } from "./SkeletonPulse";
 export { GlowButton } from "./GlowButton";
 export { CameraMove } from "./CameraMove";
+export { BackgroundAmbient } from "./BackgroundAmbient";

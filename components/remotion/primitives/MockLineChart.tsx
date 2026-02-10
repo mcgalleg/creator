@@ -19,11 +19,11 @@ export const MockLineChart: React.FC<MockLineChartProps> = ({
 }) => {
   const frame = useCurrentFrame();
 
-  const svgWidth = 280;
-  const svgHeight = 140;
-  const paddingX = 20;
-  const paddingTop = 15;
-  const paddingBottom = 15;
+  const svgWidth = 560;
+  const svgHeight = 280;
+  const paddingX = 40;
+  const paddingTop = 30;
+  const paddingBottom = 30;
   const chartWidth = svgWidth - paddingX * 2;
   const chartHeight = svgHeight - paddingTop - paddingBottom;
 
@@ -89,7 +89,7 @@ export const MockLineChart: React.FC<MockLineChartProps> = ({
             x2={svgWidth - paddingX}
             y2={y}
             stroke="rgba(255,255,255,0.06)"
-            strokeWidth={1}
+            strokeWidth={2}
           />
         );
       })}
@@ -102,7 +102,7 @@ export const MockLineChart: React.FC<MockLineChartProps> = ({
         d={linePath}
         fill="none"
         stroke={CHART_BLUE}
-        strokeWidth={3}
+        strokeWidth={6}
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeDasharray={strokeDasharray}
@@ -122,7 +122,7 @@ export const MockLineChart: React.FC<MockLineChartProps> = ({
             key={i}
             cx={p.x}
             cy={p.y}
-            r={3}
+            r={6}
             fill={CHART_BLUE}
             opacity={pointProgress}
           />

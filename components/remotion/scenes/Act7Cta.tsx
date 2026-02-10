@@ -7,13 +7,16 @@ import {
   useVideoConfig,
   spring,
   interpolate,
+  Easing,
   Img,
   staticFile,
 } from "remotion";
 import { GlowButton } from "../primitives/GlowButton";
+import { KineticText } from "../primitives/KineticText";
 import {
   BG_DARK,
   ACCENT,
+  TEXT_MUTED,
   FONT_SANS,
   HEADER_HEIGHT,
   CHAT_WIDTH_RATIO,
@@ -30,7 +33,7 @@ export const Act7Cta: React.FC = () => {
     frame,
     [0, 20],
     [1.0, 0.85],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) }
   );
 
   // F0-20: Dark overlay opacity 0 -> 0.7
@@ -38,7 +41,7 @@ export const Act7Cta: React.FC = () => {
     frame,
     [0, 20],
     [0, 0.7],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) }
   );
 
   // F15-35: Logo bounces in
@@ -55,10 +58,10 @@ export const Act7Cta: React.FC = () => {
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
-  // F85-100: Fade to BG_DARK for seamless loop
+  // F95-110: Fade to BG_DARK for seamless loop (shifted for extended act)
   const finalFadeOpacity = interpolate(
     frame,
-    [85, 100],
+    [95, 110],
     [0, 1],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
@@ -89,14 +92,14 @@ export const Act7Cta: React.FC = () => {
               height: HEADER_HEIGHT,
               display: "flex",
               alignItems: "center",
-              padding: "0 12px",
+              padding: "0 24px",
               borderBottom: `1px solid ${borderColor}`,
               flexShrink: 0,
             }}
           >
             <Img
               src={staticFile("logo.png")}
-              style={{ height: 24, objectFit: "contain", filter: "invert(1)" }}
+              style={{ height: 48, objectFit: "contain", filter: "invert(1)" }}
             />
           </div>
           {/* Body */}
@@ -139,9 +142,25 @@ export const Act7Cta: React.FC = () => {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: 24,
+          gap: 32,
         }}
       >
+        {/* Tagline above logo */}
+        {frame >= 10 && (
+          <KineticText
+            text="Turn data into strategy"
+            startFrame={10}
+            durationFrames={15}
+            entrance={{ type: "fadeIn" }}
+            style={{
+              fontSize: 40,
+              fontWeight: 500,
+              color: TEXT_MUTED,
+              textAlign: "center",
+            }}
+          />
+        )}
+
         {/* Logo */}
         {frame >= 15 && (
           <div
@@ -153,7 +172,7 @@ export const Act7Cta: React.FC = () => {
             <Img
               src={staticFile("logo.png")}
               style={{
-                height: 80,
+                height: 160,
                 width: "auto",
                 filter: "invert(1)",
               }}
@@ -167,6 +186,22 @@ export const Act7Cta: React.FC = () => {
             text="Start Free Trial →"
             startFrame={30}
             glowColor={ACCENT}
+          />
+        )}
+
+        {/* Secondary text */}
+        {frame >= 40 && (
+          <KineticText
+            text="Free for 14 days"
+            startFrame={40}
+            durationFrames={15}
+            entrance={{ type: "fadeIn" }}
+            style={{
+              fontSize: 28,
+              fontWeight: 400,
+              color: TEXT_MUTED,
+              textAlign: "center",
+            }}
           />
         )}
       </AbsoluteFill>

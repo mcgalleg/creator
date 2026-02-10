@@ -14,12 +14,12 @@ const PLAYS_DATA = [120, 180, 150, 220, 190, 250, 230, 280, 260, 300, 270, 310];
 const LIKES_DATA = [40, 60, 55, 80, 70, 95, 85, 110, 100, 120, 105, 130];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const SVG_W = 440;
-const SVG_H = 200;
-const PAD_LEFT = 30;
-const PAD_RIGHT = 10;
-const PAD_TOP = 10;
-const PAD_BOTTOM = 24;
+const SVG_W = 880;
+const SVG_H = 400;
+const PAD_LEFT = 60;
+const PAD_RIGHT = 20;
+const PAD_TOP = 20;
+const PAD_BOTTOM = 48;
 const CHART_W = SVG_W - PAD_LEFT - PAD_RIGHT;
 const CHART_H = SVG_H - PAD_TOP - PAD_BOTTOM;
 
@@ -74,17 +74,17 @@ export const MockAreaChart: React.FC<MockAreaChartProps> = ({
       style={{
         background: "#18181b",
         border: "1px solid rgba(255,255,255,0.08)",
-        borderRadius: 12,
-        padding: 12,
+        borderRadius: 24,
+        padding: 24,
         fontFamily: FONT_SANS,
       }}
     >
       <div
         style={{
-          fontSize: 13,
+          fontSize: 26,
           fontWeight: 600,
           color: TEXT_PRIMARY,
-          marginBottom: 8,
+          marginBottom: 16,
         }}
       >
         Engagement Trends
@@ -112,7 +112,7 @@ export const MockAreaChart: React.FC<MockAreaChartProps> = ({
               x2={SVG_W - PAD_RIGHT}
               y2={y}
               stroke="rgba(255,255,255,0.06)"
-              strokeWidth={1}
+              strokeWidth={2}
             />
           );
         })}
@@ -126,7 +126,7 @@ export const MockAreaChart: React.FC<MockAreaChartProps> = ({
           d={playsLine}
           fill="none"
           stroke={CHART_BLUE}
-          strokeWidth={2.5}
+          strokeWidth={5}
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeDasharray={playsEvolve.strokeDasharray}
@@ -138,7 +138,7 @@ export const MockAreaChart: React.FC<MockAreaChartProps> = ({
           d={likesLine}
           fill="none"
           stroke={CHART_GREEN}
-          strokeWidth={2.5}
+          strokeWidth={5}
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeDasharray={likesEvolve.strokeDasharray}
@@ -152,10 +152,10 @@ export const MockAreaChart: React.FC<MockAreaChartProps> = ({
             <text
               key={month}
               x={x}
-              y={SVG_H - 4}
+              y={SVG_H - 8}
               textAnchor="middle"
               fill={TEXT_MUTED}
-              fontSize={9}
+              fontSize={18}
               fontFamily={FONT_SANS}
             >
               {month}
@@ -165,14 +165,14 @@ export const MockAreaChart: React.FC<MockAreaChartProps> = ({
       </svg>
 
       {/* Legend */}
-      <div style={{ display: "flex", gap: 16, marginTop: 6 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <div style={{ width: 8, height: 8, borderRadius: 2, background: CHART_BLUE }} />
-          <span style={{ fontSize: 10, color: TEXT_MUTED }}>Plays</span>
+      <div style={{ display: "flex", gap: 32, marginTop: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 16, height: 16, borderRadius: 4, background: CHART_BLUE }} />
+          <span style={{ fontSize: 20, color: TEXT_MUTED }}>Plays</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <div style={{ width: 8, height: 8, borderRadius: 2, background: CHART_GREEN }} />
-          <span style={{ fontSize: 10, color: TEXT_MUTED }}>Likes</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 16, height: 16, borderRadius: 4, background: CHART_GREEN }} />
+          <span style={{ fontSize: 20, color: TEXT_MUTED }}>Likes</span>
         </div>
       </div>
     </div>
