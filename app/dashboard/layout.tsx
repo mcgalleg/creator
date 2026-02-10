@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { auth, isAuthBypassed, hasFeature, FEATURES } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
@@ -6,7 +7,7 @@ import { tiktokAccounts, users } from "@/lib/db/schema";
 import { CompactHeader } from "@/components/dashboard/compact-header";
 import { TrialBanner } from "@/components/dashboard/trial-banner";
 import { ResponsiveLayout } from "@/components/dashboard/responsive-layout";
-import { OnboardingFlow } from "@/components/onboarding";
+import { Loader2 } from "lucide-react";
 import { CreditsProvider } from "@/components/dashboard/credits-provider";
 import { FeatureAccessProvider } from "@/contexts/feature-context";
 import { SyncProvider } from "@/contexts/sync-context";
@@ -52,6 +53,10 @@ export default async function DashboardLayout({
   const onboardingCompletedAt = userRecord[0]?.onboardingCompletedAt ?? null;
   const showOnboarding = accounts.length === 0 && !onboardingCompletedAt;
 
+  if (showOnboarding) {
+    redirect("/onboarding");
+  }
+
   // Resolve feature access server-side via Clerk has() (DB fallback in bypass mode)
   let features: Record<string, boolean> = {
     canvas: false,
@@ -84,15 +89,15 @@ export default async function DashboardLayout({
               />
             )}
             <div className="flex-1 overflow-hidden">
-              {showOnboarding ? (
-                <div className="h-full overflow-auto">
-                  <OnboardingFlow />
+              <Suspense fallback={
+                <div className="h-full flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : (
+              }>
                 <ResponsiveLayout accounts={accounts}>
                   {children}
                 </ResponsiveLayout>
-              )}
+              </Suspense>
             </div>
           </div>
         </SyncProvider>

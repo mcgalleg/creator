@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useState, useCallback, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { MessageSquare, LayoutDashboard, Pencil, Lock, Loader2 } from 'lucide-react';
 import { SplitPaneLayout } from './split-pane-layout';
 import { ViewTabs } from './view-tabs';
@@ -68,7 +68,13 @@ export function ResponsiveLayout({
   accounts,
   children,
 }: ResponsiveLayoutProps) {
-  const [tabletTab, setTabletTab] = useState<'dashboard' | 'draw' | 'chat'>('dashboard');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const initialTab = searchParams.get('tab');
+
+  const [tabletTab, setTabletTab] = useState<'dashboard' | 'draw' | 'chat'>(
+    initialTab === 'draw' ? 'draw' : initialTab === 'chat' ? 'chat' : 'dashboard'
+  );
   const [chatOpen, setChatOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
@@ -90,7 +96,18 @@ export function ResponsiveLayout({
   const hasNewDrawContent = drawingBridge?.hasNewContent ?? false;
 
   // Track active tab for controlled ViewTabs (desktop)
-  const [activeTab, setActiveTab] = useState<"dashboard" | "draw">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "draw">(
+    initialTab === 'draw' ? 'draw' : 'dashboard'
+  );
+
+  // Shared helper to update tab in URL search params
+  const updateTabParam = useCallback((tab: string) => {
+    if (tab === 'dashboard') {
+      router.replace('/dashboard', { scroll: false });
+    } else {
+      router.replace(`/dashboard?tab=${tab}`, { scroll: false });
+    }
+  }, [router]);
 
   const handleDrawContentViewed = useCallback(() => {
     drawingBridge?.markContentViewed();
@@ -101,6 +118,7 @@ export function ResponsiveLayout({
     if (tab === 'draw' && !canAccessCanvas) return;
     if (tab === 'chat' && !canAccessChat) return;
     setTabletTab(tab);
+    updateTabParam(tab);
     if (tab === 'draw') {
       handleDrawContentViewed();
     }
@@ -141,7 +159,10 @@ export function ResponsiveLayout({
             hasNewDrawContent={hasNewDrawContent}
             onDrawContentViewed={handleDrawContentViewed}
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={(tab) => {
+              setActiveTab(tab);
+              updateTabParam(tab);
+            }}
           />
         </SplitPaneLayout>
       </div>
@@ -239,6 +260,7 @@ export function ResponsiveLayout({
               activeTab={activeTab}
               onTabChange={(tab) => {
                 setActiveTab(tab);
+                updateTabParam(tab);
                 if (tab === 'draw') {
                   setChatOpen(false);
                 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { UserButton } from '@clerk/nextjs';
-import { Coins, Settings, Sparkles } from 'lucide-react';
+import { Coins, LayoutDashboard, Settings, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -25,10 +25,15 @@ export function CompactHeader() {
   const [mounted, setMounted] = useState(false);
   const { accounts, accountsLoading, isSyncing } = useSync();
 
+  // Brief delay before showing credits so Polar meter balances settle after signup
+  const [creditsSettled, setCreditsSettled] = useState(false);
+
   // Prevent hydration mismatch with Clerk UserButton
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional for hydration handling
     setMounted(true);
+    const timer = setTimeout(() => setCreditsSettled(true), 2_000);
+    return () => clearTimeout(timer);
   }, []);
 
   // Derive the effective selected account ID
@@ -45,7 +50,7 @@ export function CompactHeader() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center px-3 md:px-4 gap-2 md:gap-4">
         {/* Logo */}
-        <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
+        <Link href="/" className="flex items-center gap-2 shrink-0">
           <Image
             src="/logo.png"
             alt="Not a Bot"
@@ -128,7 +133,7 @@ export function CompactHeader() {
         )}
 
         {/* AI Tokens Badge */}
-        {!creditsLoading && aiTokens !== null && (
+        {!creditsLoading && creditsSettled && aiTokens !== null && (
           <Badge variant="secondary" className="gap-1 shrink-0 text-xs md:text-sm">
             <Sparkles className="h-3 w-3" />
             <span>{aiTokens >= 1000 ? `${Math.round(aiTokens / 1000)}K` : aiTokens}</span>
@@ -136,7 +141,7 @@ export function CompactHeader() {
         )}
 
         {/* Sync Credits Badge */}
-        {!creditsLoading && (
+        {!creditsLoading && creditsSettled && (
           <Badge variant="secondary" className="gap-1 shrink-0 text-xs md:text-sm">
             <Coins className="h-3 w-3" />
             <span>{credits}</span>
@@ -145,6 +150,14 @@ export function CompactHeader() {
 
         {/* Theme & Accent Color - defer to avoid hydration mismatch with Radix IDs */}
         {mounted && <AccentColorPicker />}
+
+        {/* Dashboard Button */}
+        <Button variant="ghost" size="icon-sm" asChild className="min-h-[36px] min-w-[36px] md:min-h-[32px] md:min-w-[32px]">
+          <Link href="/dashboard">
+            <LayoutDashboard className="h-4 w-4" />
+            <span className="sr-only">Dashboard</span>
+          </Link>
+        </Button>
 
         {/* Settings Button - touch-friendly sizing on mobile */}
         <Button variant="ghost" size="icon-sm" asChild className="min-h-[36px] min-w-[36px] md:min-h-[32px] md:min-w-[32px]">

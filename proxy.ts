@@ -2,7 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 // Protected routes require authentication
-const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"]);
+const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/onboarding"]);
 
 // Public routes: /, /api/auth/webhook (handled implicitly by not calling auth.protect())
 
@@ -12,15 +12,7 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  // Redirect signed-in users from landing page to dashboard
-  if (req.nextUrl.pathname === "/") {
-    const { userId } = await auth();
-    if (userId) {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
-    }
-  }
-
-  // Protect dashboard routes - require authentication
+  // Protect dashboard and onboarding routes - require authentication
   if (isProtectedRoute(req)) {
     await auth.protect();
   }
