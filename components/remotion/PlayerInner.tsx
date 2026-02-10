@@ -19,6 +19,8 @@ export default function PlayerInner() {
     if (!player) return;
     if (player.isMuted()) {
       player.unmute();
+      // Pause then re-play with the user gesture event to unlock audio on mobile Safari
+      player.pause();
       player.play(e);
       setMuted(false);
     } else {
@@ -51,8 +53,8 @@ export default function PlayerInner() {
           position: "absolute",
           bottom: 12,
           right: 12,
-          width: 36,
-          height: 36,
+          width: 44,
+          height: 44,
           borderRadius: "50%",
           background: "rgba(0, 0, 0, 0.6)",
           border: "1px solid rgba(255, 255, 255, 0.15)",
