@@ -1,6 +1,15 @@
 "use client";
 
-import { useState, useCallback, useEffect, createContext, useContext } from "react";
+import { createContext, useContext } from "react";
+import useSWR, { mutate } from "swr";
+
+export const CREDITS_KEY = "/api/credits";
+
+interface CreditsData {
+  balance: number;
+  aiTokens: number | null;
+  pricing: unknown;
+}
 
 interface CreditsState {
   balance: number;
@@ -11,6 +20,13 @@ interface CreditsState {
 }
 
 const CreditsContext = createContext<CreditsState | null>(null);
+
+const creditsFetcher = async (url: string): Promise<CreditsData> => {
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to fetch credits");
+  return data;
+};
 
 /**
  * Hook for fetching and managing user credit balance.
@@ -26,46 +42,35 @@ export function useCredits(): CreditsState {
   return useCreditsInternal();
 }
 
-function useCreditsInternal(): CreditsState {
-  const [balance, setBalance] = useState<number>(0);
-  const [aiTokens, setAiTokens] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchCredits = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch("/api/credits");
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to fetch credits");
-      }
-
-      setBalance(data.balance);
-      setAiTokens(data.aiTokens ?? null);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch credits";
-      setError(message);
-    } finally {
-      setLoading(false);
+function useCreditsInternal(overrideOptions?: { refreshInterval?: number }): CreditsState {
+  const { data, error, isLoading, mutate: boundMutate } = useSWR<CreditsData>(
+    CREDITS_KEY,
+    creditsFetcher,
+    {
+      refreshInterval: overrideOptions?.refreshInterval ?? 10_000,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 2_000,
+      refreshWhenHidden: false,
+      keepPreviousData: true,
     }
-  }, []);
-
-  // Fetch credits on mount
-  useEffect(() => {
-    fetchCredits();
-  }, [fetchCredits]);
+  );
 
   return {
-    balance,
-    aiTokens,
-    loading,
-    error,
-    refresh: fetchCredits,
+    balance: data?.balance ?? 0,
+    aiTokens: data?.aiTokens ?? null,
+    loading: isLoading,
+    error: error ? (error instanceof Error ? error.message : "Failed to fetch credits") : null,
+    refresh: async () => { await boundMutate(); },
   };
+}
+
+/**
+ * Imperatively revalidate credits from anywhere (no hook required).
+ * Useful for event-driven refreshes after credit-affecting operations.
+ */
+export function invalidateCredits() {
+  mutate(CREDITS_KEY);
 }
 
 export { CreditsContext, useCreditsInternal };

@@ -33,13 +33,27 @@ export async function getUserCredits(userId: string): Promise<number> {
 }
 
 /**
- * Verify user has sufficient sync credit balance
+ * Verify user has sufficient sync credit balance.
+ * Reads from Polar (source of truth) first, falls back to local DB cache.
  */
 export async function checkCredits(
   userId: string,
   amount: number
 ): Promise<{ sufficient: boolean; balance: number; required: number }> {
-  const balance = await getUserCredits(userId);
+  let balance: number;
+
+  try {
+    const meterBalances = await getPolarMeterBalances(userId);
+    balance = meterBalances.syncCredits;
+
+    // Fire-and-forget: update local DB cache
+    syncCreditBalance(userId).catch((err) =>
+      console.error("Background cache sync failed in checkCredits:", err)
+    );
+  } catch {
+    // Polar unreachable — fall back to local DB cache
+    balance = await getUserCredits(userId);
+  }
 
   return {
     sufficient: balance >= amount,

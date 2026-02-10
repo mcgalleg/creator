@@ -8,8 +8,8 @@ import { syncCreditBalance } from "@/lib/services/credit-service";
 
 /**
  * Start a 14-day Pro trial for a new user.
- * Sets tier to "pro", sets trialEndsAt, ingests bonus credits to Polar meters,
- * and syncs local credit balance.
+ * Sets tier to "pro", sets trialEndsAt, and ingests bonus credits to Polar meters.
+ * Local credit balance syncs on first GET /api/credits via sync-on-read.
  */
 export async function startTrial(userId: string): Promise<void> {
   const trialEndsAt = new Date();
@@ -31,9 +31,6 @@ export async function startTrial(userId: string): Promise<void> {
   await ingestAiTokenEvent(userId, TRIAL_BONUS_AI_TOKENS, {
     type: "trial_bonus",
   });
-
-  // Sync local balance from Polar
-  await syncCreditBalance(userId);
 }
 
 /**
