@@ -77,9 +77,12 @@ export function Footer() {
                   </a>
                 </li>
                 <li>
-                  <span className="cursor-default text-muted-foreground/60">
+                  <Link
+                    href="/docs"
+                    className="hover:text-foreground transition-colors"
+                  >
                     Documentation
-                  </span>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -89,14 +92,20 @@ export function Footer() {
               <h4 className="text-sm font-semibold">Legal</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <span className="cursor-default text-muted-foreground/60">
+                  <Link
+                    href="/privacy"
+                    className="hover:text-foreground transition-colors"
+                  >
                     Privacy Policy
-                  </span>
+                  </Link>
                 </li>
                 <li>
-                  <span className="cursor-default text-muted-foreground/60">
+                  <Link
+                    href="/terms"
+                    className="hover:text-foreground transition-colors"
+                  >
                     Terms of Service
-                  </span>
+                  </Link>
                 </li>
               </ul>
             </div>
