@@ -1,0 +1,119 @@
+import Link from "next/link";
+import Image from "next/image";
+import { Separator } from "@/components/ui/separator";
+import { AccentColorPicker } from "@/components/accent-color-picker";
+import { AnimateOnScroll } from "@/components/landing/animate-on-scroll";
+
+export function Footer() {
+  return (
+    <footer className="border-t bg-muted/20">
+      <div className="container mx-auto max-w-6xl px-4 py-12">
+        <AnimateOnScroll>
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Brand column */}
+            <div className="space-y-4">
+              <Image
+                src="/logo.png"
+                alt="Not a Bot"
+                width={100}
+                height={33}
+                className="h-6 w-auto dark:invert"
+              />
+              <p className="text-sm text-muted-foreground">
+                AI-powered TikTok analytics for creators and brands.
+              </p>
+              <AccentColorPicker />
+            </div>
+
+            {/* Product column */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold">Product</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <Link
+                    href="/dashboard"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Dashboard
+                  </Link>
+                </li>
+                <li>
+                  <a
+                    href="#pricing"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Pricing
+                  </a>
+                </li>
+                <li>
+                  <Link
+                    href="/dashboard"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Canvas
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/dashboard"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    AI Copilot
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Resources column */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold">Resources</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <a
+                    href="#faq"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    FAQ
+                  </a>
+                </li>
+                <li>
+                  <span className="cursor-default text-muted-foreground/60">
+                    Documentation
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Legal column */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold">Legal</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <span className="cursor-default text-muted-foreground/60">
+                    Privacy Policy
+                  </span>
+                </li>
+                <li>
+                  <span className="cursor-default text-muted-foreground/60">
+                    Terms of Service
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </AnimateOnScroll>
+
+        <Separator className="my-8" />
+
+        <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+          <p className="text-sm text-muted-foreground">
+            &copy; 2026 Not a Bot. All rights reserved.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Built with AI. Designed for creators.
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}
