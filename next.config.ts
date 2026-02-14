@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  serverExternalPackages: ["remotion", "@remotion/player", "@remotion/media", "@remotion/media-utils"],
 };
 
 export default nextConfig;

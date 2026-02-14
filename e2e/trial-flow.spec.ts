@@ -47,6 +47,7 @@ async function getTrialState(userId: string = TEST_USER_ID) {
 /**
  * Reset subscription to free via test API.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function resetSubscription(userId: string = TEST_USER_ID) {
   const res = await fetch(`${BASE_URL}/api/test/reset-subscription`, {
     method: "POST",

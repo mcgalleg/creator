@@ -10,7 +10,7 @@ interface TrialBannerProps {
   daysRemaining: number;
 }
 
-export function TrialBanner({ trialEndsAt, daysRemaining }: TrialBannerProps) {
+export function TrialBanner({ daysRemaining }: TrialBannerProps) {
   const isUrgent = daysRemaining <= 3;
 
   return (
