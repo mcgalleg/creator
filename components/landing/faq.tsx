@@ -23,7 +23,7 @@ const FAQ_ITEMS = [
   {
     question: "Is my TikTok data safe?",
     answer:
-      "We use official TikTok APIs and never store your password. Your data is encrypted at rest and in transit. We never share your data with third parties or use it for any purpose other than providing you with analytics.",
+      "Your data is encrypted at rest and in transit. We never store your password, share your data with third parties, or use it for any purpose other than providing you with analytics.",
   },
   {
     question: "What are sync credits?",
@@ -38,7 +38,7 @@ const FAQ_ITEMS = [
   {
     question: "What is the Canvas workspace?",
     answer:
-      "Canvas is a freeform workspace where you can pin charts, metrics, and notes to create custom dashboards. Drag, resize, and arrange your analytics exactly how you want them.",
+      "Canvas is a freeform workspace where you can create custom drawings and diagrams from your data set. Add shapes, text, sticky notes, and sketches to visually map out your content strategy and insights.",
   },
   {
     question: "Do I need a credit card to start?",

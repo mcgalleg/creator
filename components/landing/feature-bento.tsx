@@ -9,7 +9,6 @@ import {
   RefreshCw,
   Palette,
   Download,
-  Keyboard,
   Sparkles,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -163,7 +162,7 @@ export function FeatureBento() {
             className="sm:col-span-2 lg:col-span-3 lg:row-span-2"
             icon={Layout}
             title="Canvas Workspace"
-            description="Pin charts, notes, and insights to a freeform canvas for visual exploration."
+            description="Drag notes, shapes, and insights onto a freeform canvas for visual exploration."
           >
             <CanvasMockup />
           </BentoCard>
@@ -198,25 +197,47 @@ export function FeatureBento() {
             className="lg:col-span-2"
             icon={RefreshCw}
             title="Smart Sync"
-            description="3 sync strategies"
+            description="Full, incremental, or quick sync — pull fresh video stats, follower data, and engagement metrics from TikTok on your schedule"
           />
           <BentoCard
             className="lg:col-span-2"
             icon={Palette}
             title="17 Themes"
             description="Match your brand"
-          />
+          >
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {[
+                "#f59e0b", // amber
+                "#3b82f6", // blue
+                "#06b6d4", // cyan
+                "#10b981", // emerald
+                "#d946ef", // fuchsia
+                "#22c55e", // green
+                "#6366f1", // indigo
+                "#84cc16", // lime
+                "#f97316", // orange
+                "#ec4899", // pink
+                "#a855f7", // purple
+                "#ef4444", // red
+                "#f43f5e", // rose
+                "#0ea5e9", // sky
+                "#14b8a6", // teal
+                "#8b5cf6", // violet
+                "#eab308", // yellow
+              ].map((color) => (
+                <div
+                  key={color}
+                  className="size-4 rounded-full ring-1 ring-border/50"
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </BentoCard>
           <BentoCard
             className="lg:col-span-2"
             icon={Download}
             title="Export Reports"
-            description="PDF & CSV exports"
-          />
-          <BentoCard
-            className="lg:col-span-2"
-            icon={Keyboard}
-            title="Keyboard Shortcuts"
-            description="Power-user shortcuts"
+            description="Export your Canvas workspace and dashboard views as PDF or CSV for sharing and offline analysis"
           />
           <BentoCard
             className="lg:col-span-2"
