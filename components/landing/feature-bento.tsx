@@ -14,12 +14,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 function BentoCard({
+  id,
   className = "",
   icon: Icon,
   title,
   description,
   children,
 }: {
+  id?: string;
   className?: string;
   icon: React.ComponentType<{ className?: string }>;
   title: string;
@@ -28,6 +30,7 @@ function BentoCard({
 }) {
   return (
     <div
+      id={id}
       className={`group relative rounded-xl border bg-card/50 backdrop-blur-sm p-6 transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 ${className}`}
     >
       <div className="relative z-10">
@@ -150,7 +153,8 @@ export function FeatureBento() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 auto-rows-[minmax(180px,auto)]">
           {/* Hero cards */}
           <BentoCard
-            className="sm:col-span-2 lg:col-span-3 lg:row-span-2"
+            id="ai-copilot"
+            className="sm:col-span-2 lg:col-span-3 lg:row-span-2 scroll-mt-20"
             icon={MessageSquareText}
             title="AI Chat Copilot"
             description="Ask questions about your data in plain English and get instant visual answers."
@@ -159,7 +163,8 @@ export function FeatureBento() {
           </BentoCard>
 
           <BentoCard
-            className="sm:col-span-2 lg:col-span-3 lg:row-span-2"
+            id="canvas"
+            className="sm:col-span-2 lg:col-span-3 lg:row-span-2 scroll-mt-20"
             icon={Layout}
             title="Canvas Workspace"
             description="Drag notes, shapes, and insights onto a freeform canvas for visual exploration."
@@ -169,7 +174,8 @@ export function FeatureBento() {
 
           {/* Medium cards */}
           <BentoCard
-            className="lg:col-span-2"
+            id="dashboard"
+            className="lg:col-span-2 scroll-mt-20"
             icon={LayoutDashboard}
             title="Dynamic Dashboard"
             description="Drag-and-drop widgets to build your perfect analytics view."

@@ -31,23 +31,23 @@ export function Footer() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
                   <Link
-                    href="/dashboard"
+                    href="/#dashboard"
                     className="hover:text-foreground transition-colors"
                   >
                     Dashboard
                   </Link>
                 </li>
                 <li>
-                  <a
-                    href="#pricing"
+                  <Link
+                    href="/#pricing"
                     className="hover:text-foreground transition-colors"
                   >
                     Pricing
-                  </a>
+                  </Link>
                 </li>
                 <li>
                   <Link
-                    href="/dashboard"
+                    href="/#canvas"
                     className="hover:text-foreground transition-colors"
                   >
                     Canvas
@@ -55,7 +55,7 @@ export function Footer() {
                 </li>
                 <li>
                   <Link
-                    href="/dashboard"
+                    href="/#ai-copilot"
                     className="hover:text-foreground transition-colors"
                   >
                     AI Copilot
@@ -69,12 +69,12 @@ export function Footer() {
               <h4 className="text-sm font-semibold">Resources</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <a
-                    href="#faq"
+                  <Link
+                    href="/#faq"
                     className="hover:text-foreground transition-colors"
                   >
                     FAQ
-                  </a>
+                  </Link>
                 </li>
                 <li>
                   <Link
