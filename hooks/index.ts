@@ -3,7 +3,6 @@ export { type UseAccountsReturn, type TikTokAccount, type SyncJob, type SyncOpti
 export { useAnalyticsChat, type UseAnalyticsChatReturn, type UITree, type AnalyticsData, type DiagramResult } from './use-analytics-chat';
 export { useDrawings, type Drawing } from './use-drawings';
 export { useDrawingState } from './use-drawing-state';
-export { usePinnedComponents, type PinnedComponent } from './use-pinned-components';
 export {
   useDashboardData,
   type UseDashboardDataOptions,

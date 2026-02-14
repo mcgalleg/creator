@@ -92,7 +92,6 @@ creator/
 │   │   ├── canvases/      # Canvas persistence
 │   │   ├── dashboard/     # Dashboard data APIs
 │   │   ├── features/      # Feature flags API
-│   │   ├── pinned/        # Dashboard pinned components
 │   │   ├── mcp/           # MCP server endpoint
 │   │   └── auth/webhook/  # Clerk webhook
 │   ├── dashboard/         # Protected dashboard pages
@@ -119,7 +118,6 @@ creator/
 │   ├── use-dashboard-layout.ts
 │   ├── use-features.ts
 │   ├── use-keyboard-shortcuts.ts
-│   └── use-pinned-components.ts
 ├── lib/
 │   ├── db/                # Drizzle ORM setup and schemas
 │   ├── services/          # Business logic (sync, credits, features, users)
@@ -160,7 +158,6 @@ State expires after configurable timeouts (2 minutes for connections, 15 minutes
 - **account_metrics_history** - Time-series engagement snapshots
 - **credit_transactions** - Audit log for credit changes
 - **sync_jobs** - Background sync job tracking with comment sync config
-- **pinned_components** - User dashboard customizations
 - **canvases** - Persistent canvas workspaces with React Flow state
 - **canvas_annotations** - Canvas sticky notes and text annotations
 - **dashboard_layouts** - Custom dashboard widget layouts
@@ -291,7 +288,6 @@ This creates a test user (`test_user_123`) with 1000 credits and pro tier access
 | GET | `/api/credits` | Get credit balance |
 | GET | `/api/credits/history` | Credit transaction history |
 | GET | `/api/features` | Get feature flags |
-| GET/POST/DELETE | `/api/pinned` | Manage pinned charts |
 | GET/POST | `/api/canvases` | Canvas CRUD operations |
 | GET/PUT/DELETE | `/api/canvases/[id]` | Single canvas operations |
 | * | `/api/mcp/[transport]` | MCP server endpoint |

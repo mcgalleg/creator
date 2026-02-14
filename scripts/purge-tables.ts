@@ -10,7 +10,6 @@ async function purgeAll() {
       comments,
       account_metrics_history,
       credit_transactions,
-      pinned_components,
       dashboard_layouts,
       sync_jobs,
       posts,

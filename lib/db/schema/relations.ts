@@ -4,7 +4,6 @@ import { tiktokAccounts } from "./tiktok-accounts";
 import { posts } from "./posts";
 import { comments } from "./comments";
 import { accountMetricsHistory } from "./metrics";
-import { pinnedComponents } from "./pinned-components";
 import { creditTransactions } from "./credits";
 import { syncJobs } from "./sync-jobs";
 import { drawings } from "./drawings";
@@ -14,7 +13,6 @@ import { userFeatureOverrides } from "./feature-flags";
 // Users relations
 export const usersRelations = relations(users, ({ many }) => ({
   tiktokAccounts: many(tiktokAccounts),
-  pinnedComponents: many(pinnedComponents),
   creditTransactions: many(creditTransactions),
   syncJobs: many(syncJobs),
   drawings: many(drawings),
@@ -55,14 +53,6 @@ export const accountMetricsHistoryRelations = relations(accountMetricsHistory, (
   account: one(tiktokAccounts, {
     fields: [accountMetricsHistory.accountId],
     references: [tiktokAccounts.id],
-  }),
-}));
-
-// Pinned components relations
-export const pinnedComponentsRelations = relations(pinnedComponents, ({ one }) => ({
-  user: one(users, {
-    fields: [pinnedComponents.userId],
-    references: [users.id],
   }),
 }));
 

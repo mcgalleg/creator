@@ -91,7 +91,7 @@ export function DangerZone() {
                     <li>All connected TikTok accounts</li>
                     <li>All synced analytics data</li>
                     <li>Your credit balance and transaction history</li>
-                    <li>All pinned components and saved preferences</li>
+                    <li>All saved preferences</li>
                   </ul>
                 </DialogDescription>
               </DialogHeader>
