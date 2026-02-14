@@ -37,6 +37,7 @@ export default async function DashboardLayout({
         .select({
           id: tiktokAccounts.id,
           username: tiktokAccounts.username,
+          avatarUrl: tiktokAccounts.avatarUrl,
         })
         .from(tiktokAccounts)
         .where(eq(tiktokAccounts.userId, userId))

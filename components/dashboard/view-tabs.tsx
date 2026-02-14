@@ -23,7 +23,7 @@ const ExcalidrawView = dynamic(
 );
 
 interface ViewTabsProps {
-  accounts: Array<{ id: number; username: string }>;
+  accounts: Array<{ id: number; username: string; avatarUrl: string | null }>;
   hasNewDrawContent?: boolean;
   onDrawContentViewed?: () => void;
   /** Controlled tab value */

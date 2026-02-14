@@ -54,7 +54,7 @@ function TabSwitcherRegistrar({ onSwitch }: { onSwitch: () => void }) {
 }
 
 interface ResponsiveLayoutProps {
-  accounts: Array<{ id: number; username: string }>;
+  accounts: Array<{ id: number; username: string; avatarUrl: string | null }>;
   children?: React.ReactNode;
 }
 

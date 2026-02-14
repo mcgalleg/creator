@@ -26,7 +26,7 @@ import { widgetRegistry } from "@/lib/widgets";
 import { BreakpointLayouts } from "@/lib/db/schema/dashboard-layouts";
 
 interface DynamicDashboardProps {
-  accounts: Array<{ id: number; username: string }>;
+  accounts: Array<{ id: number; username: string; avatarUrl: string | null }>;
 }
 
 export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
@@ -185,13 +185,33 @@ export function DynamicDashboard({ accounts }: DynamicDashboardProps) {
             value={selectedAccountId?.toString() ?? ""}
             onValueChange={(value) => setSelectedAccountId(Number(value))}
           >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select account" />
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select account">
+                {(() => {
+                  const acct = accounts.find((a) => a.id === selectedAccountId);
+                  if (!acct) return null;
+                  return (
+                    <div className="flex items-center gap-2">
+                      {acct.avatarUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element -- External TikTok avatar URL
+                        <img src={acct.avatarUrl} alt={acct.username} className="h-5 w-5 rounded-full" />
+                      )}
+                      <span className="truncate">@{acct.username}</span>
+                    </div>
+                  );
+                })()}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {accounts.map((account) => (
                 <SelectItem key={account.id} value={account.id.toString()}>
-                  @{account.username}
+                  <div className="flex items-center gap-2">
+                    {account.avatarUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element -- External TikTok avatar URL
+                      <img src={account.avatarUrl} alt={account.username} className="h-5 w-5 rounded-full" />
+                    )}
+                    <span>@{account.username}</span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
