@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { findExpiredTrials, expireTrial } from "@/lib/services/trial-service";
+import { timingSafeEqual } from "crypto";
 
 export const dynamic = "force-dynamic";
 
+function verifyBearerToken(header: string | null, secret: string | undefined): boolean {
+  if (!header || !secret) return false;
+  const expected = `Bearer ${secret}`;
+  if (header.length !== expected.length) return false;
+  return timingSafeEqual(Buffer.from(header), Buffer.from(expected));
+}
+
 export async function GET(req: Request) {
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!verifyBearerToken(req.headers.get("authorization"), process.env.CRON_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

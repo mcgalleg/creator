@@ -808,17 +808,22 @@ async function processPostResults(
     updatedCommentsCount = commentsCount - newCommentsCount;
   }
 
-  // Batch update comment sync metadata
-  for (const postId of postsWithCommentChanges) {
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(comments)
-      .where(eq(comments.postId, postId));
-
-    await db.update(posts).set({
-      commentsSyncedAt: new Date(),
-      syncedCommentCount: Number(countResult?.count ?? 0),
-    }).where(eq(posts.id, postId));
+  // Batch update comment sync metadata (single query instead of N+1)
+  if (postsWithCommentChanges.size > 0) {
+    const affectedIds = [...postsWithCommentChanges];
+    await db.execute(sql`
+      UPDATE posts
+      SET comments_synced_at = NOW(),
+          synced_comment_count = sub.cnt,
+          updated_at = NOW()
+      FROM (
+        SELECT post_id, COUNT(*)::int AS cnt
+        FROM comments
+        WHERE post_id IN ${sql`(${sql.join(affectedIds.map(id => sql`${id}`), sql`, `)})`}
+        GROUP BY post_id
+      ) sub
+      WHERE posts.id = sub.post_id
+    `);
   }
 
   const actualCredits = calculateActualCredits(postsCount, commentsCount);
@@ -916,17 +921,22 @@ async function processCommentResults(
   const newCommentsCount = allCommentValues.filter(c => !existingCommentSet.has(`${c.postId}:${c.tiktokId}`)).length;
   const updatedCommentsCount = commentsCount - newCommentsCount;
 
-  // Update comment sync metadata
-  for (const postId of postsWithCommentChanges) {
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(comments)
-      .where(eq(comments.postId, postId));
-
-    await db.update(posts).set({
-      commentsSyncedAt: new Date(),
-      syncedCommentCount: Number(countResult?.count ?? 0),
-    }).where(eq(posts.id, postId));
+  // Batch update comment sync metadata (single query instead of N+1)
+  if (postsWithCommentChanges.size > 0) {
+    const affectedIds = [...postsWithCommentChanges];
+    await db.execute(sql`
+      UPDATE posts
+      SET comments_synced_at = NOW(),
+          synced_comment_count = sub.cnt,
+          updated_at = NOW()
+      FROM (
+        SELECT post_id, COUNT(*)::int AS cnt
+        FROM comments
+        WHERE post_id IN ${sql`(${sql.join(affectedIds.map(id => sql`${id}`), sql`, `)})`}
+        GROUP BY post_id
+      ) sub
+      WHERE posts.id = sub.post_id
+    `);
   }
 
   const actualCredits = calculateActualCredits(0, commentsCount);

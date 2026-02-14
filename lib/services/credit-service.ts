@@ -154,6 +154,10 @@ export async function deductCredits(
 /**
  * Hold credits in escrow (deducts from local cache, can be finalized or refunded).
  * Holds work on the local cache only. Polar event is ingested on finalization.
+ *
+ * Uses a conditional UPDATE (WHERE creditBalance >= amount) which acquires a
+ * row-level lock in PostgreSQL, preventing concurrent over-deduction.
+ * The transaction log is only inserted after a successful deduction.
  */
 export async function holdCredits(
   userId: string,
@@ -164,28 +168,29 @@ export async function holdCredits(
     return getUserCredits(userId);
   }
 
-  // Atomic check-and-deduct on local cache
-  const [balanceUpdate] = await db.batch([
-    db.update(users)
-      .set({
-        creditBalance: sql`${users.creditBalance} - ${amount}`,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(users.id, userId), gte(users.creditBalance, amount)))
-      .returning({ creditBalance: users.creditBalance }),
-    db.insert(creditTransactions).values({
-      userId,
-      amount: -amount,
-      type: "credit_hold",
-      description,
-    }),
-  ]);
+  // Atomic check-and-deduct: the WHERE clause ensures the row lock prevents races.
+  // Do this BEFORE inserting the transaction log so a failed hold doesn't leave orphaned records.
+  const balanceUpdate = await db.update(users)
+    .set({
+      creditBalance: sql`${users.creditBalance} - ${amount}`,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(users.id, userId), gte(users.creditBalance, amount)))
+    .returning({ creditBalance: users.creditBalance });
 
   if (balanceUpdate.length === 0) {
     throw new Error(
       `Insufficient credits. Required: ${amount}`
     );
   }
+
+  // Only record the hold after successful deduction
+  await db.insert(creditTransactions).values({
+    userId,
+    amount: -amount,
+    type: "credit_hold",
+    description,
+  });
 
   return balanceUpdate[0].creditBalance;
 }

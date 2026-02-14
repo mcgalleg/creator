@@ -1,5 +1,6 @@
 import { Checkout } from "@polar-sh/nextjs";
 import { NextRequest } from "next/server";
+import { auth } from "@/lib/auth";
 
 const checkoutHandler = Checkout({
   accessToken: process.env.POLAR_ACCESS_TOKEN!,
@@ -9,6 +10,11 @@ const checkoutHandler = Checkout({
 
 export async function GET(req: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     return await checkoutHandler(req);
   } catch (error) {
     console.error("Checkout error:", error);
