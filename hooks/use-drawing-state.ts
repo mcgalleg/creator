@@ -116,6 +116,17 @@ export function useDrawingState(drawingId: number | null) {
       };
       setAppState(appStateToSave);
 
+      // When canvas is cleared (reset), save immediately so the empty state
+      // is persisted before any subsequent onChange can overwrite it.
+      if (newElements.length === 0) {
+        if (saveTimerRef.current) {
+          clearTimeout(saveTimerRef.current);
+        }
+        pendingSaveRef.current = null;
+        save([], appStateToSave);
+        return;
+      }
+
       // Store the pending save data
       pendingSaveRef.current = {
         elements: [...newElements],

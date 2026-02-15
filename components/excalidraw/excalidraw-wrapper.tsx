@@ -136,14 +136,23 @@ export function ExcalidrawWrapper({
       const api = excalidrawAPIRef.current;
       if (!api) return;
 
-      // Filter out cameraUpdate elements
+      // Filter to valid Excalidraw element types only
+      const VALID_EXCALIDRAW_TYPES = new Set([
+        "rectangle", "ellipse", "diamond", "text", "arrow", "line",
+        "freedraw", "image", "frame", "embeddable",
+      ]);
       const skeletonElements: any[] = [];
 
       for (const el of data.elements) {
         const element = el as Record<string, unknown>;
-        if (element.type !== "cameraUpdate") {
+        if (element.type === "cameraUpdate") continue;
+        // Normalize "circle" → "ellipse" (Excalidraw uses ellipse, not circle)
+        if (element.type === "circle") {
+          skeletonElements.push({ ...element, type: "ellipse" });
+        } else if (VALID_EXCALIDRAW_TYPES.has(element.type as string)) {
           skeletonElements.push(element);
         }
+        // Skip unknown types (e.g. "badge") that would crash convertToExcalidrawElements
       }
 
       // Use convertToExcalidrawElements to properly handle labels, bindings, etc.

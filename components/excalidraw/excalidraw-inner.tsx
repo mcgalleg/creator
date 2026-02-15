@@ -45,10 +45,13 @@ export default function ExcalidrawInner({
       "This will clear the whole canvas. Are you sure?"
     );
     if (confirmed) {
-      api.updateScene({ elements: [] });
-      // Programmatic updateScene doesn't trigger the onChange callback,
-      // so explicitly notify the parent to persist the empty state.
       const currentAppState = api.getAppState();
+      api.resetScene();
+      api.history.clear();
+      // Explicitly notify the parent to persist the empty state.
+      // resetScene may not trigger the onChange callback reliably,
+      // and we need to ensure the empty state is saved before any
+      // subsequent onChange from Excalidraw can overwrite it.
       onChange?.([], currentAppState);
     }
   }, [onChange]);
