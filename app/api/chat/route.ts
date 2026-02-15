@@ -18,6 +18,7 @@ import { eq, desc, and, gte, sql, inArray, isNotNull } from "drizzle-orm";
 import { calculateEngagementRate } from "@/lib/dashboard-utils";
 import { getAnalyticsCatalogPrompt } from "@/lib/catalog";
 import { createDiagramTool, EXCALIDRAW_FORMAT_REFERENCE } from "@/lib/ai-tools/excalidraw-tools";
+import { addCacheControlToMessages, ANTHROPIC_CACHE_CONTROL } from "@/lib/ai-tools/prompt-cache";
 
 // =============================================================================
 // Message sanitization — fix malformed tool_use inputs in conversation history
@@ -188,12 +189,35 @@ export async function POST(req: Request) {
       await convertToModelMessages(messages)
     );
 
+    // Build messages with system prompt caching:
+    // - Static system content (catalog, instructions, excalidraw ref) → cached
+    // - Dynamic account context → uncached (changes per user/session)
+    // - Conversation messages → incrementally cached via prepareStep
+    const staticSystemPrompt =
+      getAnalyticsCatalogPrompt() + additionalInstructions + EXCALIDRAW_FORMAT_REFERENCE;
+
+    const allMessages: ModelMessage[] = [
+      {
+        role: "system",
+        content: staticSystemPrompt,
+        providerOptions: ANTHROPIC_CACHE_CONTROL,
+      },
+      {
+        role: "system",
+        content: accountContext,
+      },
+      ...modelMessages,
+    ];
+
     const result = streamText({
       model,
-      system:
-        getAnalyticsCatalogPrompt() + additionalInstructions + EXCALIDRAW_FORMAT_REFERENCE + accountContext,
-      messages: modelMessages,
+      messages: allMessages,
       stopWhen: stepCountIs(5),
+      // Cache the conversation prefix before each agentic step so subsequent
+      // tool-use round-trips get cache hits on the growing conversation.
+      prepareStep: ({ messages, model }) => ({
+        messages: addCacheControlToMessages({ messages, model }),
+      }),
       experimental_repairToolCall: async ({ toolCall, error }) => {
         // If the model generates a non-dict tool input, try to repair it
         console.warn(
@@ -1053,6 +1077,8 @@ export async function POST(req: Request) {
         generateUI: tool({
           description:
             "Generate a UI component tree to display analytics data. Use this after fetching data to create visualizations.",
+          // Cache breakpoint on the last tool caches all tool definitions
+          providerOptions: ANTHROPIC_CACHE_CONTROL,
           inputSchema: z.object({
             component: z
               .string()
