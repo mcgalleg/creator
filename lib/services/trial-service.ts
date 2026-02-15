@@ -1,14 +1,14 @@
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and, lt, inArray } from "drizzle-orm";
 import { TRIAL_DURATION_DAYS } from "@/lib/subscriptions";
 import { TRIAL_BONUS_SYNC_CREDITS, TRIAL_BONUS_AI_TOKENS } from "@/lib/credits";
 import { ingestSyncCreditEvent, ingestAiTokenEvent } from "@/lib/polar";
 import { syncCreditBalance } from "@/lib/services/credit-service";
 
 /**
- * Start a 14-day Pro trial for a new user.
- * Sets tier to "pro", sets trialEndsAt, and ingests bonus credits to Polar meters.
+ * Start a 7-day Creator trial for a new user.
+ * Sets tier to "basic", sets trialEndsAt, and ingests bonus credits to Polar meters.
  * Local credit balance syncs on first GET /api/credits via sync-on-read.
  */
 export async function startTrial(userId: string): Promise<void> {
@@ -29,13 +29,13 @@ export async function startTrial(userId: string): Promise<void> {
   await db
     .update(users)
     .set({
-      subscriptionTier: "pro",
+      subscriptionTier: "basic",
       trialEndsAt,
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId));
 
-  // Grant bonus credits (Pro minus Free baseline) to Polar meters.
+  // Grant Creator-level bonus credits to Polar meters.
   // Negative values = credit grants in Polar's meter system.
   await ingestSyncCreditEvent(userId, -TRIAL_BONUS_SYNC_CREDITS, {
     type: "trial_bonus",
@@ -139,7 +139,8 @@ export async function convertTrial(userId: string): Promise<void> {
 }
 
 /**
- * Find users with expired trials who are still on the "pro" tier.
+ * Find users with expired trials who are still on a trial tier.
+ * Checks both "basic" (current) and "pro" (legacy) tiers for transition period.
  * Used by the cron job to batch-expire trials.
  */
 export async function findExpiredTrials(): Promise<string[]> {
@@ -150,7 +151,7 @@ export async function findExpiredTrials(): Promise<string[]> {
       and(
         lt(users.trialEndsAt, new Date()),
         eq(users.trialConverted, false),
-        eq(users.subscriptionTier, "pro")
+        inArray(users.subscriptionTier, ["basic", "pro"])
       )
     );
 

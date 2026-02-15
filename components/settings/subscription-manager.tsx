@@ -142,7 +142,7 @@ export function SubscriptionManager() {
               <Clock className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-medium">Pro Trial Active</p>
+              <p className="text-sm font-medium">Free Trial Active</p>
               <p className="text-xs text-muted-foreground">
                 Expires {formatDate(data.trialEndsAt)}
               </p>
@@ -220,7 +220,7 @@ export function SubscriptionManager() {
         {/* Account limits */}
         <div className="text-sm text-muted-foreground">
           Up to {tierInfo.accountLimit} connected{" "}
-          {tierInfo.accountLimit === 1 ? "account" : "accounts"}
+          {(tierInfo.accountLimit as number) === 1 ? "account" : "accounts"}
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
@@ -246,7 +246,7 @@ export function SubscriptionManager() {
                   {data?.subscriptionExpiresAt && (
                     <> ({formatDate(data.subscriptionExpiresAt)})</>
                   )}
-                  . After that, you&apos;ll be downgraded to the Free plan and lose access to paid features.
+                  . After that, you&apos;ll lose access to paid features.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

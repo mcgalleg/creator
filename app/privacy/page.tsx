@@ -139,9 +139,6 @@ export default function PrivacyPage() {
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground">
               <li>
-                <strong>Free</strong> — 7 days of data retention
-              </li>
-              <li>
                 <strong>Creator</strong> — 30 days of data retention
               </li>
               <li>

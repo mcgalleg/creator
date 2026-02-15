@@ -28,7 +28,7 @@ const FAQ_ITEMS = [
   {
     question: "What are sync credits?",
     answer:
-      "Sync credits are used to pull fresh data from TikTok. Each sync fetches your latest video performance, follower stats, and engagement metrics. Free plans include 20 credits per month, with more available on paid plans.",
+      "Sync credits are used to pull fresh data from TikTok. Each sync fetches your latest video performance, follower stats, and engagement metrics. Your plan includes monthly credits based on your tier.",
   },
   {
     question: "Can I manage multiple TikTok accounts?",
@@ -43,7 +43,7 @@ const FAQ_ITEMS = [
   {
     question: "Do I need a credit card to start?",
     answer:
-      "No! Start with a free 14-day Pro trial, no credit card required. Experience all premium features before deciding on a plan.",
+      "No! Start with a free 7-day trial with Creator-level access, no credit card required. Experience all premium features before deciding on a plan.",
   },
   {
     question: "Can I upgrade or downgrade anytime?",

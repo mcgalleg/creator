@@ -34,13 +34,13 @@ export function getTierDetails(tier: SubscriptionTier): {
     { name: string; description: string; features: string[] }
   > = {
     free: {
-      name: "Free",
-      description: "Basic analytics with limited features",
+      name: "Unsubscribed",
+      description: "No active subscription",
       features: [
-        "20 monthly sync credits",
-        "50K monthly AI tokens",
-        "Up to 1 connected account",
-        "7-day data retention",
+        "No monthly sync credits",
+        "No monthly AI tokens",
+        "No connected accounts",
+        "No data retention",
       ],
     },
     pro: {

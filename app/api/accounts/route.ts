@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "Account limit reached",
-          message: `Your ${tier} plan allows up to ${accountLimit} connected ${accountLimit === 1 ? "account" : "accounts"}. Upgrade to connect more.`,
+          message: `Your ${tier} plan allows up to ${accountLimit} connected ${(accountLimit as number) === 1 ? "account" : "accounts"}. Upgrade to connect more.`,
           limit: accountLimit,
           current: existingAccount.length,
         },

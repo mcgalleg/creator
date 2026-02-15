@@ -65,7 +65,6 @@ function formatTokens(tokens: number): string {
 }
 
 const TIERS: { tier: SubscriptionTier; price: string; highlighted: boolean }[] = [
-  { tier: "free", price: "Free", highlighted: false },
   { tier: "basic", price: "$14.99/mo", highlighted: true },
   { tier: "pro", price: "$29.99/mo", highlighted: false },
 ];
@@ -132,20 +131,23 @@ export default function PricingPage() {
             Simple, transparent pricing
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Choose the plan that fits your needs. Upgrade or downgrade anytime.
+            Choose the plan that fits your needs. Start with a free 7-day trial.
+          </p>
+          <p className="mx-auto mt-2 max-w-2xl text-sm text-muted-foreground">
+            No credit card required.
           </p>
         </section>
 
         {/* Subscription Plans */}
         <section className="container mx-auto max-w-5xl px-4 pb-16">
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2">
             {TIERS.map(({ tier, price, highlighted }) => {
               const info = getTierDisplayInfo(tier);
               const aiTokens = TIER_AI_TOKENS[tier];
               const syncCredits = TIER_SYNC_CREDITS[tier];
               const accountLimit = TIER_ACCOUNT_LIMITS[tier];
               const dataRetention = TIER_DATA_RETENTION[tier];
-              const productId = tier !== "free" ? POLAR_PRODUCTS[tier] : null;
+              const productId = POLAR_PRODUCTS[tier];
 
               return (
                 <Card
@@ -184,68 +186,51 @@ export default function PricingPage() {
                         <Check className="h-4 w-4 text-primary flex-shrink-0" />
                         <span>
                           {accountLimit} connected{" "}
-                          {accountLimit === 1 ? "account" : "accounts"}
+                          {(accountLimit as number) === 1 ? "account" : "accounts"}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Check className="h-4 w-4 text-primary flex-shrink-0" />
                         <span>{dataRetention}-day data retention</span>
                       </div>
-                      {tier !== "free" && (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                            <span>Canvas Workspace</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                            <span>AI Analytics Assistant</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                            <span>Export Reports</span>
-                          </div>
-                        </>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                        <span>Canvas Workspace</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                        <span>AI Analytics Assistant</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                        <span>Export Reports</span>
+                      </div>
                     </div>
                   </CardContent>
                   <CardFooter>
-                    {tier === "free" ? (
-                      <SignedOut>
-                        <SignInButton mode="modal">
-                          <Button variant="outline" className="w-full">
-                            Start 14-Day Pro Trial
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </Button>
-                        </SignInButton>
-                      </SignedOut>
-                    ) : (
-                      <>
-                        <SignedIn>
-                          <Button
-                            asChild
-                            className="w-full"
-                            variant={highlighted ? "default" : "outline"}
-                          >
-                            <a href={productId ? getCheckoutUrl(productId) : "#"}>
-                              Subscribe
-                              <ArrowRight className="ml-2 h-4 w-4" />
-                            </a>
-                          </Button>
-                        </SignedIn>
-                        <SignedOut>
-                          <SignInButton mode="modal">
-                            <Button
-                              className="w-full"
-                              variant={highlighted ? "default" : "outline"}
-                            >
-                              Sign in to Subscribe
-                              <ArrowRight className="ml-2 h-4 w-4" />
-                            </Button>
-                          </SignInButton>
-                        </SignedOut>
-                      </>
-                    )}
+                    <SignedIn>
+                      <Button
+                        asChild
+                        className="w-full"
+                        variant={highlighted ? "default" : "outline"}
+                      >
+                        <a href={productId ? getCheckoutUrl(productId) : "#"}>
+                          Subscribe
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </a>
+                      </Button>
+                    </SignedIn>
+                    <SignedOut>
+                      <SignInButton mode="modal">
+                        <Button
+                          className="w-full"
+                          variant={highlighted ? "default" : "outline"}
+                        >
+                          Sign in to Subscribe
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </SignInButton>
+                    </SignedOut>
                   </CardFooter>
                 </Card>
               );

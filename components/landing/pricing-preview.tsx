@@ -28,7 +28,6 @@ function formatTokens(n: number): string {
 }
 
 const TIERS: { tier: SubscriptionTier; price: string; highlighted?: boolean }[] = [
-  { tier: "free", price: "Free" },
   { tier: "basic", price: "$14.99/mo", highlighted: true },
   { tier: "pro", price: "$29.99/mo" },
 ];
@@ -45,16 +44,13 @@ export function PricingPreview() {
             Simple, transparent pricing
           </h2>
           <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-            Start free, upgrade when you&apos;re ready. No hidden fees, cancel
-            anytime.
+            Start with a free 7-day trial. No credit card required.
           </p>
         </AnimateOnScroll>
 
-        <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
+        <div className="grid gap-6 md:grid-cols-2 max-w-4xl mx-auto">
           {TIERS.map(({ tier, price, highlighted }, idx) => {
             const info = getTierDisplayInfo(tier);
-            const isPaid = tier !== "free";
-
             return (
               <AnimateOnScroll key={tier} delay={idx * 100}>
                 <Card
@@ -89,7 +85,7 @@ export function PricingPreview() {
                       <li className="flex items-center gap-2">
                         <Check className="size-4 text-primary shrink-0" />
                         {TIER_ACCOUNT_LIMITS[tier]} connected{" "}
-                        {TIER_ACCOUNT_LIMITS[tier] === 1
+                        {(TIER_ACCOUNT_LIMITS[tier] as number) === 1
                           ? "account"
                           : "accounts"}
                       </li>
@@ -97,45 +93,28 @@ export function PricingPreview() {
                         <Check className="size-4 text-primary shrink-0" />
                         {TIER_DATA_RETENTION[tier]}-day data retention
                       </li>
-                      {isPaid && (
-                        <>
-                          <li className="flex items-center gap-2">
-                            <Check className="size-4 text-primary shrink-0" />
-                            Canvas Workspace
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="size-4 text-primary shrink-0" />
-                            AI Analytics
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="size-4 text-primary shrink-0" />
-                            Export Reports
-                          </li>
-                        </>
-                      )}
+                      <li className="flex items-center gap-2">
+                        <Check className="size-4 text-primary shrink-0" />
+                        Canvas Workspace
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="size-4 text-primary shrink-0" />
+                        AI Analytics
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="size-4 text-primary shrink-0" />
+                        Export Reports
+                      </li>
                     </ul>
                   </CardContent>
                   <CardFooter>
-                    {tier === "free" ? (
-                      <SignedOut>
-                        <SignUpButton mode="modal">
-                          <Button
-                            variant="outline"
-                            className="w-full"
-                          >
-                            Start Free Trial
-                          </Button>
-                        </SignUpButton>
-                      </SignedOut>
-                    ) : (
-                      <Button
-                        asChild
-                        variant={highlighted ? "default" : "outline"}
-                        className="w-full"
-                      >
-                        <Link href="/pricing">See Full Details</Link>
-                      </Button>
-                    )}
+                    <Button
+                      asChild
+                      variant={highlighted ? "default" : "outline"}
+                      className="w-full"
+                    >
+                      <Link href="/pricing">See Full Details</Link>
+                    </Button>
                   </CardFooter>
                 </Card>
               </AnimateOnScroll>
@@ -143,13 +122,20 @@ export function PricingPreview() {
           })}
         </div>
 
-        <div className="text-center mt-8">
-          <Link
-            href="/pricing"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Compare all features &rarr;
-          </Link>
+        <div className="text-center mt-8 space-y-4">
+          <SignedOut>
+            <SignUpButton mode="modal">
+              <Button size="lg">Start Your Free 7-Day Trial</Button>
+            </SignUpButton>
+          </SignedOut>
+          <div>
+            <Link
+              href="/pricing"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Compare all features &rarr;
+            </Link>
+          </div>
         </div>
       </div>
     </section>

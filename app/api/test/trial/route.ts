@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
  * Test-only endpoint to manipulate trial state for E2E testing.
  *
  * POST /api/test/trial
- *   { action: "start", userId }      — Set user to active trial (Pro + trialEndsAt in 14 days)
+ *   { action: "start", userId }      — Set user to active trial (Creator + trialEndsAt in 7 days)
  *   { action: "expire", userId }      — Expire trial (set trialEndsAt to past, keep tier as Pro for cron to pick up)
  *   { action: "reset", userId }       — Reset to pre-trial free state (free tier, clear all trial fields)
  *
@@ -29,9 +29,9 @@ export async function POST(request: NextRequest) {
 
   switch (action) {
     case "start": {
-      const trialEndsAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+      const trialEndsAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
       await db.update(users).set({
-        subscriptionTier: "pro",
+        subscriptionTier: "basic",
         trialEndsAt,
         trialConverted: false,
         subscriptionStartedAt: now,
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       await db.update(users).set({
         trialEndsAt: pastDate,
         updatedAt: now,
-        // Keep subscriptionTier as "pro" — the cron/expireTrial will downgrade it
+        // Keep subscriptionTier as "basic" — the cron/expireTrial will downgrade it
       }).where(eq(users.id, userId));
       return NextResponse.json({ success: true, action, userId, trialEndsAt: pastDate });
     }

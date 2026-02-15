@@ -38,7 +38,7 @@ export function TrialBanner({ daysRemaining }: TrialBannerProps) {
                 : ""
             }
           >
-            Pro Trial
+            Free Trial
           </Badge>
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />

@@ -18,34 +18,34 @@ export const POLAR_CREDIT_PRODUCTS: Record<string, string> = {
 
 // Monthly AI token allocations per tier
 export const TIER_AI_TOKENS = {
-  free: 50_000,
+  free: 0,
   basic: 1_000_000,
   pro: 3_000_000,
 } as const satisfies Record<SubscriptionTier, number>;
 
 // Monthly sync credit allocations per tier
 export const TIER_SYNC_CREDITS = {
-  free: 20,
+  free: 0,
   basic: 250,
   pro: 750,
 } as const satisfies Record<SubscriptionTier, number>;
 
 // Account limits per tier
 export const TIER_ACCOUNT_LIMITS = {
-  free: 1,
+  free: 0,
   basic: 5,
   pro: 25,
 } as const satisfies Record<SubscriptionTier, number>;
 
 // Data retention in days per tier
 export const TIER_DATA_RETENTION = {
-  free: 7,
+  free: 0,
   basic: 30,
   pro: 90,
 } as const satisfies Record<SubscriptionTier, number>;
 
 // Trial configuration
-export const TRIAL_DURATION_DAYS = 14;
+export const TRIAL_DURATION_DAYS = 7;
 
 // Credit pack definitions for Polar one-time purchases (sync credits only)
 export const CREDIT_PACKS = [
@@ -65,8 +65,8 @@ export function getCreditPack(packId: string) {
 export function getTierDisplayInfo(tier: SubscriptionTier) {
   const info = {
     free: {
-      name: "Free",
-      description: "Get started with basic features",
+      name: "Unsubscribed",
+      description: "No active subscription",
       monthlyAiTokens: TIER_AI_TOKENS.free,
       monthlySyncCredits: TIER_SYNC_CREDITS.free,
       accountLimit: TIER_ACCOUNT_LIMITS.free,

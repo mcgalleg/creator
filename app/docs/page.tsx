@@ -114,8 +114,8 @@ export default function DocsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    Every new account starts with a 14-day Pro trial, giving you
-                    full access to all features including AI Copilot, Canvas, and
+                    Every new account starts with a 7-day free trial with full
+                    access to all features including AI Copilot, Canvas, and
                     advanced analytics.
                   </p>
                 </CardContent>
@@ -325,18 +325,7 @@ export default function DocsPage() {
               Manage multiple TikTok accounts from a single Not a Bot dashboard.
               Perfect for agencies, brands, or creators with multiple channels.
             </p>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Free</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold">1</p>
-                  <p className="text-sm text-muted-foreground">
-                    TikTok account
-                  </p>
-                </CardContent>
-              </Card>
+            <div className="grid gap-4 sm:grid-cols-2">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Creator</CardTitle>
@@ -500,26 +489,7 @@ export default function DocsPage() {
               the core dashboard, canvas workspace, and AI Copilot — higher
               tiers unlock more capacity and longer data retention.
             </p>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Free</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-2xl font-bold">
-                    $0
-                    <span className="text-sm font-normal text-muted-foreground">
-                      /month
-                    </span>
-                  </p>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li>50K AI tokens per month</li>
-                    <li>20 sync credits per month</li>
-                    <li>7-day data retention</li>
-                    <li>1 TikTok account</li>
-                  </ul>
-                </CardContent>
-              </Card>
+            <div className="grid gap-4 sm:grid-cols-2">
               <Card className="border-primary">
                 <CardHeader>
                   <div className="flex items-center justify-between">

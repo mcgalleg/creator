@@ -110,13 +110,9 @@ export default function TermsPage() {
               4. Subscription Plans &amp; Billing
             </h2>
             <p className="text-muted-foreground">
-              Not a Bot offers three subscription tiers:
+              Not a Bot offers two subscription tiers:
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-              <li>
-                <strong>Free</strong> — No cost, with limited features and usage
-                allocations
-              </li>
               <li>
                 <strong>Creator</strong> — $14.99/month with expanded features
                 and higher usage limits
@@ -127,7 +123,7 @@ export default function TermsPage() {
               </li>
             </ul>
             <p className="text-muted-foreground">
-              New users receive a 14-day free trial of the Pro tier. All billing
+              New users receive a 7-day free trial with Creator-level access. All billing
               is processed via Polar. Subscriptions automatically renew at the
               end of each billing period unless cancelled. You may cancel your
               subscription at any time and will retain access to your current
@@ -145,10 +141,6 @@ export default function TermsPage() {
               subscription tier:
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-              <li>
-                <strong>Free</strong> — 20 sync credits + 50,000 AI tokens per
-                month
-              </li>
               <li>
                 <strong>Creator</strong> — 250 sync credits + 1,000,000 AI
                 tokens per month
@@ -296,9 +288,6 @@ export default function TermsPage() {
               Data is retained based on your subscription tier:
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-              <li>
-                <strong>Free</strong> — 7 days of data retention
-              </li>
               <li>
                 <strong>Creator</strong> — 30 days of data retention
               </li>
