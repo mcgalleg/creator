@@ -71,6 +71,8 @@ export interface ValidationResult {
     avatarUrl: string;
     bio: string;
     isVerified: boolean;
+    bioUrl?: string;
+    profileCategory?: string;
   };
   error?: string;
 }
@@ -95,56 +97,69 @@ export interface ProcessedSyncResults {
   profileUpdated: boolean;
 }
 
-// Apify TikTok data types
-interface TikTokAuthorMeta {
+// ApiDojo TikTok data types
+interface ApiDojoPostData {
   id: string;
-  name: string;
-  nickName: string;
-  verified: boolean;
-  signature: string;
-  avatar: string;
-  fans: number;
-  following: number;
-  heart: number;
-  video: number;
-}
-
-interface TikTokVideoMeta {
-  height: number;
-  width: number;
-  duration: number;
-  coverUrl: string;
-}
-
-interface TikTokPostData {
-  id: string;
-  text: string;
-  createTime: number;
-  createTimeISO: string;
-  authorMeta: TikTokAuthorMeta;
-  webVideoUrl: string;
-  videoMeta: TikTokVideoMeta;
-  diggCount: number;
-  shareCount: number;
-  playCount: number;
-  collectCount: number;
-  commentCount: number;
-  comments?: TikTokCommentData[];
-}
-
-interface TikTokCommentData {
-  cid: string;
-  text: string;
-  createTime: number;
-  diggCount: number;
-  // Nested user object (inline comments from post scraper)
-  user?: {
-    uniqueId: string;
-    avatarThumb: string;
+  title: string;
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  bookmarks: number;
+  hashtags: string[];
+  uploadedAtFormatted: string;
+  postPage: string;
+  channel: {
+    username: string;
+    name: string;
+    avatar: string;
+    followers: number;
+    following: number;
+    videos: number;
+    bio: string;
+    verified: boolean;
   };
-  // Flat fields (dedicated clockworks/tiktok-comments-scraper output)
-  uniqueId?: string;
-  avatarThumbnail?: string;
+  video: {
+    duration: number;
+    cover: string;
+    url: string;
+    ratio: string;
+  };
+  song: {
+    title: string;
+  };
+}
+
+interface ApiDojoCommentData {
+  id: string;
+  text: string;
+  createdAt: string; // ISO string
+  likeCount: number;
+  replyCount: number;
+  commentLanguage: string;
+  isAuthorLiked: boolean;
+  awemeId: string; // video ID directly
+  user: {
+    username: string;
+    nickname: string;
+    avatarUrl: string;
+    region: string;
+  };
+}
+
+interface ApiDojoUserData {
+  id: string;
+  username: string;
+  nickname: string;
+  bio: string;
+  bioUrl: string;
+  followers: number;
+  following: number;
+  likes: number;
+  videos: number;
+  verified: boolean;
+  profileCategory: string;
+  avatar: string;
 }
 
 // ─── Cost Estimation ─────────────────────────────────────────────────────────
@@ -208,36 +223,62 @@ export function estimateCommentSyncCost(options: {
  */
 export async function validateUsername(username: string): Promise<ValidationResult> {
   const client = getApifyClient();
+  const cleanUsername = username.replace("@", "");
 
   try {
-    const run = await client.actor("clockworks/tiktok-scraper").call({
-      profiles: [username.replace("@", "")],
-      resultsPerPage: 1,
-    });
+    // Run profile scraper and user scraper in parallel
+    const [profileRun, userRun] = await Promise.all([
+      client.actor("apidojo/tiktok-profile-scraper").call({
+        usernames: [cleanUsername],
+        maxItems: 1,
+      }),
+      client.actor("apidojo/tiktok-user-scraper").call({
+        startUrls: [`https://www.tiktok.com/@${cleanUsername}`],
+        maxItems: 1,
+        getFollowers: false,
+        getFollowing: false,
+      }).catch(() => null), // Graceful degradation
+    ]);
 
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    const { items: profileItems } = await client.dataset(profileRun.defaultDatasetId).listItems();
 
-    if (!items || items.length === 0) {
+    if (!profileItems || profileItems.length === 0) {
       return { valid: false, error: "Username not found or no public content available" };
     }
 
-    const authorMeta = (items[0] as unknown as TikTokPostData)?.authorMeta;
-    if (!authorMeta) {
+    const post = profileItems[0] as unknown as ApiDojoPostData;
+    const channel = post?.channel;
+    if (!channel) {
       return { valid: false, error: "Could not retrieve profile information" };
+    }
+
+    // Get user scraper data if available
+    let userData: ApiDojoUserData | null = null;
+    if (userRun) {
+      try {
+        const { items: userItems } = await client.dataset(userRun.defaultDatasetId).listItems();
+        if (userItems && userItems.length > 0) {
+          userData = userItems[0] as unknown as ApiDojoUserData;
+        }
+      } catch {
+        // User scraper data unavailable — continue with profile data only
+      }
     }
 
     return {
       valid: true,
       profile: {
-        username: authorMeta.name,
-        displayName: authorMeta.nickName,
-        followerCount: authorMeta.fans || 0,
-        followingCount: authorMeta.following || 0,
-        likesCount: authorMeta.heart || 0,
-        videoCount: authorMeta.video || 0,
-        avatarUrl: authorMeta.avatar || "",
-        bio: authorMeta.signature || "",
-        isVerified: authorMeta.verified || false,
+        username: channel.username,
+        displayName: channel.name,
+        followerCount: Math.round(channel.followers || 0),
+        followingCount: Math.round(channel.following || 0),
+        likesCount: Math.round(userData?.likes || 0),
+        videoCount: Math.round(channel.videos || 0),
+        avatarUrl: channel.avatar || "",
+        bio: channel.bio || "",
+        isVerified: channel.verified || false,
+        bioUrl: userData?.bioUrl,
+        profileCategory: userData?.profileCategory,
       },
     };
   } catch (error) {
@@ -245,6 +286,31 @@ export async function validateUsername(username: string): Promise<ValidationResu
       valid: false,
       error: error instanceof Error ? error.message : "Unknown error validating username",
     };
+  }
+}
+
+/**
+ * Fetch user profile data from ApiDojo User Scraper
+ */
+export async function fetchUserProfile(username: string): Promise<ApiDojoUserData | null> {
+  const client = getApifyClient();
+  const cleanUsername = username.replace("@", "");
+
+  try {
+    const run = await client.actor("apidojo/tiktok-user-scraper").call({
+      startUrls: [`https://www.tiktok.com/@${cleanUsername}`],
+      maxItems: 1,
+      getFollowers: false,
+      getFollowing: false,
+    });
+
+    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    if (items && items.length > 0) {
+      return items[0] as unknown as ApiDojoUserData;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 
@@ -453,23 +519,21 @@ async function startPostActor(
   jobId: number
 ): Promise<string> {
   const actorInput: Record<string, unknown> = {
-    profiles: [username.replace("@", "")],
-    resultsPerPage: config.postsLimit ?? 50,
-    profileScrapeSections: ["videos"],
-    profileSorting: config.sorting ?? "latest",
+    usernames: [username.replace("@", "")],
+    maxItems: config.postsLimit ?? 50,
   };
 
   if (config.oldestPostDate) {
-    actorInput.oldestPostDateUnified = config.oldestPostDate;
+    actorInput.since = config.oldestPostDate;
   }
   if (config.newestPostDate) {
-    actorInput.newestPostDate = config.newestPostDate;
+    actorInput.until = config.newestPostDate;
   }
 
   // Build webhook options
   const webhooks = buildWebhooks();
 
-  const run = await client.actor("clockworks/tiktok-scraper").start(actorInput, {
+  const run = await client.actor("apidojo/tiktok-profile-scraper").start(actorInput, {
     webhooks,
   });
 
@@ -497,15 +561,16 @@ async function startCommentActor(
     (p) => p.videoUrl || `https://www.tiktok.com/@user/video/${p.tiktokId}`
   );
 
+  const maxCommentsPerPost = config.maxCommentsPerPost ?? 100;
   const actorInput: Record<string, unknown> = {
-    postURLs: postUrls,
-    commentsPerPost: config.maxCommentsPerPost ?? 100,
-    maxRepliesPerComment: 0,
+    startUrls: postUrls,
+    maxItems: postUrls.length * maxCommentsPerPost,
+    includeReplies: false,
   };
 
   const webhooks = buildWebhooks();
 
-  const run = await client.actor("clockworks/tiktok-comments-scraper").start(actorInput, {
+  const run = await client.actor("apidojo/tiktok-comments-scraper").start(actorInput, {
     webhooks,
   });
 
@@ -610,7 +675,7 @@ export async function processSyncResults(jobId: number): Promise<ProcessedSyncRe
     if (job.type === "comments") {
       result = await processCommentResults(job, items);
     } else {
-      result = await processPostResults(job, items as unknown as TikTokPostData[]);
+      result = await processPostResults(job, items as unknown as ApiDojoPostData[]);
     }
 
     return result;
@@ -650,24 +715,23 @@ export async function processSyncResults(jobId: number): Promise<ProcessedSyncRe
  */
 async function processPostResults(
   job: typeof syncJobs.$inferSelect,
-  typedItems: TikTokPostData[]
+  typedItems: ApiDojoPostData[]
 ): Promise<ProcessedSyncResults> {
   let profileUpdated = false;
 
-  // Update profile from authorMeta of the first result
-  const authorMeta = typedItems[0]?.authorMeta;
-  if (authorMeta) {
+  // Update profile from channel data of the first result
+  const channel = typedItems[0]?.channel;
+  if (channel) {
     await db
       .update(tiktokAccounts)
       .set({
-        displayName: authorMeta.nickName,
-        avatarUrl: authorMeta.avatar,
-        followerCount: authorMeta.fans || 0,
-        followingCount: authorMeta.following || 0,
-        likesCount: authorMeta.heart || 0,
-        videoCount: authorMeta.video || 0,
-        bio: authorMeta.signature,
-        isVerified: authorMeta.verified,
+        displayName: channel.name,
+        avatarUrl: channel.avatar,
+        followerCount: Math.round(channel.followers || 0),
+        followingCount: Math.round(channel.following || 0),
+        videoCount: Math.round(channel.videos || 0),
+        bio: channel.bio,
+        isVerified: channel.verified,
         lastSyncedAt: new Date(),
         updatedAt: new Date(),
       })
@@ -675,10 +739,10 @@ async function processPostResults(
 
     await db.insert(accountMetricsHistory).values({
       accountId: job.accountId,
-      followerCount: authorMeta.fans || 0,
-      followingCount: authorMeta.following || 0,
-      likesCount: authorMeta.heart || 0,
-      videoCount: authorMeta.video || 0,
+      followerCount: Math.round(channel.followers || 0),
+      followingCount: Math.round(channel.following || 0),
+      likesCount: 0, // Not available from channel; updated via User Scraper
+      videoCount: Math.round(channel.videos || 0),
       recordedAt: new Date(),
     });
 
@@ -692,23 +756,37 @@ async function processPostResults(
     .where(eq(posts.accountId, job.accountId));
   const existingPostMap = new Map(existingPosts.map(p => [p.tiktokId, p.id]));
 
-  // Build values array for batch upsert
+  // Build values array for batch upsert, deduplicating by tiktokId
+  // (ApiDojo can return the same video multiple times in one dataset)
+  const seenTiktokIds = new Set<string>();
   const postValues = typedItems
-    .filter(item => item.id)
+    .filter(item => {
+      if (!item.id) return false;
+      if (seenTiktokIds.has(item.id)) return false;
+      seenTiktokIds.add(item.id);
+      return true;
+    })
     .map(item => ({
       accountId: job.accountId,
       tiktokId: item.id,
-      description: item.text || "",
-      likes: item.diggCount || 0,
-      comments: item.commentCount || 0,
-      shares: item.shareCount || 0,
-      plays: item.playCount || 0,
-      saves: item.collectCount || 0,
-      duration: item.videoMeta?.duration || 0,
-      thumbnailUrl: item.videoMeta?.coverUrl || "",
-      videoUrl: item.webVideoUrl || "",
-      postedAt: item.createTimeISO ? new Date(item.createTimeISO) : undefined,
+      description: item.title || "",
+      likes: Math.round(item.likes || 0),
+      comments: Math.round(item.comments || 0),
+      shares: Math.round(item.shares || 0),
+      plays: Math.round(item.views || 0),
+      saves: Math.round(item.bookmarks || 0),
+      duration: Math.round(item.video?.duration || 0),
+      thumbnailUrl: item.video?.cover || "",
+      videoUrl: item.postPage || "",
+      postedAt: item.uploadedAtFormatted ? new Date(item.uploadedAtFormatted) : undefined,
       updatedAt: new Date(),
+      // New ApiDojo fields
+      hashtags: Array.isArray(item.hashtags)
+        ? item.hashtags.filter((h): h is string => typeof h === "string")
+        : null,
+      videoDirectUrl: item.video?.url || null,
+      aspectRatio: item.video?.ratio || null,
+      songTitle: item.song?.title || null,
     }));
 
   let upsertedPosts: { id: number; tiktokId: string }[] = [];
@@ -729,6 +807,10 @@ async function processPostResults(
           thumbnailUrl: sql`excluded.thumbnail_url`,
           videoUrl: sql`excluded.video_url`,
           updatedAt: sql`excluded.updated_at`,
+          hashtags: sql`excluded.hashtags`,
+          videoDirectUrl: sql`excluded.video_direct_url`,
+          aspectRatio: sql`excluded.aspect_ratio`,
+          songTitle: sql`excluded.song_title`,
         },
       })
       .returning({ id: posts.id, tiktokId: posts.tiktokId });
@@ -738,98 +820,30 @@ async function processPostResults(
   const newPostsCount = upsertedPosts.filter(p => !existingPostMap.has(p.tiktokId)).length;
   const updatedPostsCount = postsCount - newPostsCount;
 
-  // Build a map of tiktokId -> postId for comment upserts
-  const postIdMap = new Map(upsertedPosts.map(p => [p.tiktokId, p.id]));
+  const actualCredits = calculateActualCredits(postsCount, 0);
+  await finalizeAndComplete(job, { postsCount, commentsCount: 0, newPostsCount, updatedPostsCount, newCommentsCount: 0, updatedCommentsCount: 0 }, actualCredits, profileUpdated);
 
-  // Collect all inline comments
-  let commentsCount = 0;
-  let newCommentsCount = 0;
-  let updatedCommentsCount = 0;
-  const postsWithCommentChanges = new Set<number>();
-  const allCommentValues: Array<{
-    postId: number;
-    tiktokId: string;
-    text: string;
-    authorUsername: string;
-    authorAvatarUrl: string;
-    likes: number;
-    postedAt: Date | undefined;
-  }> = [];
-
-  for (const item of typedItems) {
-    if (!item.id || !item.comments || !Array.isArray(item.comments)) continue;
-    const postId = postIdMap.get(item.id);
-    if (!postId) continue;
-
-    for (const comment of item.comments) {
-      if (!comment.cid) continue;
-      allCommentValues.push({
-        postId,
-        tiktokId: comment.cid,
-        text: comment.text || "",
-        authorUsername: comment.user?.uniqueId || comment.uniqueId || "",
-        authorAvatarUrl: comment.user?.avatarThumb || comment.avatarThumbnail || "",
-        likes: comment.diggCount || 0,
-        postedAt: comment.createTime ? new Date(comment.createTime * 1000) : undefined,
+  // Two-phase "full" sync: after posts complete, auto-trigger comment sync
+  if (job.type === "full" && upsertedPosts.length > 0) {
+    try {
+      await startSync({
+        accountId: job.accountId,
+        userId: job.userId,
+        type: "comments",
+        config: {
+          commentMode: "selection",
+          selectedPostIds: upsertedPosts.map(p => p.tiktokId),
+          maxCommentsPerPost: job.syncConfig?.maxCommentsPerPost ?? 100,
+        },
       });
-      postsWithCommentChanges.add(postId);
+      console.log(`[Sync Job ${job.id}] Auto-triggered comment sync for ${upsertedPosts.length} posts (full sync phase 2)`);
+    } catch (commentError) {
+      console.error(`[Sync Job ${job.id}] Failed to auto-trigger comment sync:`, commentError);
+      // Don't fail the post sync — comments are best-effort in full sync
     }
   }
 
-  // Batch upsert comments in chunks of 500
-  if (allCommentValues.length > 0) {
-    // Pre-query existing comments for affected posts
-    const affectedPostIds = [...postsWithCommentChanges];
-    const existingComments = await db
-      .select({ id: comments.id, tiktokId: comments.tiktokId, postId: comments.postId })
-      .from(comments)
-      .where(inArray(comments.postId, affectedPostIds));
-    const existingCommentSet = new Set(existingComments.map(c => `${c.postId}:${c.tiktokId}`));
-
-    const CHUNK_SIZE = 500;
-    for (let i = 0; i < allCommentValues.length; i += CHUNK_SIZE) {
-      const chunk = allCommentValues.slice(i, i + CHUNK_SIZE);
-      await db
-        .insert(comments)
-        .values(chunk)
-        .onConflictDoUpdate({
-          target: [comments.postId, comments.tiktokId],
-          set: {
-            text: sql`excluded.text`,
-            likes: sql`excluded.likes`,
-            authorUsername: sql`excluded.author_username`,
-            authorAvatarUrl: sql`excluded.author_avatar_url`,
-          },
-        });
-    }
-
-    commentsCount = allCommentValues.length;
-    newCommentsCount = allCommentValues.filter(c => !existingCommentSet.has(`${c.postId}:${c.tiktokId}`)).length;
-    updatedCommentsCount = commentsCount - newCommentsCount;
-  }
-
-  // Batch update comment sync metadata (single query instead of N+1)
-  if (postsWithCommentChanges.size > 0) {
-    const affectedIds = [...postsWithCommentChanges];
-    await db.execute(sql`
-      UPDATE posts
-      SET comments_synced_at = NOW(),
-          synced_comment_count = sub.cnt,
-          updated_at = NOW()
-      FROM (
-        SELECT post_id, COUNT(*)::int AS cnt
-        FROM comments
-        WHERE post_id IN ${sql`(${sql.join(affectedIds.map(id => sql`${id}`), sql`, `)})`}
-        GROUP BY post_id
-      ) sub
-      WHERE posts.id = sub.post_id
-    `);
-  }
-
-  const actualCredits = calculateActualCredits(postsCount, commentsCount);
-  await finalizeAndComplete(job, { postsCount, commentsCount, newPostsCount, updatedPostsCount, newCommentsCount, updatedCommentsCount }, actualCredits, profileUpdated);
-
-  return { postsCount, commentsCount, newPostsCount, updatedPostsCount, newCommentsCount, updatedCommentsCount, creditsUsed: actualCredits, profileUpdated };
+  return { postsCount, commentsCount: 0, newPostsCount, updatedPostsCount, newCommentsCount: 0, updatedCommentsCount: 0, creditsUsed: actualCredits, profileUpdated };
 }
 
 /**
@@ -857,33 +871,44 @@ async function processCommentResults(
     authorAvatarUrl: string;
     likes: number;
     postedAt: Date | undefined;
+    authorDisplayName: string | null;
+    authorRegion: string | null;
+    commentLanguage: string | null;
+    replyCount: number;
+    isAuthorLiked: boolean;
   }> = [];
 
+  // Deduplicate by (postId, tiktokId) — ApiDojo can return duplicate comments
+  const seenCommentKeys = new Set<string>();
+
   for (const item of items) {
-    const comment = item as unknown as TikTokCommentData & {
-      postUrl?: string; videoId?: string;
-      videoWebUrl?: string; submittedVideoUrl?: string;
-    };
-    if (!comment.cid) continue;
+    const comment = item as unknown as ApiDojoCommentData;
+    if (!comment.id) continue;
 
-    const videoId = comment.videoId
-      || (comment.videoWebUrl ? extractVideoId(comment.videoWebUrl) : null)
-      || (comment.submittedVideoUrl ? extractVideoId(comment.submittedVideoUrl) : null)
-      || (comment.postUrl ? extractVideoId(comment.postUrl) : null);
-
+    // ApiDojo provides awemeId directly — no URL parsing needed
+    const videoId = comment.awemeId;
     if (!videoId) continue;
 
     const postId = postIdMap.get(videoId);
     if (!postId) continue;
 
+    const dedupKey = `${postId}:${comment.id}`;
+    if (seenCommentKeys.has(dedupKey)) continue;
+    seenCommentKeys.add(dedupKey);
+
     allCommentValues.push({
       postId,
-      tiktokId: comment.cid,
+      tiktokId: comment.id,
       text: comment.text || "",
-      authorUsername: comment.user?.uniqueId || comment.uniqueId || "",
-      authorAvatarUrl: comment.user?.avatarThumb || comment.avatarThumbnail || "",
-      likes: comment.diggCount || 0,
-      postedAt: comment.createTime ? new Date(comment.createTime * 1000) : undefined,
+      authorUsername: comment.user?.username || "",
+      authorAvatarUrl: comment.user?.avatarUrl || "",
+      likes: Math.round(comment.likeCount || 0),
+      postedAt: comment.createdAt ? new Date(comment.createdAt) : undefined,
+      authorDisplayName: comment.user?.nickname || null,
+      authorRegion: comment.user?.region || null,
+      commentLanguage: comment.commentLanguage || null,
+      replyCount: Math.round(comment.replyCount || 0),
+      isAuthorLiked: comment.isAuthorLiked || false,
     });
     postsWithCommentChanges.add(postId);
   }
@@ -913,6 +938,11 @@ async function processCommentResults(
           likes: sql`excluded.likes`,
           authorUsername: sql`excluded.author_username`,
           authorAvatarUrl: sql`excluded.author_avatar_url`,
+          authorDisplayName: sql`excluded.author_display_name`,
+          authorRegion: sql`excluded.author_region`,
+          commentLanguage: sql`excluded.comment_language`,
+          replyCount: sql`excluded.reply_count`,
+          isAuthorLiked: sql`excluded.is_author_liked`,
         },
       });
   }
@@ -1067,14 +1097,6 @@ async function getPostsForCommentSync(
     default:
       throw new Error(`Unknown comment sync mode: ${mode}`);
   }
-}
-
-/**
- * Extract TikTok video ID from a URL
- */
-function extractVideoId(url: string): string | null {
-  const match = url.match(/\/video\/(\d+)/);
-  return match ? match[1] : null;
 }
 
 // ─── Job Status & Polling ────────────────────────────────────────────────────
@@ -1270,6 +1292,20 @@ export async function getAccountSyncData(accountId: number, userId: string) {
     .where(eq(tiktokAccounts.id, accountId))
     .limit(1);
 
+  // Last completed sync job (not limited by recentJobs window)
+  const [lastCompletedJob] = await db
+    .select({ completedAt: syncJobs.completedAt })
+    .from(syncJobs)
+    .where(
+      and(
+        eq(syncJobs.accountId, accountId),
+        eq(syncJobs.userId, userId),
+        eq(syncJobs.status, "completed")
+      )
+    )
+    .orderBy(desc(syncJobs.completedAt))
+    .limit(1);
+
   // Enrich running jobs with live dataset item counts for progress tracking
   const enrichedActiveJobs = activeJobs.map((job) => {
     const liveCount = liveItemCounts.get(job.id);
@@ -1291,6 +1327,7 @@ export async function getAccountSyncData(accountId: number, userId: string) {
       totalPosts: accountData?.videoCount ?? 0,
       syncedComments: Number(commentStats?.syncedComments ?? 0),
       lastSyncedAt: accountData?.lastSyncedAt?.toISOString() ?? null,
+      lastCompletedJobAt: lastCompletedJob?.completedAt?.toISOString() ?? null,
     },
   };
 }

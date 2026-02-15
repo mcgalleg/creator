@@ -53,7 +53,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const {
       postsLimit: rawPostsLimit = 50,
       includeComments = false,
-      sorting,
+      maxCommentsPerPost: rawMaxCommentsPerPost,
       oldestPostDate,
       newestPostDate,
     } = body;
@@ -61,14 +61,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Ensure postsLimit is a positive integer
     const postsLimit = Math.max(1, Math.min(500, Math.floor(Number(rawPostsLimit) || 50)));
 
-    // Validate sorting parameter
-    const validSortingValues = ["latest", "popular", "oldest"] as const;
-    if (sorting !== undefined && !validSortingValues.includes(sorting)) {
-      return NextResponse.json(
-        { error: "Invalid sorting value. Must be one of: latest, popular, oldest" },
-        { status: 400 }
-      );
-    }
+    // Sanitize maxCommentsPerPost (if provided, must be a reasonable positive integer)
+    const maxCommentsPerPost = rawMaxCommentsPerPost
+      ? Math.max(1, Math.min(500, Math.floor(Number(rawMaxCommentsPerPost))))
+      : undefined;
 
     // Validate date parameters (if provided, must be valid ISO date strings)
     if (oldestPostDate !== undefined) {
@@ -121,7 +117,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       type: includeComments ? "full" : "posts",
       config: {
         postsLimit,
-        sorting,
+        maxCommentsPerPost,
         oldestPostDate,
         newestPostDate,
       },

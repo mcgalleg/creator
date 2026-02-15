@@ -15,7 +15,6 @@ export interface CommentSyncConfigSchema {
 export interface SyncConfigSchema {
   // Post sync options
   postsLimit?: number;
-  sorting?: "latest" | "popular" | "oldest";
   oldestPostDate?: string;
   newestPostDate?: string;
   // Comment sync options

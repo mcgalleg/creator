@@ -33,13 +33,11 @@ import {
 
 // Types
 export type PostImportMode = "latest" | "date_range" | "top_performers";
-export type PostSorting = "latest" | "popular" | "oldest";
 export type DateRangePreset = "last_week" | "last_month" | "last_3_months" | "last_6_months" | "all_time" | "custom";
 
 export interface PostImportConfig {
   mode: PostImportMode;
   postsLimit?: number;
-  sorting?: PostSorting;
   dateRangePreset?: DateRangePreset;
   customDateStart?: string;
   customDateEnd?: string;
@@ -102,7 +100,6 @@ export function PostImportDialog({
 
   // Latest posts options
   const [postsLimit, setPostsLimit] = useState(25);
-  const [sorting, setSorting] = useState<PostSorting>("latest");
 
   // Date range options
   const [dateRangePreset, setDateRangePreset] = useState<DateRangePreset>("last_month");
@@ -128,7 +125,6 @@ export function PostImportDialog({
     isOpen,
     mode,
     postsLimit,
-    sorting,
     dateRangePreset,
     topCount,
     includeComments,
@@ -201,7 +197,6 @@ export function PostImportDialog({
     switch (mode) {
       case "latest":
         config.postsLimit = postsLimit;
-        config.sorting = sorting;
         break;
       case "date_range":
         config.dateRangePreset = dateRangePreset;
@@ -283,22 +278,6 @@ export function PostImportDialog({
                         </SelectContent>
                       </Select>
                       <span className="text-xs sm:text-sm text-muted-foreground">posts</span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Label className="text-xs sm:text-sm">Sort by</Label>
-                      <Select
-                        value={sorting}
-                        onValueChange={(v) => setSorting(v as PostSorting)}
-                      >
-                        <SelectTrigger className="w-24 sm:w-28 h-8 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="latest">Latest</SelectItem>
-                          <SelectItem value="popular">Popular</SelectItem>
-                          <SelectItem value="oldest">Oldest</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                   </div>
                 )}

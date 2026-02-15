@@ -79,7 +79,7 @@ export default function AccountsPage() {
       commentsLimit: config?.includeComments
         ? (config?.commentsPerPost ?? 100) * (config?.postsLimit ?? config?.topCount ?? 50)
         : 0,
-      sorting: config?.sorting,
+      maxCommentsPerPost: config?.commentsPerPost,
       oldestPostDate: config?.customDateStart,
       newestPostDate: config?.customDateEnd,
     };

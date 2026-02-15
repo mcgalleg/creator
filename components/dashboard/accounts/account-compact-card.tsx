@@ -2,7 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { BadgeCheck, ChevronRight, Loader2 } from "lucide-react";
+import { BadgeCheck, ChevronRight, Loader2, AlertTriangle } from "lucide-react";
 import { formatNumber } from "./shared-utils";
 import type { TikTokAccount, AccountSyncData } from "@/hooks/use-accounts";
 
@@ -21,8 +21,16 @@ export function AccountCompactCard({
 }: AccountCompactCardProps) {
   const activeJobs = syncData?.activeJobs ?? [];
   const hasActiveJobs = activeJobs.length > 0;
-  const hasError = syncData?.recentJobs?.some((j) => j.status === "failed");
   const stats = syncData?.stats;
+
+  // Only show error if the most recent job failed AND no successful sync happened after it
+  const mostRecentJob = syncData?.recentJobs?.[0];
+  const lastCompletedAt = stats?.lastCompletedJobAt;
+  const hasError =
+    mostRecentJob?.status === "failed" &&
+    (!lastCompletedAt ||
+      new Date(mostRecentJob.completedAt ?? mostRecentJob.createdAt) >
+        new Date(lastCompletedAt));
   const syncedPosts = stats?.syncedPosts ?? 0;
   const syncedComments = stats?.syncedComments ?? 0;
 
@@ -64,10 +72,11 @@ export function AccountCompactCard({
             <Loader2 className="size-3 animate-spin" />
             Syncing...
           </Badge>
-        ) : hasError ? (
-          <Badge variant="destructive" className="text-xs">Error</Badge>
         ) : (
           <>
+            {hasError && (
+              <AlertTriangle className="size-3.5 text-destructive shrink-0" />
+            )}
             {syncedPosts > 0 && (
               <Badge variant="secondary" className="text-xs">
                 {formatNumber(syncedPosts)} posts
@@ -77,6 +86,9 @@ export function AccountCompactCard({
               <Badge variant="secondary" className="text-xs">
                 {formatNumber(syncedComments)} comments
               </Badge>
+            )}
+            {hasError && syncedPosts === 0 && syncedComments === 0 && (
+              <Badge variant="destructive" className="text-xs">Error</Badge>
             )}
           </>
         )}

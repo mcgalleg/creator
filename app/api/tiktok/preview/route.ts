@@ -18,6 +18,8 @@ interface PreviewResponse {
     videoCount: number;
     bio: string;
     isVerified: boolean;
+    bioUrl?: string;
+    profileCategory?: string;
   };
   costEstimates: {
     profileOnly: number;
@@ -117,6 +119,8 @@ export async function GET(request: NextRequest) {
         videoCount: profile.videoCount,
         bio: profile.bio,
         isVerified: profile.isVerified,
+        bioUrl: profile.bioUrl,
+        profileCategory: profile.profileCategory,
       },
       costEstimates: {
         profileOnly: profileOnlyCost,

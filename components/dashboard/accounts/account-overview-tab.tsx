@@ -121,8 +121,16 @@ export function AccountOverviewTab({
 
   const lastSyncedAt = stats?.lastSyncedAt ?? account.lastSyncedAt;
 
+  // Only show a failed job if no successful sync completed after it.
+  // Uses lastCompletedJobAt (not limited by the 5-job recentJobs window)
+  // so stale errors from before a successful sync are hidden.
+  const lastCompletedAt = stats?.lastCompletedJobAt;
   const lastFailedJob = recentJobs.find(
-    (j) => j.status === "failed" && !dismissedErrors.has(j.id)
+    (j) =>
+      j.status === "failed" &&
+      !dismissedErrors.has(j.id) &&
+      (!lastCompletedAt ||
+        new Date(j.completedAt ?? j.createdAt) > new Date(lastCompletedAt))
   );
 
   const handleProfileRefresh = async () => {

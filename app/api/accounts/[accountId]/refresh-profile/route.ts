@@ -68,6 +68,8 @@ export async function POST(
         videoCount: profile.videoCount,
         bio: profile.bio,
         isVerified: profile.isVerified,
+        bioUrl: profile.bioUrl ?? null,
+        profileCategory: profile.profileCategory ?? null,
         lastSyncedAt: new Date(),
         updatedAt: new Date(),
       })
@@ -95,6 +97,8 @@ export async function POST(
         avatarUrl: profile.avatarUrl,
         bio: profile.bio,
         isVerified: profile.isVerified,
+        bioUrl: profile.bioUrl,
+        profileCategory: profile.profileCategory,
       },
     });
   } catch (error) {

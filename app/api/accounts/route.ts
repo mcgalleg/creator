@@ -181,7 +181,9 @@ export async function POST(request: NextRequest) {
         videoCount: validation.profile.videoCount,
         bio: validation.profile.bio,
         isVerified: validation.profile.isVerified,
-        lastSyncedAt: new Date(), // Initial sync from validation
+        bioUrl: validation.profile.bioUrl ?? null,
+        profileCategory: validation.profile.profileCategory ?? null,
+        lastSyncedAt: new Date(),
       })
       .returning();
 

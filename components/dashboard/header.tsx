@@ -3,19 +3,12 @@
 import { UserButton } from '@clerk/nextjs';
 import { Coins } from 'lucide-react';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useCredits } from '@/hooks/use-credits';
 
 export function Header() {
-  const [credits, setCredits] = useState<number | null>(null);
-
-  useEffect(() => {
-    fetch('/api/credits')
-      .then(res => res.json())
-      .then(data => setCredits(data.balance))
-      .catch(() => setCredits(null));
-  }, []);
+  const { balance, loading } = useCredits();
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background">
@@ -34,10 +27,10 @@ export function Header() {
         <div className="flex-1" />
 
         <div className="flex items-center gap-4">
-          {credits !== null && (
+          {!loading && (
             <Badge variant="secondary" className="gap-1">
               <Coins className="h-3 w-3" />
-              {credits} credits
+              {balance} credits
             </Badge>
           )}
           <ThemeToggle />

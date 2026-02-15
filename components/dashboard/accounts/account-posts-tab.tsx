@@ -31,7 +31,6 @@ import {
 import type {
   PostImportConfig,
   PostImportMode,
-  PostSorting,
   DateRangePreset,
 } from "@/components/dashboard/post-import-dialog";
 import type { SyncJob } from "@/hooks/use-accounts";
@@ -77,7 +76,6 @@ export function AccountPostsTab({
 }: AccountPostsTabProps) {
   const [mode, setMode] = useState<PostImportMode>("latest");
   const [postsLimit, setPostsLimit] = useState(25);
-  const [sorting, setSorting] = useState<PostSorting>("latest");
   const [dateRangePreset, setDateRangePreset] = useState<DateRangePreset>("last_month");
   const [customDateStart, setCustomDateStart] = useState("");
   const [customDateEnd, setCustomDateEnd] = useState("");
@@ -136,7 +134,6 @@ export function AccountPostsTab({
     switch (mode) {
       case "latest":
         config.postsLimit = postsLimit;
-        config.sorting = sorting;
         break;
       case "date_range":
         config.dateRangePreset = dateRangePreset;
@@ -198,17 +195,6 @@ export function AccountPostsTab({
                     </SelectContent>
                   </Select>
                   <span className="text-xs text-muted-foreground">posts</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Label className="text-xs">Sort by</Label>
-                  <Select value={sorting} onValueChange={(v) => setSorting(v as PostSorting)}>
-                    <SelectTrigger className="w-24 h-8 text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="latest">Latest</SelectItem>
-                      <SelectItem value="popular">Popular</SelectItem>
-                      <SelectItem value="oldest">Oldest</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
             )}

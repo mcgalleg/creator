@@ -43,7 +43,7 @@ export interface SyncOptions {
   postsLimit?: number;
   includeComments?: boolean;
   commentsLimit?: number;
-  sorting?: "latest" | "popular" | "oldest";
+  maxCommentsPerPost?: number;
   oldestPostDate?: string;
   newestPostDate?: string;
 }
@@ -82,6 +82,7 @@ export interface AccountSyncData {
     totalPosts: number;
     syncedComments: number;
     lastSyncedAt: string | null;
+    lastCompletedJobAt: string | null;
   };
 }
 
@@ -298,7 +299,7 @@ export function useAccounts(): UseAccountsReturn {
             postsLimit: options?.postsLimit ?? 50,
             includeComments: options?.includeComments ?? false,
             commentsLimit: options?.commentsLimit ?? 0,
-            sorting: options?.sorting,
+            maxCommentsPerPost: options?.maxCommentsPerPost,
             oldestPostDate: options?.oldestPostDate,
             newestPostDate: options?.newestPostDate,
           }),

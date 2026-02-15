@@ -14,6 +14,10 @@ export const posts = pgTable("posts", {
   duration: integer("duration"), // Duration in seconds
   thumbnailUrl: text("thumbnail_url"),
   videoUrl: text("video_url"),
+  hashtags: text("hashtags").array(),
+  videoDirectUrl: text("video_direct_url"),
+  aspectRatio: text("aspect_ratio"),
+  songTitle: text("song_title"),
   postedAt: timestamp("posted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   commentsSyncedAt: timestamp("comments_synced_at"),
