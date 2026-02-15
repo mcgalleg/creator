@@ -21,6 +21,23 @@ function renderTreeRecursive(
 
   if (!Component) {
     console.warn(`Unknown component type: ${tree.component}`);
+    // If the unknown component has children, try rendering them directly
+    // (the wrapper name may be hallucinated but children may be valid)
+    if (tree.children && tree.children.length > 0) {
+      return tree.children.map((child, index) =>
+        renderTreeRecursive(child, keyGenerator, `${key ?? keyGenerator.next()}_child_${index}`)
+      );
+    }
+    // If it has data-like props, render a simple fallback table
+    if (tree.props && typeof tree.props === 'object' && Object.keys(tree.props).length > 0) {
+      const fallbackKey = key ?? keyGenerator.next();
+      return (
+        <div key={fallbackKey} className="rounded-md border p-3 text-sm text-muted-foreground">
+          <p className="font-medium mb-1">Unable to render &quot;{tree.component}&quot;</p>
+          <pre className="text-xs overflow-auto max-h-40">{JSON.stringify(tree.props, null, 2)}</pre>
+        </div>
+      );
+    }
     return null;
   }
 

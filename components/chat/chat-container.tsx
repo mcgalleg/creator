@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent, useRef, useEffect } from 'react';
+import { useState, FormEvent, useRef, useEffect, useCallback } from 'react';
 import { useAnalyticsChat } from '@/hooks/use-analytics-chat';
 import { ChatInput } from './chat-input';
 import { MessageList } from './message-list';
@@ -16,7 +16,9 @@ import { useSyncOptional } from '@/contexts/sync-context';
  */
 export function ChatContainer() {
   const [input, setInput] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+  const rafIdRef = useRef<number>(0);
   const syncContext = useSyncOptional();
 
   const {
@@ -31,10 +33,33 @@ export function ChatContainer() {
     selectedAccountId: syncContext?.selectedAccountId,
   });
 
-  // Auto-scroll to bottom when new messages arrive
+  // Track whether user is near the bottom of the scroll container
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    // Consider "near bottom" if within 150px of the bottom edge
+    // (generous threshold so CSS smooth scroll mid-animation doesn't false-negative)
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+  }, []);
+
+  // Auto-scroll: use direct scrollTop (no competing smooth animations)
+  // and debounce to one update per animation frame
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!isNearBottomRef.current) return;
+
+    cancelAnimationFrame(rafIdRef.current);
+    rafIdRef.current = requestAnimationFrame(() => {
+      const el = scrollContainerRef.current;
+      if (el) {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
   }, [messages, isGenerating]);
+
+  // Cleanup RAF on unmount
+  useEffect(() => {
+    return () => cancelAnimationFrame(rafIdRef.current);
+  }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -42,6 +67,8 @@ export function ChatContainer() {
 
     const message = input;
     setInput('');
+    // User just sent a message — they want to see the response
+    isNearBottomRef.current = true;
     await submitMessage(message);
   };
 
@@ -54,7 +81,7 @@ export function ChatContainer() {
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="flex-1 overflow-y-auto p-4">
+      <CardContent ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto scroll-smooth p-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
             <MessageSquare className="h-12 w-12 mb-4 opacity-50" />
@@ -74,8 +101,8 @@ export function ChatContainer() {
           />
         )}
 
-        {/* Loading skeleton while generating */}
-        {isGenerating && (
+        {/* Loading skeleton: only show while waiting for first token, not during active streaming */}
+        {isLoading && (
           <div className="flex justify-start mt-4">
             <div className="bg-muted rounded-lg px-4 py-3 max-w-[85%]">
               <div className="space-y-2">
@@ -95,7 +122,7 @@ export function ChatContainer() {
         )}
 
         {/* Scroll anchor */}
-        <div ref={messagesEndRef} />
+        <div />
       </CardContent>
 
       <div className="flex-shrink-0 p-4 border-t">

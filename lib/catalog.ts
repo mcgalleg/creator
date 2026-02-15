@@ -198,6 +198,95 @@ const BadgeSchema = z.object({
 });
 
 // =============================================================================
+// Alert / Feedback Components
+// =============================================================================
+
+const AlertSchema = z.object({
+  variant: z.enum(["default", "destructive"]).optional().default("default"),
+  title: z.string().optional(),
+  description: z.string(),
+});
+
+const ProgressSchema = z.object({
+  value: z.number().min(0).max(100),
+  label: z.string().optional(),
+});
+
+const SeparatorSchema = z.object({
+  orientation: z
+    .enum(["horizontal", "vertical"])
+    .optional()
+    .default("horizontal"),
+});
+
+const AvatarSchema = z.object({
+  src: z.string().url().optional(),
+  fallback: z.string().max(2),
+  size: z.enum(["sm", "default", "lg"]).optional().default("default"),
+});
+
+const SkeletonSchema = z.object({
+  width: z.string().optional(),
+  height: z.string().optional(),
+  rounded: z
+    .enum(["none", "sm", "md", "lg", "full"])
+    .optional()
+    .default("md"),
+});
+
+// =============================================================================
+// Container / Wrapper Components
+// =============================================================================
+
+const TooltipSchema = z.object({
+  content: z.string(),
+});
+
+const HoverCardSchema = z.object({
+  title: z.string().optional(),
+  description: z.string().optional(),
+  image: z.string().url().optional(),
+});
+
+const ScrollAreaSchema = z.object({
+  maxHeight: z.string().optional().default("400px"),
+});
+
+const AspectRatioSchema = z.object({
+  ratio: z.number().optional().default(16 / 9),
+});
+
+// =============================================================================
+// Compositional Components
+// =============================================================================
+
+const AccordionItemSchema = z.object({
+  title: z.string(),
+  value: z.string().optional(),
+});
+
+const AccordionSchema = z.object({
+  items: z.array(AccordionItemSchema).min(1),
+  type: z.enum(["single", "multiple"]).optional().default("single"),
+  defaultValue: z.array(z.string()).optional(),
+});
+
+const TabItemSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+});
+
+const TabsSchema = z.object({
+  tabs: z.array(TabItemSchema).min(1),
+  defaultTab: z.string().optional(),
+});
+
+const CollapsibleSchema = z.object({
+  title: z.string(),
+  defaultOpen: z.boolean().optional().default(false),
+});
+
+// =============================================================================
 // Validation Functions
 // =============================================================================
 
@@ -318,6 +407,79 @@ export const catalog = createCatalog({
       description:
         "Small badge/tag for labels and status indicators. Use for categories, status, or counts.",
     },
+
+    // Alert / Feedback Components
+    Alert: {
+      props: asProps(AlertSchema),
+      description:
+        "Alert banner for important messages, warnings, or errors. Use 'destructive' variant for critical warnings, 'default' for informational callouts, tips, and milestones.",
+    },
+    Progress: {
+      props: asProps(ProgressSchema),
+      description:
+        "Progress bar showing completion percentage (0-100). Use for goal progress, benchmarks vs targets, or any metric as a percentage of a target.",
+    },
+    Separator: {
+      props: asProps(SeparatorSchema),
+      description:
+        "Visual divider line between sections. Default is horizontal. Use vertical within Row layouts.",
+    },
+    Avatar: {
+      props: asProps(AvatarSchema),
+      description:
+        "User or account avatar showing an image with fallback initials. Use for TikTok profile pictures or commenter avatars.",
+    },
+    Skeleton: {
+      props: asProps(SkeletonSchema),
+      description:
+        "Loading placeholder with animated pulse effect. Set width/height for desired shape.",
+    },
+
+    // Container / Wrapper Components
+    Tooltip: {
+      props: asProps(TooltipSchema),
+      hasChildren: true,
+      description:
+        "Hover tooltip showing text when user hovers over the child element. Use to add context to metrics, abbreviations, or labels.",
+    },
+    HoverCard: {
+      props: asProps(HoverCardSchema),
+      hasChildren: true,
+      description:
+        "Rich hover card showing preview popup with title, description, and optional image. Use for user profiles, video previews, or detailed metric explanations.",
+    },
+    ScrollArea: {
+      props: asProps(ScrollAreaSchema),
+      hasChildren: true,
+      description:
+        "Scrollable container with custom scrollbar. Constrains content to a max height. Use for long lists, large tables, or content needing vertical bounds.",
+    },
+    AspectRatio: {
+      props: asProps(AspectRatioSchema),
+      hasChildren: true,
+      description:
+        "Container maintaining a fixed aspect ratio. Use 16/9 for landscape video, 9/16 for TikTok portrait content, 1 for square images.",
+    },
+
+    // Compositional Components
+    Accordion: {
+      props: asProps(AccordionSchema),
+      hasChildren: true,
+      description:
+        "Expandable accordion with multiple titled sections. Each child maps by index to the corresponding item. Use for FAQs, detailed breakdowns, or grouped sections. Set type 'multiple' to allow expanding several sections simultaneously.",
+    },
+    Tabs: {
+      props: asProps(TabsSchema),
+      hasChildren: true,
+      description:
+        "Tabbed interface with labeled panels. Each child maps by index to the corresponding tab. Use for different views of the same data, time period comparisons, or categorized content.",
+    },
+    Collapsible: {
+      props: asProps(CollapsibleSchema),
+      hasChildren: true,
+      description:
+        "Single expandable/collapsible section with a title toggle. Use for 'show more' patterns, optional detail sections, or secondary information hidden by default.",
+    },
   },
 
   actions: {
@@ -365,13 +527,19 @@ export function getCatalogPrompt(): string {
 }
 
 /**
- * Extended prompt with TikTok analytics context
+ * Extended prompt with TikTok analytics context.
+ * Strips auto-generated sections that are irrelevant to the chat context
+ * (Actions, Visibility Conditions, Validation Functions) to save tokens.
  */
 export function getAnalyticsCatalogPrompt(): string {
-  const basePrompt = generateCatalogPrompt(catalog);
+  let prompt = generateCatalogPrompt(catalog);
 
-  return `${basePrompt}
+  // Remove sections that don't apply to the analytics chat
+  prompt = prompt.replace(/## Available Actions[\s\S]*?(?=## |$)/, "");
+  prompt = prompt.replace(/## Visibility Conditions[\s\S]*?(?=## |$)/, "");
+  prompt = prompt.replace(/## Validation Functions[\s\S]*?(?=## |$)/, "");
 
+  return `${prompt}
 ## Context: TikTok Analytics Dashboard
 
 You are generating UI components for a TikTok analytics dashboard. The data available includes:
@@ -382,7 +550,7 @@ You are generating UI components for a TikTok analytics dashboard. The data avai
 - Posting patterns and timing analysis
 
 When generating components:
-1. ALWAYS wrap your entire response in a Column component to ensure proper vertical spacing between sections
+1. ALWAYS wrap your entire response in a Column component to ensure proper vertical spacing
 2. Use MetricCard or MetricGroup for key performance indicators
 3. Use LineChart or AreaChart for trends over time
 4. Use BarChart for comparisons (e.g., video vs video, day vs day)
@@ -391,6 +559,11 @@ When generating components:
 7. Use TopVideosGrid for showcasing best performing content
 8. Use Card to group related metrics and charts
 9. Use Grid for multi-column layouts within a section
+10. Use the remaining components (Alert, Progress, Separator, Tabs, Accordion, Collapsible, Avatar, Tooltip, ScrollArea, AspectRatio, Skeleton, HoverCard) as appropriate per their descriptions above
+
+### Compositional components (Accordion, Tabs, Collapsible):
+- For Accordion and Tabs, the children array maps BY INDEX to the items/tabs array
+- Ensure the children array length matches the items/tabs array length
 
 Always include meaningful titles and consider the user's analytical needs when selecting components.`;
 }
@@ -419,4 +592,16 @@ export type EngagementTimelineProps = z.infer<typeof EngagementTimelineSchema>;
 export type HeadingProps = z.infer<typeof HeadingSchema>;
 export type TextProps = z.infer<typeof TextSchema>;
 export type BadgeProps = z.infer<typeof BadgeSchema>;
+export type AlertProps = z.infer<typeof AlertSchema>;
+export type ProgressProps = z.infer<typeof ProgressSchema>;
+export type SeparatorProps = z.infer<typeof SeparatorSchema>;
+export type AvatarProps = z.infer<typeof AvatarSchema>;
+export type SkeletonProps = z.infer<typeof SkeletonSchema>;
+export type TooltipProps = z.infer<typeof TooltipSchema>;
+export type HoverCardProps = z.infer<typeof HoverCardSchema>;
+export type ScrollAreaProps = z.infer<typeof ScrollAreaSchema>;
+export type AspectRatioProps = z.infer<typeof AspectRatioSchema>;
+export type AccordionProps = z.infer<typeof AccordionSchema>;
+export type TabsProps = z.infer<typeof TabsSchema>;
+export type CollapsibleProps = z.infer<typeof CollapsibleSchema>;
 export type ColumnDef = z.infer<typeof ColumnDefSchema>;

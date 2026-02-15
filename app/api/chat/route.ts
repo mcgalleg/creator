@@ -1,4 +1,11 @@
-import { streamText, tool, UIMessage, convertToModelMessages, stepCountIs } from "ai";
+import {
+  streamText,
+  tool,
+  UIMessage,
+  convertToModelMessages,
+  stepCountIs,
+  type ModelMessage,
+} from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { auth, hasFeature } from "@/lib/auth";
 import { checkCredits } from "@/lib/services/credit-service";
@@ -7,9 +14,56 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { creditTransactions } from "@/lib/db/schema/credits";
 import { tiktokAccounts, posts, comments, accountMetricsHistory } from "@/lib/db/schema";
-import { eq, desc, and, gte, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, gte, sql, inArray, isNotNull } from "drizzle-orm";
+import { calculateEngagementRate } from "@/lib/dashboard-utils";
 import { getAnalyticsCatalogPrompt } from "@/lib/catalog";
 import { createDiagramTool, EXCALIDRAW_FORMAT_REFERENCE } from "@/lib/ai-tools/excalidraw-tools";
+
+// =============================================================================
+// Message sanitization — fix malformed tool_use inputs in conversation history
+// =============================================================================
+
+/**
+ * The Anthropic API requires tool_use.input to be a JSON dictionary.
+ * If the model previously generated a non-dict input (e.g. an array or null),
+ * the AI SDK stores it in conversation history. When the conversation is
+ * replayed, the API rejects the entire request with a 400.
+ *
+ * This function walks the model messages and fixes any non-dict tool-call
+ * inputs so the conversation can proceed.
+ */
+function sanitizeModelMessages(msgs: ModelMessage[]): ModelMessage[] {
+  return msgs.map((msg) => {
+    // Only assistant messages contain tool-call parts
+    if (msg.role !== "assistant" || !Array.isArray(msg.content)) return msg;
+
+    let needsFix = false;
+    const fixedContent = msg.content.map((part) => {
+      if (part.type !== "tool-call") return part;
+
+      const input = part.input;
+      if (typeof input === "object" && input !== null && !Array.isArray(input)) {
+        return part; // Already a valid dict
+      }
+
+      needsFix = true;
+      console.warn(
+        `[chat] Sanitizing malformed tool-call input for "${part.toolName}":`,
+        typeof input
+      );
+
+      // Best-effort recovery: unwrap array, or wrap in a dict
+      if (Array.isArray(input) && input.length > 0 && typeof input[0] === "object") {
+        return { ...part, input: input[0] };
+      }
+      return { ...part, input: { _raw: input ?? {} } };
+    });
+
+    return needsFix
+      ? ({ ...msg, content: fixedContent } as typeof msg)
+      : msg;
+  });
+}
 
 // Create model for AI chat
 const model = anthropic(process.env.ANTHROPIC_MODEL || "claude-haiku-4-5");
@@ -33,41 +87,50 @@ function getTimeRangeDate(timeRange: string): Date | null {
 // Additional instructions for the AI
 const additionalInstructions = `
 
-## Instructions for Analytics Queries
+## Analytics Query Selection Guide
 
-You are a TikTok analytics assistant. When users ask about their analytics:
+You are a TikTok analytics assistant. **Always prefer aggregation queries** for analytical questions — they return pre-computed answers that are accurate and token-efficient. Only use raw data queries when the user wants to see specific items.
 
-1. **First, fetch the relevant data** using the fetchAnalyticsData tool. Choose the appropriate query type:
-   - 'overview': Get account overview metrics (followers, likes, videos)
-   - 'posts': Get post/video data with engagement metrics
-   - 'engagement': Get engagement trends over time
-   - 'top_content': Get top performing videos
-   - 'comments': Get comments from videos
+### Aggregation queries (for analytical questions):
+- **post_stats** → "How many videos?", "What are my averages?", total counts and averages
+- **top_commenters** → "Who are my super fans?", "Most engaged followers?", ranked commenter list
+- **engagement_breakdown** → "What engagement do I get most?", pie-chart-ready breakdown of likes/comments/shares/saves
+- **posting_times** → "When should I post?", "Best time to post?", performance by day-of-week and hour
+- **comment_activity** → "Comment trends?", "Getting more comments?", daily comment counts over time
+- **growth** → "Am I growing?", "Follower trends?", metrics history with percentage changes
+- **duration_performance** → "Best video length?", "Optimal duration?", performance by duration bucket
 
-2. **Then, generate the UI** using the generateUI tool. Choose components based on the data:
-   - For overview questions, use MetricGroup or MetricCard components
-   - For trends over time, use LineChart or AreaChart
-   - For comparisons, use BarChart
-   - For composition analysis, use PieChart
-   - For detailed listings, use DataTable
-   - For showcasing videos, use TopVideosGrid or VideoCard
-   - Use Card to group related content
-   - Use Grid for dashboard layouts
+### Raw data queries (for displaying specific items):
+- **overview** → Account profile and aggregate metrics
+- **posts** → List of videos with engagement data (returns totalCount + limited subset)
+- **engagement** → Engagement trend data points over time
+- **top_content** → Best performing videos ranked by engagement score (returns totalCount + limited subset)
+- **comments** → Individual comment text and details
 
-3. **Be conversational** - Explain what the data shows and provide insights.
+### Important rules:
+1. When a query returns \`totalCount\` and \`returnedCount\`, ALWAYS tell the user "Showing X of Y total" when X < Y.
+2. For counting questions ("how many...?"), use aggregation queries (post_stats, top_commenters) — never count raw rows.
+3. Use timeRange '30d' for trends and recent performance. Use 'all' for cumulative totals and lifetime stats.
+4. After fetching data, use generateUI to visualize it with appropriate chart components.
+5. Be conversational — explain what the data shows and provide insights.
+6. Format numbers in compact form (1.2M not 1,234,567). Include % symbol for percentages.
 
-4. **Handle missing data gracefully** - If no data is available, explain and suggest what the user can do.
+### Rendering data in charts:
+When creating BarChart, LineChart, or AreaChart, the xKey and yKeys values MUST exactly match the property names in the data objects. Pass fetched data arrays directly — do NOT rename or transform keys.
+- **posting_times** best days: BarChart with data=summary.byDayOfWeek, xKey="dayName", yKeys=["avgEngagementRate"]
+- **posting_times** best hours: BarChart with data=summary.byHour, xKey="hour", yKeys=["avgEngagementRate"]
+- **engagement**: LineChart or AreaChart with xKey="date", yKeys=["plays","likes","comments","shares"]
+- **growth**: LineChart with data=followerGrowth, xKey="date", yKeys=["followers"]
+- **comment_activity**: BarChart or AreaChart with data=activity, xKey="date", yKeys=["comments"]
+- **engagement_breakdown**: PieChart with data=breakdown, nameKey="type", valueKey="value"
+- **duration_performance**: BarChart with data=buckets, xKey="bucket", yKeys=["avgPlays"] or yKeys=["engagementRate"]
 
-5. **Format numbers appropriately**:
-   - Large numbers should use compact format (e.g., 1.2M instead of 1,234,567)
-   - Percentages should include the % symbol
-   - Trends should indicate direction (up/down/neutral)
-
-Example flow:
-- User: "Show me my top performing videos"
-- You: Call fetchAnalyticsData with query='top_content'
-- You: Call generateUI with TopVideosGrid or DataTable component
-- You: Provide a brief analysis of the results
+### Rendering data in tables:
+When using DataTable, you MUST copy every row from the fetched result into the \`data\` prop array. Aggregation queries return arrays with simple column-ready keys:
+- **top_commenters**: use the \`commenters\` array. Column keys: rank, username, comments, likes.
+- **duration_performance**: use the \`buckets\` array. Column keys: bucket, postCount, avgPlays, avgLikes, engagementRate.
+- **engagement_breakdown**: use the \`breakdown\` array. Column keys: type, value, percentage. Or use PieChart.
+- **posting_times**: use \`summary.byDayOfWeek\` array. Column keys: dayName, postCount, avgEngagementRate.
 `;
 
 export async function POST(req: Request) {
@@ -121,12 +184,37 @@ export async function POST(req: Request) {
       accountContext = `\n\nThe user has ${userAccounts.length} connected TikTok account(s): ${userAccounts.map((a) => `@${a.username} (${a.displayName || a.username})`).join(", ")}.`;
     }
 
+    const modelMessages = sanitizeModelMessages(
+      await convertToModelMessages(messages)
+    );
+
     const result = streamText({
       model,
       system:
         getAnalyticsCatalogPrompt() + additionalInstructions + EXCALIDRAW_FORMAT_REFERENCE + accountContext,
-      messages: await convertToModelMessages(messages),
+      messages: modelMessages,
       stopWhen: stepCountIs(5),
+      experimental_repairToolCall: async ({ toolCall, error }) => {
+        // If the model generates a non-dict tool input, try to repair it
+        console.warn(
+          `[chat] Repairing tool call "${toolCall.toolName}":`,
+          error.message
+        );
+        try {
+          const parsed =
+            typeof toolCall.input === "string"
+              ? JSON.parse(toolCall.input)
+              : toolCall.input;
+          // Unwrap array wrapper — model sometimes wraps the object in [...]
+          const fixed = Array.isArray(parsed) ? parsed[0] : parsed;
+          if (typeof fixed === "object" && fixed !== null) {
+            return { ...toolCall, input: JSON.stringify(fixed) };
+          }
+        } catch {
+          // JSON parse failed — can't repair
+        }
+        return null;
+      },
       onFinish: async ({ totalUsage }) => {
         const totalTokens = totalUsage.totalTokens ?? 0;
         if (totalTokens > 0) {
@@ -148,7 +236,7 @@ export async function POST(req: Request) {
       tools: {
         fetchAnalyticsData: tool({
           description:
-            "Fetch analytics data from the database. Use this to get TikTok account metrics, posts, engagement data, top content, or comments.",
+            "Fetch analytics data from the database. Supports aggregation queries (post_stats, top_commenters, engagement_breakdown, posting_times, comment_activity, growth, duration_performance) for analytical questions, and raw data queries (overview, posts, engagement, top_content, comments) for displaying specific items.",
           inputSchema: z.object({
             query: z
               .enum([
@@ -157,9 +245,16 @@ export async function POST(req: Request) {
                 "engagement",
                 "top_content",
                 "comments",
+                "post_stats",
+                "top_commenters",
+                "engagement_breakdown",
+                "posting_times",
+                "comment_activity",
+                "growth",
+                "duration_performance",
               ])
               .describe(
-                "Type of data to fetch: overview (account metrics), posts (video list), engagement (trends over time), top_content (best performing videos), comments (video comments)"
+                "Aggregation queries: post_stats (counts/averages), top_commenters (ranked fans), engagement_breakdown (likes/comments/shares/saves split), posting_times (best day/hour), comment_activity (daily comment trend), growth (follower/engagement trends), duration_performance (best video length). Raw data queries: overview, posts, engagement, top_content, comments."
               ),
             accountIds: z
               .array(z.string())
@@ -205,7 +300,7 @@ export async function POST(req: Request) {
             const timeRangeDate = timeRange
               ? getTimeRangeDate(timeRange)
               : null;
-            const resultLimit = limit || 10;
+            const resultLimit = limit || 50;
 
             switch (query) {
               case "overview": {
@@ -261,6 +356,12 @@ export async function POST(req: Request) {
                   conditions.push(gte(posts.postedAt, timeRangeDate));
                 }
 
+                // Get total count first
+                const [{ total: postsTotalCount }] = await db
+                  .select({ total: sql<number>`count(*)` })
+                  .from(posts)
+                  .where(and(...conditions));
+
                 // Determine sort order
                 const sortColumn = metric === "plays" ? posts.plays :
                                    metric === "comments" ? posts.comments :
@@ -292,7 +393,8 @@ export async function POST(req: Request) {
                 return {
                   type: "posts",
                   posts: postData,
-                  count: postData.length,
+                  totalCount: Number(postsTotalCount),
+                  returnedCount: postData.length,
                 };
               }
 
@@ -346,17 +448,29 @@ export async function POST(req: Request) {
                   type: "engagement",
                   accountMetrics: metricsData,
                   dailyEngagement,
+                  summary: {
+                    totalDays: dailyEngagement.length,
+                    totalPosts: dailyEngagement.reduce((sum, d) => sum + Number(d.postCount), 0),
+                    totalMetricDataPoints: metricsData.length,
+                  },
                 };
               }
 
               case "top_content": {
                 // Get top performing content
-                const conditions = [inArray(posts.accountId, targetAccountIds)];
+                const topContentConditions = [inArray(posts.accountId, targetAccountIds)];
                 if (timeRangeDate) {
-                  conditions.push(gte(posts.postedAt, timeRangeDate));
+                  topContentConditions.push(gte(posts.postedAt, timeRangeDate));
                 }
 
+                // Get total count first
+                const [{ total: topContentTotalCount }] = await db
+                  .select({ total: sql<number>`count(*)` })
+                  .from(posts)
+                  .where(and(...topContentConditions));
+
                 // Default sort by engagement score (likes + comments*2 + shares*3)
+                const topContentLimit = limit || 10;
                 const topPosts = await db
                   .select({
                     id: posts.id,
@@ -376,18 +490,19 @@ export async function POST(req: Request) {
                   })
                   .from(posts)
                   .leftJoin(tiktokAccounts, eq(posts.accountId, tiktokAccounts.id))
-                  .where(and(...conditions))
+                  .where(and(...topContentConditions))
                   .orderBy(
                     desc(
                       sql`(${posts.likes} + ${posts.comments} * 2 + ${posts.shares} * 3)`
                     )
                   )
-                  .limit(resultLimit);
+                  .limit(topContentLimit);
 
                 return {
                   type: "top_content",
                   posts: topPosts,
-                  count: topPosts.length,
+                  totalCount: Number(topContentTotalCount),
+                  returnedCount: topPosts.length,
                 };
               }
 
@@ -410,9 +525,20 @@ export async function POST(req: Request) {
                   return {
                     type: "comments",
                     comments: [],
-                    count: 0,
+                    totalCount: 0,
                   };
                 }
+
+                const postIdList = postIds.map((p) => p.id);
+
+                // Get total count of all comments
+                const [{ total }] = await db
+                  .select({ total: sql<number>`count(*)` })
+                  .from(comments)
+                  .where(inArray(comments.postId, postIdList));
+
+                // Use a higher default limit for comments to give the assistant more context
+                const commentLimit = limit || 200;
 
                 const commentsData = await db
                   .select({
@@ -426,19 +552,490 @@ export async function POST(req: Request) {
                   })
                   .from(comments)
                   .leftJoin(posts, eq(comments.postId, posts.id))
-                  .where(
-                    inArray(
-                      comments.postId,
-                      postIds.map((p) => p.id)
-                    )
-                  )
+                  .where(inArray(comments.postId, postIdList))
                   .orderBy(desc(comments.likes))
-                  .limit(resultLimit);
+                  .limit(commentLimit);
 
                 return {
                   type: "comments",
                   comments: commentsData,
-                  count: commentsData.length,
+                  totalCount: Number(total),
+                };
+              }
+
+              case "post_stats": {
+                // Aggregated post statistics
+                const psConditions = [inArray(posts.accountId, targetAccountIds)];
+                if (timeRangeDate) {
+                  psConditions.push(gte(posts.postedAt, timeRangeDate));
+                }
+
+                const [postStatsResult] = await db
+                  .select({
+                    totalPosts: sql<number>`count(*)`,
+                    totalLikes: sql<number>`coalesce(sum(${posts.likes}), 0)`,
+                    totalComments: sql<number>`coalesce(sum(${posts.comments}), 0)`,
+                    totalShares: sql<number>`coalesce(sum(${posts.shares}), 0)`,
+                    totalPlays: sql<number>`coalesce(sum(${posts.plays}), 0)`,
+                    totalSaves: sql<number>`coalesce(sum(${posts.saves}), 0)`,
+                    avgLikes: sql<number>`coalesce(avg(${posts.likes}), 0)`,
+                    avgComments: sql<number>`coalesce(avg(${posts.comments}), 0)`,
+                    avgShares: sql<number>`coalesce(avg(${posts.shares}), 0)`,
+                    avgPlays: sql<number>`coalesce(avg(${posts.plays}), 0)`,
+                    avgSaves: sql<number>`coalesce(avg(${posts.saves}), 0)`,
+                    maxLikes: sql<number>`coalesce(max(${posts.likes}), 0)`,
+                    maxPlays: sql<number>`coalesce(max(${posts.plays}), 0)`,
+                    earliestPost: sql<string>`min(${posts.postedAt})`,
+                    latestPost: sql<string>`max(${posts.postedAt})`,
+                  })
+                  .from(posts)
+                  .where(and(...psConditions));
+
+                return {
+                  type: "post_stats",
+                  stats: {
+                    totalPosts: Number(postStatsResult.totalPosts),
+                    totalLikes: Number(postStatsResult.totalLikes),
+                    totalComments: Number(postStatsResult.totalComments),
+                    totalShares: Number(postStatsResult.totalShares),
+                    totalPlays: Number(postStatsResult.totalPlays),
+                    totalSaves: Number(postStatsResult.totalSaves),
+                    avgLikes: Math.round(Number(postStatsResult.avgLikes)),
+                    avgComments: Math.round(Number(postStatsResult.avgComments)),
+                    avgShares: Math.round(Number(postStatsResult.avgShares)),
+                    avgPlays: Math.round(Number(postStatsResult.avgPlays)),
+                    avgSaves: Math.round(Number(postStatsResult.avgSaves)),
+                    maxLikes: Number(postStatsResult.maxLikes),
+                    maxPlays: Number(postStatsResult.maxPlays),
+                    earliestPost: postStatsResult.earliestPost,
+                    latestPost: postStatsResult.latestPost,
+                  },
+                  timeRange: timeRange || "all",
+                };
+              }
+
+              case "top_commenters": {
+                // Top commenters ranked by comment count and likes
+                const tcPostConditions = [inArray(posts.accountId, targetAccountIds)];
+                if (timeRangeDate) {
+                  tcPostConditions.push(gte(posts.postedAt, timeRangeDate));
+                }
+
+                // Get post IDs for filtering
+                const tcPostIds = await db
+                  .select({ id: posts.id })
+                  .from(posts)
+                  .where(and(...tcPostConditions));
+
+                if (tcPostIds.length === 0) {
+                  return {
+                    type: "top_commenters",
+                    commenters: [],
+                    totalUniqueCommenters: 0,
+                  };
+                }
+
+                const tcPostIdList = tcPostIds.map((p) => p.id);
+
+                // Get total unique commenters
+                const [{ totalUnique }] = await db
+                  .select({
+                    totalUnique: sql<number>`count(distinct ${comments.authorUsername})`,
+                  })
+                  .from(comments)
+                  .where(
+                    and(
+                      inArray(comments.postId, tcPostIdList),
+                      sql`${comments.authorUsername} IS NOT NULL AND ${comments.authorUsername} != ''`
+                    )
+                  );
+
+                // Get top commenters grouped by username
+                const topCommentersData = await db
+                  .select({
+                    authorUsername: comments.authorUsername,
+                    authorAvatarUrl: sql<string>`MAX(${comments.authorAvatarUrl})`,
+                    commentCount: sql<number>`COUNT(*)`,
+                    totalLikes: sql<number>`COALESCE(SUM(${comments.likes}), 0)`,
+                  })
+                  .from(comments)
+                  .where(
+                    and(
+                      inArray(comments.postId, tcPostIdList),
+                      sql`${comments.authorUsername} IS NOT NULL AND ${comments.authorUsername} != ''`
+                    )
+                  )
+                  .groupBy(comments.authorUsername)
+                  .orderBy(
+                    desc(sql`COUNT(*)`),
+                    desc(sql`COALESCE(SUM(${comments.likes}), 0)`)
+                  )
+                  .limit(limit || 50);
+
+                return {
+                  type: "top_commenters",
+                  commenters: topCommentersData.map((c, i) => ({
+                    rank: i + 1,
+                    username: c.authorUsername,
+                    avatarUrl: c.authorAvatarUrl || null,
+                    comments: Number(c.commentCount),
+                    likes: Number(c.totalLikes),
+                  })),
+                  totalUniqueCommenters: Number(totalUnique),
+                  returnedCount: topCommentersData.length,
+                };
+              }
+
+              case "engagement_breakdown": {
+                // Engagement breakdown by type (likes/comments/shares/saves)
+                const ebConditions = [inArray(posts.accountId, targetAccountIds)];
+                if (timeRangeDate) {
+                  ebConditions.push(gte(posts.postedAt, timeRangeDate));
+                }
+
+                const [engagementTotals] = await db
+                  .select({
+                    totalLikes: sql<number>`coalesce(sum(${posts.likes}), 0)`,
+                    totalComments: sql<number>`coalesce(sum(${posts.comments}), 0)`,
+                    totalShares: sql<number>`coalesce(sum(${posts.shares}), 0)`,
+                    totalSaves: sql<number>`coalesce(sum(${posts.saves}), 0)`,
+                  })
+                  .from(posts)
+                  .where(and(...ebConditions));
+
+                const ebLikes = Number(engagementTotals.totalLikes);
+                const ebComments = Number(engagementTotals.totalComments);
+                const ebShares = Number(engagementTotals.totalShares);
+                const ebSaves = Number(engagementTotals.totalSaves);
+                const totalEngagement = ebLikes + ebComments + ebShares + ebSaves;
+
+                const pct = (v: number) =>
+                  totalEngagement === 0
+                    ? 0
+                    : Math.round((v / totalEngagement) * 10000) / 100;
+
+                return {
+                  type: "engagement_breakdown",
+                  breakdown: [
+                    { type: "likes", value: ebLikes, percentage: pct(ebLikes) },
+                    { type: "comments", value: ebComments, percentage: pct(ebComments) },
+                    { type: "shares", value: ebShares, percentage: pct(ebShares) },
+                    { type: "saves", value: ebSaves, percentage: pct(ebSaves) },
+                  ],
+                  totalEngagement,
+                  timeRange: timeRange || "all",
+                };
+              }
+
+              case "posting_times": {
+                // Posting times analysis by day of week and hour
+                const ptConditions = [inArray(posts.accountId, targetAccountIds)];
+                if (timeRangeDate) {
+                  ptConditions.push(gte(posts.postedAt, timeRangeDate));
+                }
+
+                const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+                const postingData = await db
+                  .select({
+                    dayOfWeek: sql<number>`EXTRACT(DOW FROM ${posts.postedAt})`,
+                    hour: sql<number>`EXTRACT(HOUR FROM ${posts.postedAt})`,
+                    postCount: sql<number>`COUNT(*)`,
+                    totalPlays: sql<number>`COALESCE(SUM(${posts.plays}), 0)`,
+                    totalLikes: sql<number>`COALESCE(SUM(${posts.likes}), 0)`,
+                    totalComments: sql<number>`COALESCE(SUM(${posts.comments}), 0)`,
+                    totalShares: sql<number>`COALESCE(SUM(${posts.shares}), 0)`,
+                    totalSaves: sql<number>`COALESCE(SUM(${posts.saves}), 0)`,
+                  })
+                  .from(posts)
+                  .where(and(...ptConditions))
+                  .groupBy(
+                    sql`EXTRACT(DOW FROM ${posts.postedAt})`,
+                    sql`EXTRACT(HOUR FROM ${posts.postedAt})`
+                  )
+                  .orderBy(
+                    sql`EXTRACT(DOW FROM ${posts.postedAt}) ASC`,
+                    sql`EXTRACT(HOUR FROM ${posts.postedAt}) ASC`
+                  );
+
+                // Transform with engagement rates
+                const timeSlots = postingData.map((row) => {
+                  const pc = Number(row.postCount);
+                  const tp = Number(row.totalPlays);
+                  const tl = Number(row.totalLikes);
+                  const tc = Number(row.totalComments);
+                  const tsh = Number(row.totalShares);
+                  const tsv = Number(row.totalSaves);
+                  return {
+                    dayOfWeek: Number(row.dayOfWeek),
+                    dayName: DAY_NAMES[Number(row.dayOfWeek)],
+                    hour: Number(row.hour),
+                    postCount: pc,
+                    avgPlays: pc > 0 ? Math.round(tp / pc) : 0,
+                    engagementRate: calculateEngagementRate(tl, tc, tsh, tsv, tp),
+                  };
+                });
+
+                // Summarize by day of week
+                const byDay = DAY_NAMES.map((name, i) => {
+                  const daySlots = timeSlots.filter((s) => s.dayOfWeek === i);
+                  const totalPosts = daySlots.reduce((s, d) => s + d.postCount, 0);
+                  const avgEng = daySlots.length > 0
+                    ? Number((daySlots.reduce((s, d) => s + d.engagementRate * d.postCount, 0) / Math.max(totalPosts, 1)).toFixed(2))
+                    : 0;
+                  return { dayOfWeek: i, dayName: name, postCount: totalPosts, avgEngagementRate: avgEng };
+                });
+
+                // Summarize by hour — only include hours with posts to keep response compact
+                const byHour = Array.from({ length: 24 }, (_, h) => {
+                  const hourSlots = timeSlots.filter((s) => s.hour === h);
+                  const totalPosts = hourSlots.reduce((s, d) => s + d.postCount, 0);
+                  const avgEng = hourSlots.length > 0
+                    ? Number((hourSlots.reduce((s, d) => s + d.engagementRate * d.postCount, 0) / Math.max(totalPosts, 1)).toFixed(2))
+                    : 0;
+                  return { hour: h, postCount: totalPosts, avgEngagementRate: avgEng };
+                }).filter((h) => h.postCount > 0);
+
+                // Return only summaries — omit raw timeSlots to keep the response
+                // compact enough for the AI to embed in generateUI chart props
+                return {
+                  type: "posting_times",
+                  summary: { byDayOfWeek: byDay, byHour },
+                  timeRange: timeRange || "all",
+                };
+              }
+
+              case "comment_activity": {
+                // Comment activity over time (daily counts)
+                const caPostConditions = [inArray(posts.accountId, targetAccountIds)];
+                if (timeRangeDate) {
+                  caPostConditions.push(gte(posts.postedAt, timeRangeDate));
+                }
+
+                const caPostIds = await db
+                  .select({ id: posts.id })
+                  .from(posts)
+                  .where(and(...caPostConditions));
+
+                if (caPostIds.length === 0) {
+                  return { type: "comment_activity", activity: [], total: 0, timeRange: timeRange || "30d" };
+                }
+
+                const caPostIdList = caPostIds.map((p) => p.id);
+
+                // Determine the date range for filling
+                const caStartDate = timeRangeDate || new Date(new Date().setDate(new Date().getDate() - 30));
+                const caDays = timeRange === "7d" ? 7 : timeRange === "90d" ? 90 : 30;
+
+                const activityData = await db
+                  .select({
+                    date: sql<string>`DATE(COALESCE(${comments.postedAt}, ${comments.createdAt}))`,
+                    commentCount: sql<number>`COUNT(*)`,
+                  })
+                  .from(comments)
+                  .where(
+                    and(
+                      inArray(comments.postId, caPostIdList),
+                      gte(sql`COALESCE(${comments.postedAt}, ${comments.createdAt})`, caStartDate)
+                    )
+                  )
+                  .groupBy(sql`DATE(COALESCE(${comments.postedAt}, ${comments.createdAt}))`)
+                  .orderBy(sql`DATE(COALESCE(${comments.postedAt}, ${comments.createdAt})) ASC`);
+
+                // Fill missing dates with zeros
+                const dataMap = new Map(activityData.map((d) => [d.date, Number(d.commentCount)]));
+                const filledActivity: { date: string; comments: number }[] = [];
+                for (let i = 0; i < caDays; i++) {
+                  const date = new Date(caStartDate);
+                  date.setDate(date.getDate() + i);
+                  const dateStr = date.toISOString().split("T")[0];
+                  filledActivity.push({ date: dateStr, comments: dataMap.get(dateStr) || 0 });
+                }
+
+                const caTotal = filledActivity.reduce((sum, d) => sum + d.comments, 0);
+
+                return {
+                  type: "comment_activity",
+                  activity: filledActivity,
+                  total: caTotal,
+                  timeRange: timeRange || "30d",
+                };
+              }
+
+              case "growth": {
+                // Growth trends: metrics history + post engagement over time
+                const grConditions = [inArray(accountMetricsHistory.accountId, targetAccountIds)];
+                if (timeRangeDate) {
+                  grConditions.push(gte(accountMetricsHistory.recordedAt, timeRangeDate));
+                }
+
+                const metricsHistory = await db
+                  .select({
+                    date: sql<string>`DATE(${accountMetricsHistory.recordedAt})`,
+                    followerCount: sql<number>`MAX(${accountMetricsHistory.followerCount})`,
+                    followingCount: sql<number>`MAX(${accountMetricsHistory.followingCount})`,
+                    likesCount: sql<number>`MAX(${accountMetricsHistory.likesCount})`,
+                    videoCount: sql<number>`MAX(${accountMetricsHistory.videoCount})`,
+                  })
+                  .from(accountMetricsHistory)
+                  .where(and(...grConditions))
+                  .groupBy(sql`DATE(${accountMetricsHistory.recordedAt})`)
+                  .orderBy(sql`DATE(${accountMetricsHistory.recordedAt}) ASC`);
+
+                // Post engagement grouped by date
+                const grPostConditions = [inArray(posts.accountId, targetAccountIds)];
+                if (timeRangeDate) {
+                  grPostConditions.push(gte(posts.postedAt, timeRangeDate));
+                }
+
+                const engagementByDate = await db
+                  .select({
+                    date: sql<string>`DATE(${posts.postedAt})`,
+                    totalPlays: sql<number>`COALESCE(SUM(${posts.plays}), 0)`,
+                    totalLikes: sql<number>`COALESCE(SUM(${posts.likes}), 0)`,
+                    totalComments: sql<number>`COALESCE(SUM(${posts.comments}), 0)`,
+                    totalShares: sql<number>`COALESCE(SUM(${posts.shares}), 0)`,
+                    totalSaves: sql<number>`COALESCE(SUM(${posts.saves}), 0)`,
+                    postCount: sql<number>`COUNT(*)`,
+                  })
+                  .from(posts)
+                  .where(and(...grPostConditions))
+                  .groupBy(sql`DATE(${posts.postedAt})`)
+                  .orderBy(sql`DATE(${posts.postedAt}) ASC`);
+
+                const followerGrowth = metricsHistory.map((row) => ({
+                  date: row.date,
+                  followers: Number(row.followerCount ?? 0),
+                  following: Number(row.followingCount ?? 0),
+                  totalLikes: Number(row.likesCount ?? 0),
+                  videoCount: Number(row.videoCount ?? 0),
+                }));
+
+                const engagementGrowth = engagementByDate.map((row) => {
+                  const tl = Number(row.totalLikes);
+                  const tc = Number(row.totalComments);
+                  const tsh = Number(row.totalShares);
+                  const tsv = Number(row.totalSaves);
+                  const tp = Number(row.totalPlays);
+                  return {
+                    date: row.date,
+                    plays: tp,
+                    likes: tl,
+                    comments: tc,
+                    shares: tsh,
+                    saves: tsv,
+                    postCount: Number(row.postCount),
+                    engagementRate: calculateEngagementRate(tl, tc, tsh, tsv, tp),
+                  };
+                });
+
+                // Compute summary with % change
+                const grSummary: Record<string, unknown> = {
+                  dataPoints: followerGrowth.length,
+                  period: timeRange || "all",
+                };
+                if (followerGrowth.length >= 2) {
+                  const first = followerGrowth[0].followers;
+                  const last = followerGrowth[followerGrowth.length - 1].followers;
+                  grSummary.followerChange = last - first;
+                  grSummary.followerChangePercent = first > 0 ? Number(((last - first) / first * 100).toFixed(2)) : 0;
+                  grSummary.startFollowers = first;
+                  grSummary.endFollowers = last;
+                }
+
+                return {
+                  type: "growth",
+                  followerGrowth,
+                  engagementGrowth,
+                  summary: grSummary,
+                };
+              }
+
+              case "duration_performance": {
+                // Duration performance using SQL buckets
+                const dpConditions = [
+                  inArray(posts.accountId, targetAccountIds),
+                  isNotNull(posts.duration),
+                ];
+                if (timeRangeDate) {
+                  dpConditions.push(gte(posts.postedAt, timeRangeDate));
+                }
+
+                const durationBuckets = await db
+                  .select({
+                    bucket: sql<string>`CASE
+                      WHEN ${posts.duration} <= 15 THEN '0-15s'
+                      WHEN ${posts.duration} <= 30 THEN '16-30s'
+                      WHEN ${posts.duration} <= 60 THEN '31-60s'
+                      WHEN ${posts.duration} <= 180 THEN '1-3min'
+                      ELSE '3min+'
+                    END`,
+                    bucketOrder: sql<number>`CASE
+                      WHEN ${posts.duration} <= 15 THEN 1
+                      WHEN ${posts.duration} <= 30 THEN 2
+                      WHEN ${posts.duration} <= 60 THEN 3
+                      WHEN ${posts.duration} <= 180 THEN 4
+                      ELSE 5
+                    END`,
+                    postCount: sql<number>`COUNT(*)`,
+                    avgPlays: sql<number>`COALESCE(AVG(${posts.plays}), 0)`,
+                    avgLikes: sql<number>`COALESCE(AVG(${posts.likes}), 0)`,
+                    avgComments: sql<number>`COALESCE(AVG(${posts.comments}), 0)`,
+                    avgShares: sql<number>`COALESCE(AVG(${posts.shares}), 0)`,
+                    avgSaves: sql<number>`COALESCE(AVG(${posts.saves}), 0)`,
+                    totalPlays: sql<number>`COALESCE(SUM(${posts.plays}), 0)`,
+                    totalLikes: sql<number>`COALESCE(SUM(${posts.likes}), 0)`,
+                    totalComments: sql<number>`COALESCE(SUM(${posts.comments}), 0)`,
+                    totalShares: sql<number>`COALESCE(SUM(${posts.shares}), 0)`,
+                    totalSaves: sql<number>`COALESCE(SUM(${posts.saves}), 0)`,
+                  })
+                  .from(posts)
+                  .where(and(...dpConditions))
+                  .groupBy(
+                    sql`CASE
+                      WHEN ${posts.duration} <= 15 THEN '0-15s'
+                      WHEN ${posts.duration} <= 30 THEN '16-30s'
+                      WHEN ${posts.duration} <= 60 THEN '31-60s'
+                      WHEN ${posts.duration} <= 180 THEN '1-3min'
+                      ELSE '3min+'
+                    END`,
+                    sql`CASE
+                      WHEN ${posts.duration} <= 15 THEN 1
+                      WHEN ${posts.duration} <= 30 THEN 2
+                      WHEN ${posts.duration} <= 60 THEN 3
+                      WHEN ${posts.duration} <= 180 THEN 4
+                      ELSE 5
+                    END`
+                  )
+                  .orderBy(sql`CASE
+                    WHEN ${posts.duration} <= 15 THEN 1
+                    WHEN ${posts.duration} <= 30 THEN 2
+                    WHEN ${posts.duration} <= 60 THEN 3
+                    WHEN ${posts.duration} <= 180 THEN 4
+                    ELSE 5
+                  END ASC`);
+
+                const buckets = durationBuckets.map((b) => ({
+                  bucket: b.bucket,
+                  postCount: Number(b.postCount),
+                  avgPlays: Math.round(Number(b.avgPlays)),
+                  avgLikes: Math.round(Number(b.avgLikes)),
+                  avgComments: Math.round(Number(b.avgComments)),
+                  avgShares: Math.round(Number(b.avgShares)),
+                  avgSaves: Math.round(Number(b.avgSaves)),
+                  engagementRate: calculateEngagementRate(
+                    Number(b.totalLikes),
+                    Number(b.totalComments),
+                    Number(b.totalShares),
+                    Number(b.totalSaves),
+                    Number(b.totalPlays)
+                  ),
+                }));
+
+                return {
+                  type: "duration_performance",
+                  buckets,
+                  timeRange: timeRange || "all",
                 };
               }
 
@@ -466,10 +1063,10 @@ export async function POST(req: Request) {
               .record(z.any())
               .describe("The props for the component according to its schema"),
             children: z
-              .array(z.any())
+              .array(z.record(z.any()))
               .optional()
               .describe(
-                "Optional array of nested component definitions for container components"
+                "Optional array of nested component objects, each with {component, props, children?}"
               ),
           }),
           execute: async ({ component, props, children }) => {
