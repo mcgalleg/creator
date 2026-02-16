@@ -6,7 +6,6 @@ import {
   cancelSubscription,
   endSubscription,
 } from "@/lib/services/subscription-service";
-import { convertTrial, isTrialActive } from "@/lib/services/trial-service";
 import { db } from "@/lib/db";
 import { creditTransactions } from "@/lib/db/schema/credits";
 import { getCreditPack } from "@/lib/subscriptions";
@@ -22,15 +21,14 @@ export const POST = Webhooks({
     const tier = POLAR_PRODUCT_TO_TIER[productId];
     if (!userId || !tier) return;
 
-    // Free product activation: just sync balance, don't change tier (trial may be active)
+    // Free product activation: just sync balance, don't change tier (starter may be active)
     if (tier === "free") {
       await syncCreditBalance(userId);
       return;
     }
 
-    // Paid tier: provision subscription and mark trial as converted
+    // Paid tier: provision subscription (subscriptionStartedAt prevents starter expiry)
     await provisionSubscription(userId, tier);
-    await convertTrial(userId);
     await syncCreditBalance(userId);
   },
 
@@ -50,13 +48,6 @@ export const POST = Webhooks({
     // Free product revoked: just log, don't change tier
     if (tier === "free") {
       console.log(`Free product revoked for user ${userId}`);
-      return;
-    }
-
-    // Paid product revoked: if trial is still active, keep Pro; otherwise end subscription
-    const trialActive = await isTrialActive(userId);
-    if (trialActive) {
-      console.log(`Paid subscription revoked for user ${userId}, but trial still active — keeping Pro`);
       return;
     }
 

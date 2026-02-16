@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Crown, ArrowRight, Calendar, Clock, Coins, Bot, XCircle } from "lucide-react";
+import { Crown, ArrowRight, Calendar, Coins, Bot, XCircle, Plug } from "lucide-react";
 import { getTierDisplayInfo, TIER_AI_TOKENS, TIER_SYNC_CREDITS } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/lib/subscriptions";
 
@@ -34,14 +34,13 @@ interface UserSubscriptionData {
   subscriptionStartedAt: string | null;
   subscriptionExpiresAt: string | null;
   creditsResetAt: string | null;
-  trialEndsAt: string | null;
-  trialConverted: boolean;
 }
 
 const TIER_BADGE_VARIANT: Record<SubscriptionTier, "secondary" | "default" | "outline"> = {
   free: "outline",
   basic: "secondary",
   pro: "default",
+  mcp: "secondary",
 };
 
 function formatDate(dateString: string): string {
@@ -110,11 +109,8 @@ export function SubscriptionManager() {
   const tierInfo = getTierDisplayInfo(tier);
   const monthlySyncCredits = TIER_SYNC_CREDITS[tier];
   const monthlyAiTokens = TIER_AI_TOKENS[tier];
-  const isPaid = tier !== "free";
-  const isOnTrial =
-    !!data?.trialEndsAt &&
-    !data?.trialConverted &&
-    new Date(data.trialEndsAt) > new Date();
+  const isMcp = tier === "mcp";
+  const isPaid = tier !== "free" && !isMcp;
 
   return (
     <Card>
@@ -122,7 +118,11 @@ export function SubscriptionManager() {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Crown className="h-5 w-5 text-primary" />
+              {isMcp ? (
+                <Plug className="h-5 w-5 text-primary" />
+              ) : (
+                <Crown className="h-5 w-5 text-primary" />
+              )}
               Subscription
             </CardTitle>
             <CardDescription className="mt-1">
@@ -135,86 +135,101 @@ export function SubscriptionManager() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Trial status */}
-        {isOnTrial && data?.trialEndsAt && (
-          <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-              <Clock className="h-4 w-4 text-primary" />
+        {/* MCP tier: simplified info */}
+        {isMcp ? (
+          <>
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
+                <Coins className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Buy credit packs as needed</p>
+                <p className="text-xs text-muted-foreground">
+                  No monthly allocation — purchase sync credits a la carte
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium">Free Trial Active</p>
-              <p className="text-xs text-muted-foreground">
-                Expires {formatDate(data.trialEndsAt)}
-              </p>
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
+                <Bot className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Bring your own AI</p>
+                <p className="text-xs text-muted-foreground">
+                  Use Claude Desktop, ChatGPT, or any MCP-compatible client
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          </>
+        ) : (
+          <>
+            {/* Monthly allocations */}
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
+                <Coins className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">
+                  {monthlySyncCredits > 0
+                    ? `${monthlySyncCredits.toLocaleString()} sync credits/month`
+                    : "No monthly sync credits"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {monthlySyncCredits > 0
+                    ? "Included with your plan"
+                    : "Upgrade for monthly credits"}
+                </p>
+              </div>
+            </div>
 
-        {/* Monthly allocations */}
-        <div className="flex items-center gap-3 rounded-lg border p-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-            <Coins className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <p className="text-sm font-medium">
-              {monthlySyncCredits > 0
-                ? `${monthlySyncCredits.toLocaleString()} sync credits/month`
-                : "No monthly sync credits"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {monthlySyncCredits > 0
-                ? "Included with your plan"
-                : "Upgrade for monthly credits"}
-            </p>
-          </div>
-        </div>
+            {monthlyAiTokens > 0 && (
+              <div className="flex items-center gap-3 rounded-lg border p-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
+                  <Bot className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">
+                    {(monthlyAiTokens / 1000).toLocaleString()}K AI tokens/month
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Included with your plan
+                  </p>
+                </div>
+              </div>
+            )}
 
-        {monthlyAiTokens > 0 && (
-          <div className="flex items-center gap-3 rounded-lg border p-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-              <Bot className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">
-                {(monthlyAiTokens / 1000).toLocaleString()}K AI tokens/month
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Included with your plan
-              </p>
-            </div>
-          </div>
-        )}
+            {/* Billing dates */}
+            {isPaid && data?.subscriptionExpiresAt && (
+              <div className="flex items-center gap-3 rounded-lg border p-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
+                  <Calendar className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">
+                    Next billing date
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(data.subscriptionExpiresAt)}
+                  </p>
+                </div>
+              </div>
+            )}
 
-        {/* Billing dates */}
-        {isPaid && data?.subscriptionExpiresAt && (
-          <div className="flex items-center gap-3 rounded-lg border p-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-              <Calendar className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">
-                Next billing date
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {formatDate(data.subscriptionExpiresAt)}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Credit reset date */}
-        {isPaid && data?.creditsResetAt && (
-          <div className="flex items-center gap-3 rounded-lg border p-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-              <Coins className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Credits reset</p>
-              <p className="text-xs text-muted-foreground">
-                {formatDate(data.creditsResetAt)}
-              </p>
-            </div>
-          </div>
+            {/* Credit reset date */}
+            {isPaid && data?.creditsResetAt && (
+              <div className="flex items-center gap-3 rounded-lg border p-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
+                  <Coins className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Credits reset</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(data.creditsResetAt)}
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Account limits */}
@@ -224,43 +239,54 @@ export function SubscriptionManager() {
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
-        <Button asChild variant={isPaid ? "outline" : "default"} className="w-full">
-          <Link href="/pricing">
-            {isPaid ? "Change Plan" : "Upgrade Plan"}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
-        {isPaid && !isOnTrial && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" className="w-full text-muted-foreground hover:text-destructive">
-                <XCircle className="mr-2 h-4 w-4" />
-                Cancel Subscription
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Cancel your {tierInfo.name} subscription?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Your subscription will remain active until the end of your current billing period
-                  {data?.subscriptionExpiresAt && (
-                    <> ({formatDate(data.subscriptionExpiresAt)})</>
-                  )}
-                  . After that, you&apos;ll lose access to paid features.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleCancel}
-                  disabled={canceling}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  {canceling ? "Canceling..." : "Cancel Subscription"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+        {isMcp ? (
+          <Button asChild variant="outline" className="w-full">
+            <Link href="/pricing">
+              Switch to Creator or Pro
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        ) : (
+          <>
+            <Button asChild variant={isPaid ? "outline" : "default"} className="w-full">
+              <Link href="/pricing">
+                {isPaid ? "Change Plan" : "Upgrade Plan"}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            {isPaid && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" className="w-full text-muted-foreground hover:text-destructive">
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Cancel Subscription
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel your {tierInfo.name} subscription?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Your subscription will remain active until the end of your current billing period
+                      {data?.subscriptionExpiresAt && (
+                        <> ({formatDate(data.subscriptionExpiresAt)})</>
+                      )}
+                      . After that, you&apos;ll lose access to paid features.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleCancel}
+                      disabled={canceling}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {canceling ? "Canceling..." : "Cancel Subscription"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </>
         )}
       </CardFooter>
     </Card>

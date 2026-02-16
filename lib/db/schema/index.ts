@@ -3,6 +3,7 @@ export * from "./users";
 export * from "./tiktok-accounts";
 export * from "./posts";
 export * from "./comments";
+export * from "./post-collaborators";
 export * from "./metrics";
 export * from "./credits";
 export * from "./sync-jobs";

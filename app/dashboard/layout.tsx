@@ -1,18 +1,17 @@
 import { Suspense } from "react";
 import { auth, isAuthBypassed, hasFeature, FEATURES } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { tiktokAccounts, users } from "@/lib/db/schema";
 import { CompactHeader } from "@/components/dashboard/compact-header";
-import { TrialBanner } from "@/components/dashboard/trial-banner";
 import { ResponsiveLayout } from "@/components/dashboard/responsive-layout";
 import { Loader2 } from "lucide-react";
 import { CreditsProvider } from "@/components/dashboard/credits-provider";
 import { FeatureAccessProvider } from "@/contexts/feature-context";
 import { SyncProvider } from "@/contexts/sync-context";
 import { ensureUserExists } from "@/lib/services/user-service";
-import { getTrialInfo } from "@/lib/services/trial-service";
 
 export default async function DashboardLayout({
   children,
@@ -31,7 +30,7 @@ export default async function DashboardLayout({
     await ensureUserExists(userId);
   }
 
-  // Fetch user's TikTok accounts and onboarding status
+  // Fetch user's TikTok accounts, onboarding status, and subscription tier
   const accounts = userId
     ? await db
         .select({
@@ -45,17 +44,31 @@ export default async function DashboardLayout({
 
   const userRecord = userId
     ? await db
-        .select({ onboardingCompletedAt: users.onboardingCompletedAt })
+        .select({
+          onboardingCompletedAt: users.onboardingCompletedAt,
+          subscriptionTier: users.subscriptionTier,
+        })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1)
     : [];
 
   const onboardingCompletedAt = userRecord[0]?.onboardingCompletedAt ?? null;
+  const subscriptionTier = userRecord[0]?.subscriptionTier ?? "free";
   const showOnboarding = accounts.length === 0 && !onboardingCompletedAt;
 
   if (showOnboarding) {
     redirect("/onboarding");
+  }
+
+  // MCP tier users: redirect from /dashboard to /dashboard/mcp
+  if (subscriptionTier === "mcp") {
+    const hdrs = await headers();
+    const url = new URL(hdrs.get("x-url") || hdrs.get("x-invoke-path") || "/dashboard", "http://localhost");
+    const pathname = url.pathname;
+    if (pathname === "/dashboard" || pathname === "/dashboard/") {
+      redirect("/dashboard/mcp");
+    }
   }
 
   // Resolve feature access server-side via Clerk has() (DB fallback in bypass mode)
@@ -75,20 +88,12 @@ export default async function DashboardLayout({
     };
   }
 
-  const trialInfo = userId ? await getTrialInfo(userId) : null;
-
   return (
     <FeatureAccessProvider features={features}>
       <CreditsProvider>
         <SyncProvider>
           <div className="h-screen flex flex-col overflow-hidden">
-            <CompactHeader />
-            {trialInfo?.isOnTrial && trialInfo.trialEndsAt && (
-              <TrialBanner
-                trialEndsAt={trialInfo.trialEndsAt.toISOString()}
-                daysRemaining={trialInfo.daysRemaining}
-              />
-            )}
+            <CompactHeader subscriptionTier={subscriptionTier} />
             <div className="flex-1 overflow-hidden">
               <Suspense fallback={
                 <div className="h-full flex items-center justify-center">

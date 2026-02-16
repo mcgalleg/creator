@@ -51,6 +51,6 @@ export const CREDIT_PRICING_DISPLAY = {
 
 export const SIGNUP_BONUS_CREDITS = 250;
 
-// Trial bonus credits (Creator-level allocation for 7-day trial)
-export const TRIAL_BONUS_SYNC_CREDITS = 250;
-export const TRIAL_BONUS_AI_TOKENS = 1_000_000;
+// Starter bonus credits (Creator-level allocation for 30-day starter period)
+export const STARTER_BONUS_SYNC_CREDITS = 250;
+export const STARTER_BONUS_AI_TOKENS = 1_000_000;

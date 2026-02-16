@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, FormEvent, useRef, useEffect, useCallback } from 'react';
-import { MessageSquare, AlertCircle, X } from 'lucide-react';
+import { MessageSquare, AlertCircle, X, Sparkles, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import { useAnalyticsChat } from '@/hooks/use-analytics-chat';
 import { ChatInput } from '@/components/chat/chat-input';
 import { MessageList } from '@/components/chat/message-list';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDrawingBridgeOptional } from '@/contexts/drawing-bridge-context';
 import { useSyncOptional } from '@/contexts/sync-context';
+import { useCredits } from '@/hooks/use-credits';
 import { Button } from '@/components/ui/button';
 import type { DiagramResult } from '@/hooks/use-analytics-chat';
 
@@ -21,6 +23,7 @@ export function ChatPanel({ onClose }: { onClose?: () => void }) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const drawingBridge = useDrawingBridgeOptional();
   const syncContext = useSyncOptional();
+  const { aiTokens } = useCredits();
 
   const handleDiagramGenerated = useCallback((diagram: DiagramResult) => {
     if (drawingBridge) {
@@ -121,6 +124,20 @@ export function ChatPanel({ onClose }: { onClose?: () => void }) {
         {/* Scroll anchor */}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* AI tokens depleted prompt */}
+      {aiTokens !== null && aiTokens <= 0 && (
+        <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm">
+          <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
+          <span className="flex-1 text-muted-foreground">
+            You&apos;re out of AI tokens.{" "}
+            <Link href="/pricing" className="font-medium text-primary hover:underline">
+              Subscribe for 1M/month
+              <ArrowRight className="inline ml-0.5 h-3 w-3" />
+            </Link>
+          </span>
+        </div>
+      )}
 
       {/* Chat Input */}
       <div className="p-4 border-t bg-background">

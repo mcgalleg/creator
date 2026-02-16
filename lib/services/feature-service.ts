@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
-export type SubscriptionTier = "free" | "basic" | "pro";
+export type SubscriptionTier = "free" | "basic" | "pro" | "mcp";
 
 /**
  * Get user's subscription tier from the database
@@ -67,6 +67,16 @@ export function getTierDetails(tier: SubscriptionTier): {
         "Up to 5 connected accounts",
         "30-day data retention",
         "Export reports",
+      ],
+    },
+    mcp: {
+      name: "MCP Apps",
+      description: "Bring your own AI client",
+      features: [
+        "MCP server access for external AI clients",
+        "Up to 10 connected accounts",
+        "90-day data retention",
+        "Buy sync credit packs as needed",
       ],
     },
   };

@@ -7,6 +7,7 @@ import {
   isAuthError,
   PERIOD_DAYS,
 } from "@/lib/dashboard-utils";
+import { proxyImageUrl } from "@/lib/image-proxy";
 
 /**
  * GET /api/dashboard/comments
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
       tiktokId: comment.tiktokId,
       text: comment.text,
       authorUsername: comment.authorUsername,
-      authorAvatarUrl: comment.authorAvatarUrl,
+      authorAvatarUrl: proxyImageUrl(comment.authorAvatarUrl),
       likes: comment.likes ?? 0,
       postedAt: comment.postedAt?.toISOString() ?? null,
       createdAt: comment.createdAt.toISOString(),
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
         id: comment.post.id,
         tiktokId: comment.post.tiktokId,
         description: comment.post.description,
-        thumbnailUrl: comment.post.thumbnailUrl,
+        thumbnailUrl: proxyImageUrl(comment.post.thumbnailUrl),
       },
     }));
 

@@ -23,23 +23,23 @@ async function seedTestUser() {
         name: "Test User",
         creditBalance: 1000, // Generous balance for testing
         subscriptionTier: "pro", // Pro tier for full feature access
-        trialConverted: true, // Prevent trial interference in tests
+        subscriptionStartedAt: new Date(), // Prevents starter expiry logic
       })
       .onConflictDoUpdate({
         target: users.id,
         set: {
           creditBalance: 1000,
           subscriptionTier: "pro",
-          trialConverted: true,
+          subscriptionStartedAt: new Date(),
         },
       });
 
-    console.log(`✅ Test user seeded successfully (ID: ${TEST_USER_ID})`);
+    console.log(`Test user seeded successfully (ID: ${TEST_USER_ID})`);
     console.log("   Email: test@example.com");
     console.log("   Credits: 1000");
     console.log("   Tier: pro");
   } catch (error) {
-    console.error("❌ Failed to seed test user:", error);
+    console.error("Failed to seed test user:", error);
     process.exit(1);
   }
 

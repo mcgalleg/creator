@@ -1,34 +1,31 @@
 /**
- * One-time migration script for existing users during the reverse trial rollout.
+ * One-time migration script for existing users during the starter redesign.
  *
  * Run with: npx tsx scripts/migrate-existing-users.ts
  *
  * This script:
- * 1. Sets trialConverted = true for ALL existing users (prevents trial logic from applying)
+ * 1. Sets subscriptionStartedAt = now for all paid-tier users (prevents starter expiry logic)
  * 2. Logs how many users were updated
  *
- * Run AFTER deploying the code changes, ONCE.
+ * Run AFTER deploying the schema migration (0011), ONCE.
  */
 
 import "dotenv/config";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
+import { inArray } from "drizzle-orm";
 
 async function main() {
-  console.log("Migrating existing users...\n");
+  console.log("Migrating existing users for starter redesign...\n");
 
-  // Set trialConverted = true for all existing users to prevent trial logic
+  // Set subscriptionStartedAt for all paid-tier users to prevent starter expiry
   const result = await db
     .update(users)
-    .set({ trialConverted: true })
+    .set({ subscriptionStartedAt: new Date() })
+    .where(inArray(users.subscriptionTier, ["basic", "pro"]))
     .returning({ id: users.id });
 
-  console.log(`Updated ${result.length} users with trialConverted = true`);
-
-  // TODO: For free-tier users, optionally create a Polar subscription to the
-  // free product so they receive monthly baseline credits. This requires
-  // creating subscriptions via the Polar API for each user's Polar customer ID.
-  // For now, free-tier users can be subscribed manually or via a follow-up script.
+  console.log(`Updated ${result.length} paid-tier users with subscriptionStartedAt`);
 
   console.log("\nMigration complete.");
   process.exit(0);

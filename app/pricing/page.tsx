@@ -23,6 +23,7 @@ import {
   Check,
   Bot,
   RefreshCw,
+  Plug,
 } from "lucide-react";
 import {
   CREDIT_PACKS,
@@ -64,7 +65,8 @@ function formatTokens(tokens: number): string {
   return tokens.toString();
 }
 
-const TIERS: { tier: SubscriptionTier; price: string; highlighted: boolean }[] = [
+const TIERS: { tier: SubscriptionTier; price: string; priceNote?: string; highlighted: boolean }[] = [
+  { tier: "mcp" as SubscriptionTier, price: "Pay as you go", priceNote: "Buy sync credit packs", highlighted: false },
   { tier: "basic", price: "$14.99/mo", highlighted: true },
   { tier: "pro", price: "$29.99/mo", highlighted: false },
 ];
@@ -131,28 +133,27 @@ export default function PricingPage() {
             Simple, transparent pricing
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Choose the plan that fits your needs. Start with a free 7-day trial.
-          </p>
-          <p className="mx-auto mt-2 max-w-2xl text-sm text-muted-foreground">
-            No credit card required.
+            Choose the plan that fits your needs. Bring your own AI client or use our full dashboard.
           </p>
         </section>
 
         {/* Subscription Plans */}
-        <section className="container mx-auto max-w-5xl px-4 pb-16">
-          <div className="grid gap-6 md:grid-cols-2">
-            {TIERS.map(({ tier, price, highlighted }) => {
+        <section className="container mx-auto max-w-6xl px-4 pb-16">
+          <div className="grid gap-6 md:grid-cols-3">
+            {TIERS.map(({ tier, price, priceNote, highlighted }) => {
               const info = getTierDisplayInfo(tier);
               const aiTokens = TIER_AI_TOKENS[tier];
               const syncCredits = TIER_SYNC_CREDITS[tier];
               const accountLimit = TIER_ACCOUNT_LIMITS[tier];
               const dataRetention = TIER_DATA_RETENTION[tier];
               const productId = POLAR_PRODUCTS[tier];
+              const isMcp = tier === "mcp";
 
               return (
                 <Card
                   key={tier}
-                  className={highlighted ? "relative border-primary shadow-md" : "relative"}
+                  id={isMcp ? "mcp" : undefined}
+                  className={`relative ${highlighted ? "border-primary shadow-md" : ""} ${isMcp ? "scroll-mt-20" : ""}`}
                 >
                   {highlighted && (
                     <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -163,48 +164,82 @@ export default function PricingPage() {
                     <CardTitle className="text-xl">{info.name}</CardTitle>
                     <CardDescription>{info.description}</CardDescription>
                     <p className="text-3xl font-bold pt-2">{price}</p>
+                    {priceNote && (
+                      <p className="text-sm text-muted-foreground">{priceNote}</p>
+                    )}
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Bot className="h-4 w-4 text-primary flex-shrink-0" />
-                        <span>
-                          {aiTokens > 0
-                            ? `${formatTokens(aiTokens)} AI tokens/month`
-                            : "No AI tokens"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <RefreshCw className="h-4 w-4 text-primary flex-shrink-0" />
-                        <span>
-                          {syncCredits > 0
-                            ? `${syncCredits.toLocaleString()} sync credits/month`
-                            : "250 one-time signup credits"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                        <span>
-                          {accountLimit} connected{" "}
-                          {(accountLimit as number) === 1 ? "account" : "accounts"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                        <span>{dataRetention}-day data retention</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                        <span>Canvas Workspace</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                        <span>AI Analytics Assistant</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                        <span>Export Reports</span>
-                      </div>
+                      {isMcp ? (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <Plug className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span>MCP server access</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Bot className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span>Bring your own AI (Claude Desktop, ChatGPT, Claude Code)</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RefreshCw className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span>Buy sync credit packs as needed</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span>{accountLimit} connected accounts</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span>{dataRetention}-day data retention</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <Bot className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span>
+                              {aiTokens > 0
+                                ? `${formatTokens(aiTokens)} AI tokens/month`
+                                : "No AI tokens"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RefreshCw className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span>
+                              {syncCredits > 0
+                                ? `${syncCredits.toLocaleString()} sync credits/month`
+                                : "250 one-time signup credits"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span>
+                              {accountLimit} connected{" "}
+                              {(accountLimit as number) === 1 ? "account" : "accounts"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span>{dataRetention}-day data retention</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span>Canvas Workspace</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span>AI Analytics Assistant</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span>Export Reports</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Plug className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span>MCP server access included</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </CardContent>
                   <CardFooter>
@@ -215,7 +250,7 @@ export default function PricingPage() {
                         variant={highlighted ? "default" : "outline"}
                       >
                         <a href={productId ? getCheckoutUrl(productId) : "#"}>
-                          Subscribe
+                          {isMcp ? "Get Started" : "Subscribe"}
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </a>
                       </Button>
@@ -226,7 +261,7 @@ export default function PricingPage() {
                           className="w-full"
                           variant={highlighted ? "default" : "outline"}
                         >
-                          Sign in to Subscribe
+                          {isMcp ? "Sign in to Get Started" : "Sign in to Subscribe"}
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                       </SignInButton>
@@ -238,24 +273,28 @@ export default function PricingPage() {
           </div>
         </section>
 
-        <div className="container mx-auto max-w-5xl px-4">
+        <div className="container mx-auto max-w-6xl px-4">
           <Separator />
         </div>
 
         {/* Credit Packs Section */}
-        <section id="credits" className="container mx-auto max-w-5xl px-4 py-16 scroll-mt-20">
+        <section id="credits" className="container mx-auto max-w-6xl px-4 py-16 scroll-mt-20">
           <div className="text-center mb-12">
             <Badge variant="outline" className="mb-4">
               <Coins className="mr-1 size-3" />
               Sync Credit Packs
             </Badge>
             <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              Need More Sync Credits?
+              Sync Credit Packs
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
               Purchase additional sync credits anytime. One-time purchases that
               never expire. Use them for syncing posts, comments, and more.
             </p>
+            <div className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm text-primary">
+              <Plug className="h-4 w-4" />
+              <span>Works with all plans including MCP Apps</span>
+            </div>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">

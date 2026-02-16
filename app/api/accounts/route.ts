@@ -7,6 +7,7 @@ import { validateUsername, estimateSyncCost, startSync } from "@/lib/services/sy
 import { checkCredits } from "@/lib/services/credit-service";
 import { getUserTier } from "@/lib/services/feature-service";
 import { TIER_ACCOUNT_LIMITS } from "@/lib/subscriptions";
+import { proxyImageUrl } from "@/lib/image-proxy";
 
 // Type for import options
 type ImportOption = "profile_only" | "profile_posts" | "profile_posts_comments";
@@ -42,7 +43,12 @@ export async function GET() {
       .where(eq(tiktokAccounts.userId, userId))
       .orderBy(tiktokAccounts.createdAt);
 
-    return NextResponse.json({ accounts });
+    return NextResponse.json({
+      accounts: accounts.map((a) => ({
+        ...a,
+        avatarUrl: proxyImageUrl(a.avatarUrl),
+      })),
+    });
   } catch (error) {
     console.error("Error fetching accounts:", error);
     return NextResponse.json(

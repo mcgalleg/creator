@@ -8,6 +8,7 @@ import {
   calculateEngagementRate,
   PERIOD_DAYS,
 } from "@/lib/dashboard-utils";
+import { proxyImageUrl } from "@/lib/image-proxy";
 
 const DEFAULT_LIMIT = 6;
 const MAX_LIMIT = 50;
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
         id: video.id,
         tiktokId: video.tiktokId,
         description: video.description,
-        thumbnailUrl: video.thumbnailUrl,
+        thumbnailUrl: proxyImageUrl(video.thumbnailUrl),
         videoUrl: video.videoUrl,
         likes,
         comments,

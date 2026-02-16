@@ -94,7 +94,7 @@ export async function POST(req: Request) {
           updatedAt: new Date(),
         },
       })
-      .returning({ trialConverted: users.trialConverted });
+      .returning({ starterExpiresAt: users.starterExpiresAt });
 
     // Create Polar customer with Clerk ID as externalId
     try {
@@ -117,15 +117,15 @@ export async function POST(req: Request) {
       console.error(`Failed to create Polar customer for ${id}:`, polarErr);
     }
 
-    // Start 14-day Pro trial (skip for re-registered users who already converted)
-    // Wrapped in separate try/catch so trial failure doesn't break user creation
+    // Start 30-day Starter period (skip for re-registered users who already have one)
+    // Wrapped in separate try/catch so starter failure doesn't break user creation
     try {
-      if (!upsertResult?.trialConverted) {
-        const { startTrial } = await import("@/lib/services/trial-service");
-        await startTrial(id);
+      if (!upsertResult?.starterExpiresAt) {
+        const { startStarter } = await import("@/lib/services/trial-service");
+        await startStarter(id);
       }
-    } catch (trialErr) {
-      console.error(`Failed to start trial for ${id}:`, trialErr);
+    } catch (starterErr) {
+      console.error(`Failed to start starter for ${id}:`, starterErr);
     }
 
     console.log(`Upserted user ${id} (email: ${email})`);

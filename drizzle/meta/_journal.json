@@ -71,6 +71,20 @@
       "when": 1770700000000,
       "tag": "0009_drop_pinned_components",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1770800000000,
+      "tag": "0010_data_enrichment",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1770900000000,
+      "tag": "0011_trial_to_starter_and_mcp_tier",
+      "breakpoints": true
     }
   ]
 }

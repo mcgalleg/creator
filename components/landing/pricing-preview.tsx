@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, Bot, RefreshCw } from "lucide-react";
+import { Check, Bot, RefreshCw, Plug } from "lucide-react";
 import { SignUpButton, SignedOut } from "@clerk/nextjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,8 @@ function formatTokens(n: number): string {
   return n.toString();
 }
 
-const TIERS: { tier: SubscriptionTier; price: string; highlighted?: boolean }[] = [
+const TIERS: { tier: SubscriptionTier; price: string; priceNote?: string; highlighted?: boolean }[] = [
+  { tier: "mcp" as SubscriptionTier, price: "Pay as you go", priceNote: "Buy sync credit packs" },
   { tier: "basic", price: "$14.99/mo", highlighted: true },
   { tier: "pro", price: "$29.99/mo" },
 ];
@@ -44,13 +45,14 @@ export function PricingPreview() {
             Simple, transparent pricing
           </h2>
           <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-            Start with a free 7-day trial. No credit card required.
+            Bring your own AI client or use our full dashboard. Start exploring with free starter credits.
           </p>
         </AnimateOnScroll>
 
-        <div className="grid gap-6 md:grid-cols-2 max-w-4xl mx-auto">
-          {TIERS.map(({ tier, price, highlighted }, idx) => {
+        <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
+          {TIERS.map(({ tier, price, priceNote, highlighted }, idx) => {
             const info = getTierDisplayInfo(tier);
+            const isMcp = tier === "mcp";
             return (
               <AnimateOnScroll key={tier} delay={idx * 100}>
                 <Card
@@ -71,40 +73,74 @@ export function PricingPreview() {
                     <div className="mt-2">
                       <span className="text-3xl font-bold">{price}</span>
                     </div>
+                    {priceNote && (
+                      <p className="text-sm text-muted-foreground">{priceNote}</p>
+                    )}
                   </CardHeader>
                   <CardContent className="flex-1">
                     <ul className="space-y-3 text-sm">
-                      <li className="flex items-center gap-2">
-                        <Bot className="size-4 text-primary shrink-0" />
-                        {formatTokens(TIER_AI_TOKENS[tier])} AI tokens/month
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <RefreshCw className="size-4 text-primary shrink-0" />
-                        {TIER_SYNC_CREDITS[tier]} sync credits/month
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="size-4 text-primary shrink-0" />
-                        {TIER_ACCOUNT_LIMITS[tier]} connected{" "}
-                        {(TIER_ACCOUNT_LIMITS[tier] as number) === 1
-                          ? "account"
-                          : "accounts"}
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="size-4 text-primary shrink-0" />
-                        {TIER_DATA_RETENTION[tier]}-day data retention
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="size-4 text-primary shrink-0" />
-                        Canvas Workspace
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="size-4 text-primary shrink-0" />
-                        AI Analytics
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="size-4 text-primary shrink-0" />
-                        Export Reports
-                      </li>
+                      {isMcp ? (
+                        <>
+                          <li className="flex items-center gap-2">
+                            <Plug className="size-4 text-primary shrink-0" />
+                            MCP server access
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Bot className="size-4 text-primary shrink-0" />
+                            Bring your own AI client
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <RefreshCw className="size-4 text-primary shrink-0" />
+                            Buy sync credit packs as needed
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="size-4 text-primary shrink-0" />
+                            {TIER_ACCOUNT_LIMITS[tier]} connected accounts
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="size-4 text-primary shrink-0" />
+                            {TIER_DATA_RETENTION[tier]}-day data retention
+                          </li>
+                        </>
+                      ) : (
+                        <>
+                          <li className="flex items-center gap-2">
+                            <Bot className="size-4 text-primary shrink-0" />
+                            {formatTokens(TIER_AI_TOKENS[tier])} AI tokens/month
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <RefreshCw className="size-4 text-primary shrink-0" />
+                            {TIER_SYNC_CREDITS[tier]} sync credits/month
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="size-4 text-primary shrink-0" />
+                            {TIER_ACCOUNT_LIMITS[tier]} connected{" "}
+                            {(TIER_ACCOUNT_LIMITS[tier] as number) === 1
+                              ? "account"
+                              : "accounts"}
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="size-4 text-primary shrink-0" />
+                            {TIER_DATA_RETENTION[tier]}-day data retention
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="size-4 text-primary shrink-0" />
+                            Canvas Workspace
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="size-4 text-primary shrink-0" />
+                            AI Analytics
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="size-4 text-primary shrink-0" />
+                            Export Reports
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Plug className="size-4 text-primary shrink-0" />
+                            MCP server access included
+                          </li>
+                        </>
+                      )}
                     </ul>
                   </CardContent>
                   <CardFooter>
@@ -113,7 +149,7 @@ export function PricingPreview() {
                       variant={highlighted ? "default" : "outline"}
                       className="w-full"
                     >
-                      <Link href="/pricing">See Full Details</Link>
+                      <Link href="/pricing">{isMcp ? "Get Started" : "See Full Details"}</Link>
                     </Button>
                   </CardFooter>
                 </Card>
@@ -125,7 +161,7 @@ export function PricingPreview() {
         <div className="text-center mt-8 space-y-4">
           <SignedOut>
             <SignUpButton mode="modal">
-              <Button size="lg">Start Your Free 7-Day Trial</Button>
+              <Button size="lg">Get Started</Button>
             </SignUpButton>
           </SignedOut>
           <div>

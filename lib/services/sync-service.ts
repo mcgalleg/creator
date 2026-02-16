@@ -6,6 +6,7 @@ import {
   posts,
   comments,
   accountMetricsHistory,
+  postCollaborators,
 } from "@/lib/db/schema";
 import type { SyncConfigSchema } from "@/lib/db/schema/sync-jobs";
 import {
@@ -127,6 +128,18 @@ interface ApiDojoPostData {
   };
   song: {
     title: string;
+    artist: string;
+    duration: number;
+  };
+  collabInfo?: {
+    collaborators: Array<{
+      id: string;
+      username: string;
+      name: string;
+      avatar: string;
+      verified: string | boolean;
+      followers: number;
+    }>;
   };
 }
 
@@ -144,6 +157,7 @@ interface ApiDojoCommentData {
     nickname: string;
     avatarUrl: string;
     region: string;
+    followers: number;
   };
 }
 
@@ -787,6 +801,8 @@ async function processPostResults(
       videoDirectUrl: item.video?.url || null,
       aspectRatio: item.video?.ratio || null,
       songTitle: item.song?.title || null,
+      songArtist: item.song?.artist || null,
+      songDuration: Math.round(item.song?.duration || 0) || null,
     }));
 
   let upsertedPosts: { id: number; tiktokId: string }[] = [];
@@ -811,9 +827,42 @@ async function processPostResults(
           videoDirectUrl: sql`excluded.video_direct_url`,
           aspectRatio: sql`excluded.aspect_ratio`,
           songTitle: sql`excluded.song_title`,
+          songArtist: sql`excluded.song_artist`,
+          songDuration: sql`excluded.song_duration`,
         },
       })
       .returning({ id: posts.id, tiktokId: posts.tiktokId });
+  }
+
+  // Upsert collaborators from collabInfo
+  const upsertedPostMap = new Map(upsertedPosts.map(p => [p.tiktokId, p.id]));
+  const collabValues = typedItems
+    .filter(item => item.collabInfo?.collaborators?.length)
+    .flatMap(item => {
+      const postId = upsertedPostMap.get(item.id);
+      if (!postId) return [];
+      return item.collabInfo!.collaborators.map(c => ({
+        postId,
+        tiktokUserId: c.id,
+        username: c.username,
+        displayName: c.name,
+        avatarUrl: c.avatar,
+        isVerified: c.verified === true || c.verified === "verified account",
+        followerCount: Math.round(c.followers || 0),
+      }));
+    });
+
+  if (collabValues.length > 0) {
+    await db.insert(postCollaborators).values(collabValues)
+      .onConflictDoUpdate({
+        target: [postCollaborators.postId, postCollaborators.tiktokUserId],
+        set: {
+          displayName: sql`excluded.display_name`,
+          avatarUrl: sql`excluded.avatar_url`,
+          isVerified: sql`excluded.is_verified`,
+          followerCount: sql`excluded.follower_count`,
+        },
+      });
   }
 
   const postsCount = upsertedPosts.length;
@@ -876,6 +925,7 @@ async function processCommentResults(
     commentLanguage: string | null;
     replyCount: number;
     isAuthorLiked: boolean;
+    authorFollowerCount: number | null;
   }> = [];
 
   // Deduplicate by (postId, tiktokId) — ApiDojo can return duplicate comments
@@ -909,6 +959,7 @@ async function processCommentResults(
       commentLanguage: comment.commentLanguage || null,
       replyCount: Math.round(comment.replyCount || 0),
       isAuthorLiked: comment.isAuthorLiked || false,
+      authorFollowerCount: Math.round(comment.user?.followers || 0) || null,
     });
     postsWithCommentChanges.add(postId);
   }
@@ -943,6 +994,7 @@ async function processCommentResults(
           commentLanguage: sql`excluded.comment_language`,
           replyCount: sql`excluded.reply_count`,
           isAuthorLiked: sql`excluded.is_author_liked`,
+          authorFollowerCount: sql`excluded.author_follower_count`,
         },
       });
   }

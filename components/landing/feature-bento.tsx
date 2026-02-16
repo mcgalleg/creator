@@ -10,6 +10,7 @@ import {
   Palette,
   Download,
   Sparkles,
+  Plug,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -133,6 +134,25 @@ function SentimentMockup() {
   );
 }
 
+function McpClientMockup() {
+  return (
+    <div className="mt-4 space-y-2">
+      {["Claude Desktop", "ChatGPT", "Claude Code"].map((client) => (
+        <div
+          key={client}
+          className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs text-muted-foreground"
+        >
+          <Plug className="size-3 text-primary" />
+          <span>{client}</span>
+          <span className="ml-auto rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-600 dark:text-emerald-400">
+            Connected
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function FeatureBento() {
   return (
     <section id="features" className="py-24 bg-background">
@@ -190,6 +210,16 @@ export function FeatureBento() {
             description="AI-powered sentiment analysis across all your comments."
           >
             <SentimentMockup />
+          </BentoCard>
+
+          <BentoCard
+            id="mcp"
+            className="lg:col-span-2 scroll-mt-20"
+            icon={Plug}
+            title="Use Your Own AI Client"
+            description="Connect Claude Desktop, ChatGPT, or any MCP-compatible client to query your analytics with natural language."
+          >
+            <McpClientMockup />
           </BentoCard>
 
           {/* Small cards */}

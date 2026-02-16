@@ -67,15 +67,15 @@ export async function ensureUserExists(userId: string): Promise<boolean> {
       console.error(`Failed to create Polar customer for ${userId}:`, polarErr);
     }
 
-    // Start 7-day Creator trial (separate try/catch so trial failure doesn't break user creation)
+    // Start 30-day Starter period (separate try/catch so starter failure doesn't break user creation)
     try {
-      const { startTrial } = await import("@/lib/services/trial-service");
-      await startTrial(userId);
-    } catch (trialErr) {
-      console.error(`Failed to start trial for ${userId}:`, trialErr);
+      const { startStarter } = await import("@/lib/services/trial-service");
+      await startStarter(userId);
+    } catch (starterErr) {
+      console.error(`Failed to start starter for ${userId}:`, starterErr);
     }
 
-    console.log(`Created user ${userId} on-the-fly with Creator trial`);
+    console.log(`Created user ${userId} on-the-fly with Starter period`);
     return true;
   } catch (error) {
     console.error("Error ensuring user exists:", error);

@@ -8,6 +8,7 @@ import {
   escapeLikePattern,
   type Period,
 } from "@/lib/dashboard-utils";
+import { proxyImageUrl } from "@/lib/image-proxy";
 
 function getStartDate(period: Period): Date {
   const now = new Date();
@@ -153,7 +154,7 @@ export async function GET(request: NextRequest) {
         id: post.id,
         tiktokId: post.tiktokId,
         description: post.description,
-        thumbnailUrl: post.thumbnailUrl,
+        thumbnailUrl: proxyImageUrl(post.thumbnailUrl),
         likes: post.likes ?? 0,
         comments: post.comments ?? 0,
         shares: post.shares ?? 0,

@@ -91,7 +91,6 @@ function TopContentVideoCard({ video }: { video: TopContentVideo }) {
               fill
               className="object-cover"
               sizes="(max-width: 768px) 50vw, 33vw"
-              unoptimized
               onError={() => setImageError(true)}
             />
             {video.videoUrl && (

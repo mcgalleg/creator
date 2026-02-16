@@ -14,6 +14,7 @@ export const comments = pgTable("comments", {
   commentLanguage: text("comment_language"),
   replyCount: integer("reply_count").default(0),
   isAuthorLiked: boolean("is_author_liked").default(false),
+  authorFollowerCount: integer("author_follower_count"),
   postedAt: timestamp("posted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
