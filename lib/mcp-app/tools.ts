@@ -462,8 +462,8 @@ export function registerAllTools(server: McpServer) {
 
   registerAppTool(server, "describe_tables", {
     description:
-      "Returns the database schema (table names, columns, types) for the analytics tables available to query. " +
-      "Call this before using query_data so you know what columns and tables exist.",
+      "Returns the full database schema with detailed column types and relationships. " +
+      "Call this before using query_data to understand what tables and columns are available.",
     inputSchema: {},
     _meta: { ui: { resourceUri: RESOURCE_URI } },
   }, async (_args, { authInfo }) => {
@@ -478,8 +478,9 @@ export function registerAllTools(server: McpServer) {
     description:
       "Execute a read-only PostgreSQL SELECT query against the analytics database. " +
       "Data is automatically scoped to the current user's TikTok accounts — no account filters needed. " +
-      "Use describe_tables first to see available tables and columns. " +
-      "Only SELECT queries are allowed. WITH (CTE) queries are supported. Max 500 rows returned.",
+      "Only SELECT queries are allowed. WITH (CTE) queries are supported. Max 500 rows returned. " +
+      "Use describe_tables first to see available tables, then query iteratively — " +
+      "examine results from each query to decide what to explore next for deeper insights.",
     inputSchema: {
       sql: z.string().describe("A PostgreSQL SELECT query"),
     },
@@ -502,4 +503,5 @@ export function registerAllTools(server: McpServer) {
       };
     }
   });
+
 }

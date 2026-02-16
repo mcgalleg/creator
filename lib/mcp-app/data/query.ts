@@ -135,7 +135,8 @@ function validateTableReferences(query: string): void {
     .replace(/\/\*[\s\S]*?\*\//g, "");
 
   // Block schema-qualified references (e.g. public.users) that bypass CTE shadows
-  if (/\bpublic\./i.test(cleaned) || /\b\w+\.(?![\w.]*\bpublic)\w+\.\w+/i.test(cleaned)) {
+  // Match any 3-part dotted identifier like schema.table.column
+  if (/\bpublic\./i.test(cleaned) || /\b\w+\.\w+\.\w+/i.test(cleaned)) {
     throw new Error("Schema-qualified table references are not allowed");
   }
 
@@ -187,22 +188,28 @@ function buildScopedQuery(userQuery: string, accountIds: number[]): string {
   return `${prefix} ${trimmed}`;
 }
 
-export async function executeReadQuery(userId: string, queryStr: string) {
+const QUERY_TIMEOUT_MS = 10_000;
+
+type QueryResult = {
+  columns: string[];
+  rows: Record<string, unknown>[];
+  rowCount: number;
+  truncated: boolean;
+};
+
+function validateQuery(queryStr: string): string {
   const trimmed = queryStr.trim().replace(/;\s*$/, "");
 
-  // Must be a SELECT (or WITH ... SELECT)
   if (!/^\s*(SELECT|WITH)\b/i.test(trimmed)) {
     throw new Error("Only SELECT queries are allowed");
   }
 
-  // Block mutation keywords
   if (FORBIDDEN_KEYWORDS.test(trimmed)) {
     throw new Error(
       "Query contains forbidden operations (only SELECT is allowed)"
     );
   }
 
-  // Reject multiple statements
   const withoutStrings = trimmed
     .replace(/'[^']*'/g, "")
     .replace(/"[^"]*"/g, "");
@@ -210,24 +217,36 @@ export async function executeReadQuery(userId: string, queryStr: string) {
     throw new Error("Multiple SQL statements are not allowed");
   }
 
-  // Validate only allowed tables are referenced
   validateTableReferences(trimmed);
+  return trimmed;
+}
 
-  // Resolve the user's account IDs
-  const accountIds = await getUserAccountIds(userId);
-  if (accountIds.length === 0) {
-    return { columns: [], rows: [], rowCount: 0, truncated: false };
+function coerceRow(row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(row)) {
+    if (typeof val === "string" && /^-?\d+(\.\d+)?$/.test(val)) {
+      out[key] = Number(val);
+    } else {
+      out[key] = val;
+    }
   }
+  return out;
+}
 
-  // Build scoped query with CTE shadowing + row limit
+async function runScopedQuery(
+  trimmed: string,
+  accountIds: number[]
+): Promise<QueryResult> {
   const scoped = buildScopedQuery(trimmed, accountIds);
   const limited = `SELECT * FROM (${scoped}) AS _q LIMIT ${MAX_ROWS}`;
 
-  const QUERY_TIMEOUT_MS = 10_000;
   const result = await Promise.race([
     db.execute(sql.raw(limited)),
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Query timed out (10s limit)")), QUERY_TIMEOUT_MS)
+      setTimeout(
+        () => reject(new Error("Query timed out (10s limit)")),
+        QUERY_TIMEOUT_MS
+      )
     ),
   ]);
 
@@ -236,19 +255,7 @@ export async function executeReadQuery(userId: string, queryStr: string) {
     : ((result as Record<string, unknown>).rows as Record<string, unknown>[]) ??
       [];
 
-  // Neon HTTP returns bigint/numeric as strings — coerce to numbers
-  const rows = rawRows.map((row) => {
-    const out: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(row)) {
-      if (typeof val === "string" && /^-?\d+(\.\d+)?$/.test(val)) {
-        out[key] = Number(val);
-      } else {
-        out[key] = val;
-      }
-    }
-    return out;
-  });
-
+  const rows = rawRows.map(coerceRow);
   const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
 
   return {
@@ -258,3 +265,18 @@ export async function executeReadQuery(userId: string, queryStr: string) {
     truncated: rows.length === MAX_ROWS,
   };
 }
+
+export async function executeReadQuery(
+  userId: string,
+  queryStr: string
+): Promise<QueryResult> {
+  const trimmed = validateQuery(queryStr);
+
+  const accountIds = await getUserAccountIds(userId);
+  if (accountIds.length === 0) {
+    return { columns: [], rows: [], rowCount: 0, truncated: false };
+  }
+
+  return runScopedQuery(trimmed, accountIds);
+}
+
