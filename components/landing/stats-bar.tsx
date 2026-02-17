@@ -1,5 +1,5 @@
 const metrics = [
-  { value: "30+", label: "Widgets" },
+  { value: "31", label: "Widgets" },
   { value: "17", label: "Color Themes" },
   { value: "5", label: "Chart Types" },
   { value: "3", label: "Sync Strategies" },

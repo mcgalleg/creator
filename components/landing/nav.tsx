@@ -53,6 +53,12 @@ export function Nav() {
           >
             FAQ
           </a>
+          <Link
+            href="/docs"
+            className="hidden text-sm text-muted-foreground hover:text-foreground transition-colors sm:inline-block"
+          >
+            Docs
+          </Link>
           <AccentColorPicker />
           <SignedOut>
             <SignInButton mode="modal">

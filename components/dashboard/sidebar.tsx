@@ -8,12 +8,14 @@ import {
   LayoutDashboard,
   Users,
   Settings,
+  BookOpen,
 } from 'lucide-react';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/accounts', label: 'Accounts', icon: Users },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+  { href: '/docs', label: 'Documentation', icon: BookOpen },
 ];
 
 export function Sidebar() {

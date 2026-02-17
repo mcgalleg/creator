@@ -1,7 +1,7 @@
 'use client';
 
 import { UserButton } from '@clerk/nextjs';
-import { Coins, LayoutDashboard, Settings, Sparkles, Plug } from 'lucide-react';
+import { Coins, LayoutDashboard, Settings, Sparkles, Plug, BookOpen } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -89,6 +89,14 @@ export function CompactHeader({ subscriptionTier = "free" }: CompactHeaderProps)
 
         {/* Theme & Accent Color - defer to avoid hydration mismatch with Radix IDs */}
         {mounted && <AccentColorPicker />}
+
+        {/* Docs Button */}
+        <Button variant="ghost" size="icon-sm" asChild className="min-h-[36px] min-w-[36px] md:min-h-[32px] md:min-w-[32px]">
+          <Link href="/docs">
+            <BookOpen className="h-4 w-4" />
+            <span className="sr-only">Documentation</span>
+          </Link>
+        </Button>
 
         {/* Dashboard Button */}
         <Button variant="ghost" size="icon-sm" asChild className="min-h-[36px] min-w-[36px] md:min-h-[32px] md:min-w-[32px]">

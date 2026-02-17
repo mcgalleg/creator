@@ -8,7 +8,7 @@ const steps = [
     number: "1",
     title: "Connect",
     description:
-      "Link your social accounts in one click. We support Instagram, YouTube, TikTok, and more.",
+      "Link your TikTok account in one click. Securely connect via TikTok's official API to access your public analytics data.",
   },
   {
     icon: RefreshCw,

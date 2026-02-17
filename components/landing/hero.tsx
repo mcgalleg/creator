@@ -28,9 +28,9 @@ export function Hero() {
               </span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
-              Ask questions in plain English and get instant, actionable insights
-              about your TikTok analytics. Beautiful visualizations generated
-              on-the-fly, powered by AI.
+              Turn your TikTok data into interactive charts, dashboards, and
+              insights — just by asking a question. Real-time visualizations
+              generated on-the-fly, powered by AI.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <SignedOut>
@@ -51,7 +51,7 @@ export function Hero() {
             </div>
             <SignedOut>
               <p className="mt-4 text-sm text-muted-foreground">
-                No credit card required. 100 free credits to get started.
+                No credit card required. 250 free credits to get started.
               </p>
             </SignedOut>
           </div>

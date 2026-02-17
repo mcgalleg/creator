@@ -134,24 +134,6 @@ function SentimentMockup() {
   );
 }
 
-function McpClientMockup() {
-  return (
-    <div className="mt-4 space-y-2">
-      {["Claude Desktop", "ChatGPT", "Claude Code"].map((client) => (
-        <div
-          key={client}
-          className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs text-muted-foreground"
-        >
-          <Plug className="size-3 text-primary" />
-          <span>{client}</span>
-          <span className="ml-auto rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-600 dark:text-emerald-400">
-            Connected
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export function FeatureBento() {
   return (
@@ -212,16 +194,6 @@ export function FeatureBento() {
             <SentimentMockup />
           </BentoCard>
 
-          <BentoCard
-            id="mcp"
-            className="lg:col-span-2 scroll-mt-20"
-            icon={Plug}
-            title="Use Your Own AI Client"
-            description="Connect Claude Desktop, ChatGPT, or any MCP-compatible client to query your analytics with natural language."
-          >
-            <McpClientMockup />
-          </BentoCard>
-
           {/* Small cards */}
           <BentoCard
             className="lg:col-span-2"
@@ -235,6 +207,76 @@ export function FeatureBento() {
             title="Smart Sync"
             description="Full, incremental, or quick sync — pull fresh video stats, follower data, and engagement metrics from TikTok on your schedule"
           />
+
+          {/* MCP Hero Card */}
+          <BentoCard
+            id="mcp"
+            className="sm:col-span-2 lg:col-span-6 lg:row-span-2 scroll-mt-20"
+            icon={Plug}
+            title="MCP Apps — Bring Your Own AI"
+            description="Connect Claude Desktop, ChatGPT, or any MCP-compatible client to query your TikTok analytics with natural language. No subscription required — just buy sync credits as you go."
+          >
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Compatible Clients</h4>
+                {["Claude Desktop", "ChatGPT", "Claude Code"].map((client) => (
+                  <div
+                    key={client}
+                    className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs text-muted-foreground"
+                  >
+                    <Plug className="size-3 text-primary" />
+                    <span>{client}</span>
+                    <span className="ml-auto rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-600 dark:text-emerald-400">
+                      Supported
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">How It Works</h4>
+                <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 flex size-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">1</span>
+                    <p className="text-xs text-muted-foreground">Activate MCP Apps for free</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 flex size-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">2</span>
+                    <p className="text-xs text-muted-foreground">Buy a sync credit pack</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 flex size-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">3</span>
+                    <p className="text-xs text-muted-foreground">Add the MCP server URL to your AI client</p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sample Chat</h4>
+                <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
+                  <div className="flex justify-end">
+                    <div className="rounded-lg bg-primary/10 px-2.5 py-1.5 text-[11px] text-muted-foreground max-w-[85%]">
+                      Who are my biggest fans?
+                    </div>
+                  </div>
+                  <div className="flex justify-start">
+                    <div className="rounded-lg bg-muted px-2.5 py-1.5 text-[11px] text-muted-foreground max-w-[85%] space-y-1.5">
+                      <div>Here are your top commenters:</div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="size-4 rounded-full bg-primary/20" />
+                        <span className="font-medium">@sarah_creates</span>
+                        <span className="ml-auto text-primary">47 comments</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="size-4 rounded-full bg-primary/15" />
+                        <span className="font-medium">@mike_fitness</span>
+                        <span className="ml-auto text-primary">32 comments</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </BentoCard>
+
           <BentoCard
             className="lg:col-span-2"
             icon={Palette}

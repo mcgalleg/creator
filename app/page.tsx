@@ -4,7 +4,7 @@ import { StatsBar } from "@/components/landing/stats-bar";
 import { FeatureBento } from "@/components/landing/feature-bento";
 import { Showcase } from "@/components/landing/showcase";
 import { HowItWorks } from "@/components/landing/how-it-works";
-import { InteractiveQueries } from "@/components/landing/interactive-queries";
+import { SampleQuestions } from "@/components/landing/interactive-queries";
 import { PricingPreview } from "@/components/landing/pricing-preview";
 import { Faq } from "@/components/landing/faq";
 import { FinalCta } from "@/components/landing/final-cta";
@@ -20,7 +20,7 @@ export default function Home() {
         <FeatureBento />
         <Showcase />
         <HowItWorks />
-        <InteractiveQueries />
+        <SampleQuestions />
         <PricingPreview />
         <Faq />
         <FinalCta />

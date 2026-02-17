@@ -7,6 +7,7 @@ import { MessageList } from './message-list';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, MessageSquare } from 'lucide-react';
+import Link from 'next/link';
 import { useSyncOptional } from '@/contexts/sync-context';
 
 /**
@@ -92,6 +93,9 @@ export function ChatContainer() {
               <li>&quot;What&apos;s my engagement rate?&quot;</li>
               <li>&quot;Compare my performance this week&quot;</li>
             </ul>
+            <Link href="/docs/ai-copilot" className="text-xs text-primary hover:underline mt-3 inline-block">
+              Learn more about AI Copilot
+            </Link>
           </div>
         ) : (
           <MessageList

@@ -151,7 +151,12 @@ export function CreditDisplay() {
     <Card>
       <CardHeader>
         <CardTitle>Credit Balance</CardTitle>
-        <CardDescription>Your available credits for syncing</CardDescription>
+        <CardDescription>
+          Your available credits for syncing.{" "}
+          <Link href="/docs/credits" className="text-primary hover:underline">
+            How credits work
+          </Link>
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex flex-wrap items-center gap-6">
