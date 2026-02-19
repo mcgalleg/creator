@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
 import { DemoVideo } from "./DemoVideo";
 import { VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_FPS, TOTAL_FRAMES } from "./constants";
@@ -39,18 +39,45 @@ const PlayerContent: React.FC = () => {
   const playerRef = useRef<PlayerRef>(null);
   const [muted, setMuted] = useState(true);
 
-  const toggleMute = useCallback(() => {
+  // Force-mute on mount (belt-and-suspenders with initiallyMuted) and keep
+  // the React icon in sync with the Player's actual mute state via the
+  // volumechange event. This prevents the icon showing "muted" while audio
+  // plays — which can happen when initiallyMuted doesn't reliably take
+  // effect across reloads.
+  useEffect(() => {
     const player = playerRef.current;
     if (!player) return;
-    if (player.isMuted()) {
-      player.unmute();
-      player.setVolume(1);
-      setMuted(false);
-    } else {
-      player.mute();
-      setMuted(true);
-    }
+
+    player.mute();
+
+    const syncMuted = () => {
+      if (playerRef.current) {
+        setMuted(playerRef.current.isMuted());
+      }
+    };
+
+    player.addEventListener("volumechange", syncMuted);
+    return () => player.removeEventListener("volumechange", syncMuted);
   }, []);
+
+  const toggleMute = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const player = playerRef.current;
+      if (!player) return;
+
+      if (muted) {
+        player.unmute();
+        player.setVolume(1);
+      } else {
+        player.mute();
+      }
+      // State is synced by the volumechange listener above, but set it
+      // eagerly here too for immediate UI feedback.
+      setMuted(!muted);
+    },
+    [muted],
+  );
 
   return (
     <div style={{ position: "relative", width: "100%", cursor: "none" }}>
@@ -64,6 +91,7 @@ const PlayerContent: React.FC = () => {
         autoPlay
         loop
         initiallyMuted
+        clickToPlay={false}
         style={{ width: "100%" }}
         errorFallback={() => (
           <div

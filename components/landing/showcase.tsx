@@ -1,6 +1,8 @@
 import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AnimateOnScroll } from "@/components/landing/animate-on-scroll";
+import { DashboardShowcaseMockup } from "./dashboard-showcase-mockup";
+import { CanvasShowcaseInteractiveMockup } from "./canvas-showcase-interactive-mockup";
 
 function DashboardMockup() {
   return (
@@ -157,89 +159,6 @@ function DashboardMockup() {
   );
 }
 
-function CanvasMockup() {
-  return (
-    <div className="rounded-xl border bg-card shadow-sm overflow-hidden [transform:perspective(1200px)_rotateY(2deg)] transition-transform hover:[transform:perspective(1200px)_rotateY(0deg)]">
-      {/* Header bar with Excalidraw-like toolbar */}
-      <div className="flex items-center gap-2 border-b px-4 py-2.5">
-        <div className="flex gap-1.5">
-          <div className="size-2.5 rounded-full bg-red-400/60" />
-          <div className="size-2.5 rounded-full bg-yellow-400/60" />
-          <div className="size-2.5 rounded-full bg-green-400/60" />
-        </div>
-        <div className="text-xs text-muted-foreground ml-2">Canvas</div>
-        {/* Mini toolbar icons */}
-        <div className="ml-auto flex items-center gap-1">
-          {["□", "○", "—", "A", "✎"].map((t) => (
-            <div
-              key={t}
-              className="size-5 rounded bg-muted flex items-center justify-center text-[9px] text-muted-foreground"
-            >
-              {t}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="relative h-56 bg-[radial-gradient(circle,_var(--border)_1px,_transparent_1px)] bg-[size:16px_16px] p-4">
-        {/* Sticky note */}
-        <div className="absolute top-4 left-4 w-28 rounded-lg bg-yellow-400/15 border border-yellow-400/25 p-2 shadow-sm rotate-[-1deg]">
-          <div className="text-[10px] font-medium text-yellow-700 dark:text-yellow-400">
-            Content Strategy
-          </div>
-          <div className="h-1 w-16 rounded bg-yellow-500/30 mt-1" />
-          <div className="h-1 w-12 rounded bg-yellow-500/20 mt-1" />
-          <div className="h-1 w-14 rounded bg-yellow-500/15 mt-1" />
-        </div>
-
-        {/* Hand-drawn style rectangle */}
-        <div className="absolute top-6 right-5 w-28 h-16 rounded-md border-2 border-dashed border-blue-400/40 flex items-center justify-center">
-          <div className="text-[9px] text-blue-600 dark:text-blue-400 font-medium text-center px-1">
-            Q1 Goals
-          </div>
-        </div>
-
-        {/* Arrow connector (SVG) */}
-        <svg className="absolute top-14 left-[140px] w-16 h-8" viewBox="0 0 64 32">
-          <path
-            d="M0,16 C16,16 32,8 56,8"
-            stroke="currentColor"
-            className="text-muted-foreground/40"
-            fill="none"
-            strokeWidth="1.5"
-            strokeDasharray="4 2"
-          />
-          <path
-            d="M52,4 L58,8 L52,12"
-            stroke="currentColor"
-            className="text-muted-foreground/40"
-            fill="none"
-            strokeWidth="1.5"
-          />
-        </svg>
-
-        {/* Emerald note */}
-        <div className="absolute bottom-14 left-6 w-24 rounded-lg bg-emerald-400/15 border border-emerald-400/25 p-2 shadow-sm rotate-[1deg]">
-          <div className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-            Audience
-          </div>
-          <div className="h-1 w-14 rounded bg-emerald-500/30 mt-1" />
-          <div className="h-1 w-10 rounded bg-emerald-500/20 mt-1" />
-        </div>
-
-        {/* Text element */}
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/4 text-[11px] font-medium text-foreground/60 italic">
-          Growth roadmap 2026
-        </div>
-
-        {/* Drawn circle */}
-        <div className="absolute bottom-8 right-8 size-16 rounded-full border-2 border-primary/30 flex items-center justify-center">
-          <div className="text-[9px] text-primary font-medium">Launch</div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const dashboardFeatures = [
   "Drag-and-drop widget layout",
@@ -278,7 +197,7 @@ export function Showcase() {
                 ))}
               </ul>
             </div>
-            <DashboardMockup />
+            <DashboardShowcaseMockup />
           </div>
         </AnimateOnScroll>
 
@@ -286,7 +205,7 @@ export function Showcase() {
         <AnimateOnScroll>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="order-2 lg:order-1">
-              <CanvasMockup />
+              <CanvasShowcaseInteractiveMockup />
             </div>
             <div className="order-1 lg:order-2">
               <div className="flex items-center gap-3 mb-4">

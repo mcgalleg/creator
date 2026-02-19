@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 
 export const ACCENT_COLORS = [
   "amber",
@@ -35,15 +35,17 @@ const STORAGE_KEY = "accent-color";
 const DEFAULT_ACCENT: AccentColor = "amber";
 
 export function AccentColorProvider({ children }: { children: ReactNode }) {
-  const [accentColor, setAccentColorState] = useState<AccentColor>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored && ACCENT_COLORS.includes(stored as AccentColor)) {
-        return stored as AccentColor;
-      }
+  const [accentColor, setAccentColorState] = useState<AccentColor>(DEFAULT_ACCENT);
+
+  // Sync from localStorage after hydration to avoid server/client mismatch.
+  // The inline script in <head> already sets the data-accent attribute so CSS
+  // variables are correct immediately — this just syncs React state.
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored && ACCENT_COLORS.includes(stored as AccentColor)) {
+      setAccentColorState(stored as AccentColor);
     }
-    return DEFAULT_ACCENT;
-  });
+  }, []);
 
   const setAccentColor = useCallback((color: AccentColor) => {
     setAccentColorState(color);

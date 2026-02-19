@@ -11,8 +11,11 @@ import {
   Download,
   Sparkles,
   Plug,
+  Send,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { CanvasInteractiveMockup } from "./canvas-interactive-mockup";
+import { DashboardInteractiveMockup } from "./dashboard-interactive-mockup";
 
 function BentoCard({
   id,
@@ -46,94 +49,246 @@ function BentoCard({
 
 function ChatMockup() {
   return (
-    <div className="mt-4 space-y-3">
-      <div className="flex justify-end">
-        <div className="rounded-lg bg-primary/10 px-3 py-2 text-xs text-muted-foreground max-w-[70%]">
-          Show me engagement trends for this week
-        </div>
-      </div>
-      <div className="flex justify-start">
-        <div className="rounded-lg bg-muted px-3 py-2 max-w-[80%] space-y-2">
-          <div className="text-xs text-muted-foreground">
-            Your engagement is up 24% this week.
-          </div>
-          <div className="h-16 rounded bg-gradient-to-t from-primary/20 to-primary/5 flex items-end gap-1 p-2">
-            {[40, 55, 35, 70, 60, 80, 75].map((h, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-sm bg-primary/40"
-                style={{ height: `${h}%` }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+    <div className="mt-4 flex flex-col rounded-lg border bg-card/80 overflow-hidden">
+      <style>{`
+        @keyframes chatSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes chatDraw{from{stroke-dashoffset:300}to{stroke-dashoffset:0}}
+        @keyframes chatReveal{from{opacity:0}to{opacity:1}}
+        @keyframes chatBlink{0%,100%{opacity:.3}50%{opacity:1}}
+        .c-msg{opacity:0;animation:chatSlideIn .4s ease-out forwards}
+        .c-draw{stroke-dasharray:300;stroke-dashoffset:300;animation:chatDraw 1s ease-out forwards}
+        .c-reveal{opacity:0;animation:chatReveal .5s ease-out forwards}
+        .c-blink{animation:chatBlink 1s ease-in-out infinite}
+      `}</style>
 
-function CanvasMockup() {
-  return (
-    <div className="mt-4 relative h-32 rounded-lg border bg-card overflow-hidden bg-[radial-gradient(circle,_var(--border)_1px,_transparent_1px)] bg-[size:16px_16px]">
-      <div className="absolute top-3 left-3 w-20 h-14 rounded bg-yellow-400/20 border border-yellow-400/30 p-1.5">
-        <div className="h-1.5 w-12 rounded bg-yellow-500/40 mb-1" />
-        <div className="h-1.5 w-8 rounded bg-yellow-500/30" />
+      {/* Header bar */}
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-muted/30">
+        <div className="flex size-4 items-center justify-center rounded bg-primary/10">
+          <Sparkles className="size-2.5 text-primary" />
+        </div>
+        <span className="text-[11px] font-medium">AI Copilot</span>
+        <div className="ml-auto flex items-center gap-1.5">
+          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[9px] text-muted-foreground">Online</span>
+        </div>
       </div>
-      <div className="absolute top-5 right-4 w-16 h-12 rounded bg-blue-400/20 border border-blue-400/30 p-1.5">
-        <div className="h-1.5 w-10 rounded bg-blue-500/40 mb-1" />
-        <div className="h-1.5 w-6 rounded bg-blue-500/30" />
-      </div>
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-24 h-14 rounded bg-muted border p-1.5">
-        <div className="h-full flex items-end gap-0.5">
-          {[60, 80, 45, 70, 55].map((h, i) => (
+
+      {/* Chat messages */}
+      <div className="flex-1 px-3 py-3 space-y-3 overflow-hidden">
+        {/* User message */}
+        <div
+          className="c-msg flex justify-end"
+          style={{ animationDelay: "0.3s" }}
+        >
+          <div className="rounded-2xl rounded-tr-sm bg-primary/10 border border-primary/15 px-3 py-1.5 text-[11px] text-foreground/80">
+            Show me engagement trends for this week
+          </div>
+        </div>
+
+        {/* AI response */}
+        <div
+          className="c-msg flex gap-2.5"
+          style={{ animationDelay: "1s" }}
+        >
+          <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/15">
+            <Sparkles className="size-2.5 text-primary" />
+          </div>
+          <div className="space-y-2 min-w-0 flex-1">
+            <p className="text-[11px] text-foreground/80 leading-relaxed">
+              Engagement is{" "}
+              <span className="font-semibold text-emerald-500">up 24%</span>{" "}
+              this week with{" "}
+              <span className="font-semibold text-primary">
+                2.1M total views
+              </span>
+              . Peak day was <span className="font-medium">Saturday</span>.
+            </p>
+
+            {/* Chart card */}
+            <div className="rounded-lg border bg-muted/30 p-2.5 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-medium text-foreground/60 uppercase tracking-wider">
+                  Daily Views
+                </span>
+                <span className="text-[9px] font-semibold text-emerald-500">
+                  +24%
+                </span>
+              </div>
+              <svg viewBox="0 0 220 55" className="w-full" style={{ height: 48 }}>
+                <defs>
+                  <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="0%"
+                      stopColor="var(--primary)"
+                      stopOpacity="0.25"
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="var(--primary)"
+                      stopOpacity="0"
+                    />
+                  </linearGradient>
+                </defs>
+                {/* Grid lines */}
+                {[15, 30, 45].map((y) => (
+                  <line
+                    key={y}
+                    x1="20"
+                    y1={y}
+                    x2="212"
+                    y2={y}
+                    stroke="currentColor"
+                    strokeOpacity="0.05"
+                    strokeWidth="0.5"
+                    strokeDasharray="2 3"
+                  />
+                ))}
+                {/* Gradient fill */}
+                <path
+                  className="c-reveal"
+                  style={{ animationDelay: "2s" }}
+                  d="M25,47 L56,38 L87,41 L118,16 L149,27 L180,6 L211,12 L211,50 L25,50 Z"
+                  fill="url(#cg)"
+                />
+                {/* Line */}
+                <polyline
+                  className="c-draw"
+                  style={{ animationDelay: "1.6s" }}
+                  points="25,47 56,38 87,41 118,16 149,27 180,6 211,12"
+                  fill="none"
+                  stroke="var(--primary)"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {/* Data dots */}
+                {[
+                  [25, 47],
+                  [56, 38],
+                  [87, 41],
+                  [118, 16],
+                  [149, 27],
+                  [180, 6],
+                  [211, 12],
+                ].map(([cx, cy], i) => (
+                  <circle
+                    key={i}
+                    cx={cx}
+                    cy={cy}
+                    r="2"
+                    fill="var(--primary)"
+                    className="c-reveal"
+                    style={{ animationDelay: `${2.2 + i * 0.08}s` }}
+                  />
+                ))}
+                {/* Highlight ring on peak (Saturday) */}
+                <circle
+                  cx={180}
+                  cy={6}
+                  r="4"
+                  fill="var(--primary)"
+                  fillOpacity="0.12"
+                  className="c-reveal"
+                  style={{ animationDelay: "2.7s" }}
+                />
+              </svg>
+              <div className="flex justify-between px-1 text-[8px] text-muted-foreground/50">
+                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+                  <span key={d}>{d}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Metric pills */}
             <div
-              key={i}
-              className="flex-1 rounded-sm bg-primary/30"
-              style={{ height: `${h}%` }}
-            />
-          ))}
+              className="c-msg flex gap-1.5 flex-wrap"
+              style={{ animationDelay: "2.5s" }}
+            >
+              {[
+                { label: "Views", value: "2.1M", cls: "text-primary" },
+                { label: "Likes", value: "45.2K", cls: "text-rose-400" },
+                { label: "Shares", value: "8.3K", cls: "text-blue-400" },
+              ].map((m) => (
+                <div
+                  key={m.label}
+                  className="rounded-md border bg-muted/40 px-2 py-0.5 text-[9px]"
+                >
+                  <span className="text-muted-foreground">{m.label}</span>{" "}
+                  <span className={`font-semibold ${m.cls}`}>{m.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Follow-up suggestions */}
+            <div
+              className="c-msg flex gap-1.5 flex-wrap"
+              style={{ animationDelay: "3s" }}
+            >
+              {["Which post drove the spike?", "Compare to last week"].map(
+                (q) => (
+                  <div
+                    key={q}
+                    className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[9px] text-primary/70"
+                  >
+                    {q}
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Input bar */}
+      <div className="px-3 py-2 border-t bg-muted/20">
+        <div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-1.5">
+          <span className="text-[10px] text-muted-foreground/40 flex items-center">
+            Ask about your data
+            <span className="c-blink ml-0.5 inline-block w-px h-3 bg-muted-foreground/40" />
+          </span>
+          <div className="ml-auto flex size-5 items-center justify-center rounded-lg bg-primary/10">
+            <Send className="size-2.5 text-primary/60" />
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function DashboardMiniMockup() {
-  return (
-    <div className="mt-4 grid grid-cols-2 gap-2">
-      <div className="h-10 rounded bg-primary/10 border border-primary/20" />
-      <div className="h-10 rounded bg-blue-500/10 border border-blue-500/20" />
-      <div className="h-10 rounded bg-emerald-500/10 border border-emerald-500/20" />
-      <div className="h-10 rounded bg-orange-500/10 border border-orange-500/20" />
-    </div>
-  );
-}
+const MORE_FEATURES = [
+  {
+    icon: MessageCircle,
+    title: "Comment Analysis",
+    desc: "AI-powered sentiment analysis across all your comments",
+  },
+  {
+    icon: Users,
+    title: "Multi-Account",
+    desc: "Manage up to 25 TikTok accounts in one place",
+  },
+  {
+    icon: RefreshCw,
+    title: "Smart Sync",
+    desc: "Full, incremental, or quick sync on your schedule",
+  },
+  {
+    icon: Download,
+    title: "Export Reports",
+    desc: "Download canvas and dashboards as PDF or CSV",
+  },
+  {
+    icon: Sparkles,
+    title: "Streaming UI",
+    desc: "Watch charts and insights render in real time",
+  },
+];
 
-function SentimentMockup() {
-  return (
-    <div className="mt-4 space-y-2">
-      <div className="flex items-center gap-2">
-        <div className="text-xs text-muted-foreground w-16">Positive</div>
-        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-          <div className="h-full w-3/4 rounded-full bg-emerald-500/60" />
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <div className="text-xs text-muted-foreground w-16">Neutral</div>
-        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-          <div className="h-full w-1/2 rounded-full bg-blue-500/60" />
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <div className="text-xs text-muted-foreground w-16">Negative</div>
-        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-          <div className="h-full w-1/5 rounded-full bg-red-500/60" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
+const THEME_COLORS = [
+  "#f59e0b", "#3b82f6", "#06b6d4", "#10b981", "#d946ef",
+  "#22c55e", "#6366f1", "#84cc16", "#f97316", "#ec4899",
+  "#a855f7", "#ef4444", "#f43f5e", "#0ea5e9", "#14b8a6",
+  "#8b5cf6", "#eab308",
+];
 
 export function FeatureBento() {
   return (
@@ -171,7 +326,7 @@ export function FeatureBento() {
             title="Canvas Workspace"
             description="Drag notes, shapes, and insights onto a freeform canvas for visual exploration."
           >
-            <CanvasMockup />
+            <CanvasInteractiveMockup />
           </BentoCard>
 
           {/* Medium cards */}
@@ -182,31 +337,45 @@ export function FeatureBento() {
             title="Dynamic Dashboard"
             description="Drag-and-drop widgets to build your perfect analytics view."
           >
-            <DashboardMiniMockup />
+            <DashboardInteractiveMockup />
           </BentoCard>
 
-          <BentoCard
-            className="lg:col-span-2"
-            icon={MessageCircle}
-            title="Comment Analysis"
-            description="AI-powered sentiment analysis across all your comments."
-          >
-            <SentimentMockup />
-          </BentoCard>
-
-          {/* Small cards */}
-          <BentoCard
-            className="lg:col-span-2"
-            icon={Users}
-            title="Multi-Account"
-            description="Manage up to 25 accounts"
-          />
-          <BentoCard
-            className="lg:col-span-2"
-            icon={RefreshCw}
-            title="Smart Sync"
-            description="Full, incremental, or quick sync — pull fresh video stats, follower data, and engagement metrics from TikTok on your schedule"
-          />
+          {/* More features — consolidated */}
+          <div className="lg:col-span-4 group relative rounded-xl border bg-card/50 backdrop-blur-sm p-6 transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+              {MORE_FEATURES.map((f) => (
+                <div key={f.title} className="flex items-start gap-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <f.icon className="size-4 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">{f.title}</div>
+                    <div className="text-xs text-muted-foreground leading-relaxed">
+                      {f.desc}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {/* 17 Themes — with color swatches */}
+              <div className="flex items-start gap-3">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <Palette className="size-4 text-primary" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium">17 Themes</div>
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {THEME_COLORS.map((color) => (
+                      <div
+                        key={color}
+                        className="size-3.5 rounded-full ring-1 ring-border/50"
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* MCP Hero Card */}
           <BentoCard
@@ -277,52 +446,6 @@ export function FeatureBento() {
             </div>
           </BentoCard>
 
-          <BentoCard
-            className="lg:col-span-2"
-            icon={Palette}
-            title="17 Themes"
-            description="Match your brand"
-          >
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {[
-                "#f59e0b", // amber
-                "#3b82f6", // blue
-                "#06b6d4", // cyan
-                "#10b981", // emerald
-                "#d946ef", // fuchsia
-                "#22c55e", // green
-                "#6366f1", // indigo
-                "#84cc16", // lime
-                "#f97316", // orange
-                "#ec4899", // pink
-                "#a855f7", // purple
-                "#ef4444", // red
-                "#f43f5e", // rose
-                "#0ea5e9", // sky
-                "#14b8a6", // teal
-                "#8b5cf6", // violet
-                "#eab308", // yellow
-              ].map((color) => (
-                <div
-                  key={color}
-                  className="size-4 rounded-full ring-1 ring-border/50"
-                  style={{ backgroundColor: color }}
-                />
-              ))}
-            </div>
-          </BentoCard>
-          <BentoCard
-            className="lg:col-span-2"
-            icon={Download}
-            title="Export Reports"
-            description="Export your Canvas workspace and dashboard views as PDF or CSV for sharing and offline analysis"
-          />
-          <BentoCard
-            className="lg:col-span-2"
-            icon={Sparkles}
-            title="Streaming UI"
-            description="Real-time visualizations"
-          />
         </div>
       </div>
     </section>

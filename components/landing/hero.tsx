@@ -41,13 +41,14 @@ export function Hero() {
                   </Button>
                 </SignUpButton>
               </SignedOut>
-              <Link href="/dashboard">
-                <Button variant="outline" size="lg" className="gap-2">
-                  <SignedIn>Go to Dashboard</SignedIn>
-                  <SignedOut>View Demo</SignedOut>
-                  <ArrowRight className="size-4" />
-                </Button>
-              </Link>
+              <SignedIn>
+                <Link href="/dashboard">
+                  <Button variant="outline" size="lg" className="gap-2">
+                    Go to Dashboard
+                    <ArrowRight className="size-4" />
+                  </Button>
+                </Link>
+              </SignedIn>
             </div>
             <SignedOut>
               <p className="mt-4 text-sm text-muted-foreground">
