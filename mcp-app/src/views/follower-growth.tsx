@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { App } from "@modelcontextprotocol/ext-apps";
 import type { FollowerGrowthData } from "../types";
 import { ChartWrapper } from "../components/chart-wrapper";
-import { formatDateShort, formatNumber } from "../lib/formatters";
+import { formatDateShort } from "../lib/formatters";
 import { CHART_COLORS, CHART_COLORS_LIGHT } from "../lib/colors";
 import appStyles from "../styles/app.module.css";
 

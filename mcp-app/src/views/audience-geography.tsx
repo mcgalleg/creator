@@ -1,6 +1,5 @@
 import type { AudienceGeographyData } from "../types";
 import { ChartWrapper } from "../components/chart-wrapper";
-import { MetricCard } from "../components/metric-card";
 import { formatNumber } from "../lib/formatters";
 import { CHART_COLORS } from "../lib/colors";
 import appStyles from "../styles/app.module.css";

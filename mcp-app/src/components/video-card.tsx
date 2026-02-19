@@ -15,7 +15,7 @@ interface VideoCardProps {
 }
 
 export function VideoCard({
-  description, thumbnailUrl, plays, likes, comments, shares, saves, postedAt, engagementRate, extra,
+  description, thumbnailUrl, plays, likes, comments, shares, postedAt, engagementRate, extra,
 }: VideoCardProps) {
   const badgeClass = engagementRate > 5
     ? styles.badgeGood
@@ -26,6 +26,7 @@ export function VideoCard({
   return (
     <div className={styles.card}>
       {thumbnailUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- MCP App, not Next.js
         <img src={thumbnailUrl} alt="" className={styles.thumbnail} />
       ) : (
         <div className={styles.thumbnail} />

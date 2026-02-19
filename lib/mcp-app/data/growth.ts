@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { posts, tiktokAccounts } from "@/lib/db/schema";
-import { inArray, sql, and, gte, lte, count } from "drizzle-orm";
+import { inArray, and, gte, lte, count } from "drizzle-orm";
 import { getUserAccountIds } from "./accounts";
 
 export async function fetchFollowerGrowth(
@@ -22,7 +22,6 @@ export async function fetchFollowerGrowth(
   // Approximate historical growth using post engagement trends
   const now = new Date();
   const points: Array<{ date: string; followers: number; delta: number }> = [];
-  let runningFollowers = currentFollowers;
 
   // Work backwards: each period, subtract an estimated delta based on post volume
   const periodData: Array<{ date: string; postCount: number }> = [];

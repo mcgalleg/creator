@@ -28,6 +28,7 @@ ChartJS.register(
 );
 
 // Shared defaults that respect CSS variables
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Chart.js generic requires `any` for shared config
 const baseOptions: ChartOptions<any> = {
   responsive: true,
   maintainAspectRatio: true,
@@ -50,7 +51,9 @@ const baseOptions: ChartOptions<any> = {
 
 interface ChartWrapperProps {
   type: "line" | "bar" | "doughnut" | "scatter" | "area";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Chart.js requires `any` for polymorphic chart types
   data: ChartData<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   options?: ChartOptions<any>;
   height?: number;
 }
@@ -60,7 +63,7 @@ export function ChartWrapper({ type, data, options, height }: ChartWrapperProps)
 
   // Doughnut doesn't use scales
   if (type === "doughnut") {
-    delete (mergedOptions as any).scales;
+    delete (mergedOptions as Record<string, unknown>).scales;
   }
 
   const chartProps = { data, options: mergedOptions, height: height ?? 280 };

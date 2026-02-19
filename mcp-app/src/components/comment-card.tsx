@@ -13,6 +13,7 @@ export function CommentCard({ text, authorUsername, authorAvatarUrl, likes, crea
   return (
     <div className={styles.card}>
       {authorAvatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- MCP App, not Next.js
         <img src={authorAvatarUrl} alt="" className={styles.avatar} />
       ) : (
         <div className={styles.avatar} />

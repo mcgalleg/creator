@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { posts, comments } from "@/lib/db/schema";
-import { eq, inArray, sql, count, desc } from "drizzle-orm";
+import { eq, inArray, count, desc } from "drizzle-orm";
 import { getUserAccountIds } from "./accounts";
 
 // Map common region codes to display names

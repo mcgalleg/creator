@@ -17,7 +17,8 @@ const postSelect = {
   postedAt: posts.postedAt,
 };
 
-function mapPost(p: typeof postSelect extends Record<string, infer V> ? Record<string, any> : never) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- row shape comes from dynamic select
+function mapPost(p: Record<string, any>) {
   const plays = p.plays ?? 0;
   const engagement = (p.likes ?? 0) + (p.comments ?? 0) + (p.shares ?? 0);
   const engagementRate = plays > 0 ? Math.round((engagement / plays) * 10000) / 100 : 0;

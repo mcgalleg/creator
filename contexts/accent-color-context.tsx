@@ -40,9 +40,14 @@ export function AccentColorProvider({ children }: { children: ReactNode }) {
   // Sync from localStorage after hydration to avoid server/client mismatch.
   // The inline script in <head> already sets the data-accent attribute so CSS
   // variables are correct immediately — this just syncs React state.
+  // Sync from localStorage after mount. The inline <head> script already sets
+  // the data-accent attribute so CSS variables are correct immediately — this
+  // just aligns React state. The synchronous setState is intentional to avoid
+  // a render with stale accent color.
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored && ACCENT_COLORS.includes(stored as AccentColor)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAccentColorState(stored as AccentColor);
     }
   }, []);

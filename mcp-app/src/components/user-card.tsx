@@ -1,4 +1,3 @@
-import { formatNumber } from "../lib/formatters";
 import styles from "./user-card.module.css";
 
 interface UserCardProps {
@@ -14,6 +13,7 @@ export function UserCard({ rank, username, avatarUrl, stat, badge }: UserCardPro
     <div className={styles.card}>
       <div className={styles.rank}>{rank}</div>
       {avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- MCP App, not Next.js
         <img src={avatarUrl} alt="" className={styles.avatar} />
       ) : (
         <div className={styles.avatar} />

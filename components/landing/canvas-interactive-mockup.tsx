@@ -285,7 +285,6 @@ export function CanvasInteractiveMockup() {
         } as React.CSSProperties
       }
     >
-      {/* eslint-disable-next-line @next/next/no-css-tags */}
       <style>{`
         @font-face {
           font-family: 'Virgil';

@@ -41,16 +41,16 @@ const ANALYTICS_SCHEMA = [
       account_id: "integer FK → tiktok_accounts.id",
       tiktok_id: "text",
       description: "text (caption)",
-      likes: "bigint",
-      comments: "bigint",
-      shares: "bigint",
-      plays: "bigint",
-      saves: "bigint",
-      duration: "integer (seconds)",
-      hashtags: "text[]",
-      song_title: "text",
-      song_artist: "text",
-      posted_at: "timestamp",
+      likes: "bigint — total likes on this video",
+      comments: "bigint — total comments on this video",
+      shares: "bigint — total shares (reposts)",
+      plays: "bigint — total video views/plays",
+      saves: "bigint — total bookmarks/saves",
+      duration: "integer — video length in seconds (nullable)",
+      hashtags: "text[] — array of hashtag strings; use unnest(hashtags) for per-tag analysis",
+      song_title: "text — audio/sound title used in video (nullable)",
+      song_artist: "text — audio/sound artist (nullable)",
+      posted_at: "timestamp — when the video was published (nullable for some posts)",
       created_at: "timestamp",
     },
   },
@@ -64,12 +64,12 @@ const ANALYTICS_SCHEMA = [
       text: "text",
       author_username: "text",
       author_display_name: "text",
-      author_region: "text",
-      comment_language: "text",
+      author_region: "text — 2-letter country code of commenter (nullable)",
+      comment_language: "text — 2-letter language code (nullable)",
       likes: "integer",
       reply_count: "integer",
-      is_author_liked: "boolean (creator liked this comment)",
-      author_follower_count: "integer",
+      is_author_liked: "boolean — whether the creator liked/hearted this comment",
+      author_follower_count: "integer — commenter's follower count at time of sync",
       posted_at: "timestamp",
       created_at: "timestamp",
     },
@@ -112,10 +112,21 @@ export async function getAnalyticsSchema(userId: string) {
   return {
     userAccountIds: accountIds,
     instructions:
-      "Write standard PostgreSQL SELECT queries against these tables. " +
-      "Data is automatically scoped to the current user's accounts — no need to add account filters yourself. " +
-      "Join comments to posts via comments.post_id = posts.id.",
+      "Write standard PostgreSQL SELECT queries. " +
+      "Data is automatically scoped to the current user's accounts — do not add account_id filters. " +
+      "The hashtags column is text[] — use unnest(hashtags) to expand for per-hashtag analysis. " +
+      "Engagement rate is conventionally calculated as (likes + comments + shares) / NULLIF(plays, 0) * 100. " +
+      "posted_at, duration, song_title, and song_artist may be NULL — use appropriate NULL handling. " +
+      "Join comments to posts via comments.post_id = posts.id. " +
+      "Join post_collaborators via post_collaborators.post_id = posts.id. " +
+      "Use account_metrics_history for historical follower/following snapshots over time.",
     tables: ANALYTICS_SCHEMA,
+    notes: [
+      "hashtags is a PostgreSQL text[] column — use unnest(hashtags) to expand into rows for per-hashtag queries",
+      "Engagement rate convention: (likes + comments + shares) / NULLIF(plays, 0) * 100",
+      "posted_at, duration, song_title, song_artist can be NULL",
+      "account_metrics_history contains periodic snapshots — use recorded_at for time-series analysis of follower growth",
+    ],
   };
 }
 
@@ -279,4 +290,3 @@ export async function executeReadQuery(
 
   return runScopedQuery(trimmed, accountIds);
 }
-

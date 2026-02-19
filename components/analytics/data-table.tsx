@@ -57,6 +57,7 @@ function DataTable<T extends Record<string, unknown>>({
     [columns]
   )
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table API is designed for this pattern
   const table = useReactTable({
     data,
     columns: tableColumns,
