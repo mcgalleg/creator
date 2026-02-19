@@ -1,10 +1,2 @@
 export { getUserAccountIds } from "./accounts";
-export { fetchPosts, fetchTopContent, fetchViralPosts, fetchUnderperforming } from "./posts";
-export { fetchEngagementTrends, fetchEngagementRate } from "./engagement";
-export { fetchFollowerGrowth } from "./growth";
-export { fetchPostingFrequency } from "./posting";
-export { fetchRecentComments, fetchTopCommenters, fetchCommentActivity, fetchAudienceLoyalty } from "./comments";
-export { fetchPeriodComparison, fetchAccountComparison } from "./comparisons";
-export { fetchAudienceGeography, fetchAudienceLanguages } from "./audience";
-export { fetchCreatorEngagement } from "./creator-engagement";
 export { getAnalyticsSchema, executeReadQuery } from "./query";
