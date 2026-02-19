@@ -245,16 +245,17 @@ export function CanvasShowcaseInteractiveMockup() {
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (!dragging.current) return;
+      const drag = dragging.current;
+      if (!drag) return;
       const svgPoint = clientToSvg(e.clientX, e.clientY);
-      const dx = svgPoint.x - dragging.current.startX;
-      const dy = svgPoint.y - dragging.current.startY;
+      const dx = svgPoint.x - drag.startX;
+      const dy = svgPoint.y - drag.startY;
+      const id = drag.id;
+      const newX = drag.origX + dx;
+      const newY = drag.origY + dy;
       setNodePositions((prev) => ({
         ...prev,
-        [dragging.current!.id]: {
-          x: dragging.current!.origX + dx,
-          y: dragging.current!.origY + dy,
-        },
+        [id]: { x: newX, y: newY },
       }));
     },
     [clientToSvg]
