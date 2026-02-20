@@ -6,9 +6,9 @@ import { Shield } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Not a Bot",
+  title: "Privacy Policy — Astriq",
   description:
-    "Privacy policy for Not a Bot — how we collect, use, and protect your data.",
+    "Privacy policy for Astriq — how we collect, use, and protect your data.",
 };
 
 export default function PrivacyPage() {
@@ -37,13 +37,13 @@ export default function PrivacyPage() {
           <section className="space-y-4">
             <h2 className="text-xl font-semibold">Introduction</h2>
             <p className="text-muted-foreground">
-              Not a Bot is operated by Not a Bot (&ldquo;we&rdquo;,
+              Astriq is operated by Astriq (&ldquo;we&rdquo;,
               &ldquo;us&rdquo;, &ldquo;our&rdquo;). This Privacy Policy
               explains how we collect, use, store, and protect your information
               when you use our AI-powered TikTok analytics platform.
             </p>
             <p className="text-muted-foreground">
-              By using Not a Bot, you agree to the collection and use of
+              By using Astriq, you agree to the collection and use of
               information in accordance with this policy.
             </p>
           </section>
@@ -111,7 +111,7 @@ export default function PrivacyPage() {
           <section className="space-y-4">
             <h2 className="text-xl font-semibold">AI Processing</h2>
             <p className="text-muted-foreground">
-              Not a Bot uses AI models to analyze your TikTok data and provide
+              Astriq uses AI models to analyze your TikTok data and provide
               actionable insights, including content performance analysis,
               audience trends, and comment sentiment.
             </p>
@@ -217,7 +217,7 @@ export default function PrivacyPage() {
             </ul>
             <p className="text-muted-foreground">
               To exercise any of these rights, use the relevant features in your
-              dashboard or contact us at support@notabot.app.
+              dashboard or contact us at support@astriq.ai.
             </p>
           </section>
 
@@ -262,7 +262,7 @@ export default function PrivacyPage() {
               Children&apos;s Privacy
             </h2>
             <p className="text-muted-foreground">
-              Not a Bot is not directed at children under the age of 13. We do
+              Astriq is not directed at children under the age of 13. We do
               not knowingly collect personal information from children under 13.
               If we become aware that we have collected data from a child under
               13, we will take steps to delete that information promptly.
@@ -279,7 +279,7 @@ export default function PrivacyPage() {
               changes will be communicated via email or in-app notification.
             </p>
             <p className="text-muted-foreground">
-              Your continued use of Not a Bot after any changes to this policy
+              Your continued use of Astriq after any changes to this policy
               constitutes your acceptance of the updated terms.
             </p>
           </section>
@@ -293,10 +293,10 @@ export default function PrivacyPage() {
               If you have any questions about this Privacy Policy or how we
               handle your data, please contact us at{" "}
               <a
-                href="mailto:support@notabot.app"
+                href="mailto:support@astriq.ai"
                 className="text-foreground underline underline-offset-4 hover:text-foreground/80"
               >
-                support@notabot.app
+                support@astriq.ai
               </a>
               .
             </p>

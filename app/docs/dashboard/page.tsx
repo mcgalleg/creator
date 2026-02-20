@@ -3,7 +3,7 @@ import { LayoutDashboard } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Dashboard — Not a Bot",
+  title: "Dashboard — Astriq",
   description:
     "Your command center for TikTok analytics with drag-and-drop widgets and customizable layouts.",
 };

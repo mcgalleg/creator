@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { SignInButton, SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { AccentColorPicker } from "@/components/accent-color-picker";
+import { AstriqLogo } from "@/components/astriq-logo";
 
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
@@ -25,14 +25,7 @@ export function Nav() {
     >
       <div className="flex h-16 items-center justify-between px-3 md:px-4">
         <div className="flex items-center gap-2">
-          <Image
-            src="/logo.png"
-            alt="Not a Bot"
-            width={120}
-            height={40}
-            className="h-16 pb-2 w-auto dark:invert"
-            priority
-          />
+          <AstriqLogo variant="combo" size="lg" />
         </div>
         <nav className="flex items-center gap-4">
           <a

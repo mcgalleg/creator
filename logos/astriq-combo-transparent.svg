@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 140" width="520" height="140" role="img" aria-labelledby="c2-title">
+  <title id="c2-title">Astriq Logo - Constellation Mark</title>
+  <defs>
+    <linearGradient id="c2-txt" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E2E8F0"/>
+      <stop offset="100%" stop-color="#94A3B8"/>
+    </linearGradient>
+    <radialGradient id="c2-ns" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </radialGradient>
+    <filter id="c2-nsglow" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+    <filter id="c2-nodeglow" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="2.5"/>
+    </filter>
+  </defs>
+
+  <!-- Constellation Icon -->
+  <g transform="translate(72, 70)">
+    <!-- Connection lines -->
+    <g stroke="#3B82F6" stroke-width="1" opacity="0.3" stroke-linecap="round">
+      <line x1="0" y1="-38" x2="0" y2="0"/>
+      <line x1="0" y1="-38" x2="33" y2="-20"/>
+      <line x1="0" y1="-38" x2="-33" y2="-5"/>
+      <line x1="33" y1="-20" x2="36" y2="14"/>
+      <line x1="33" y1="-20" x2="0" y2="0"/>
+      <line x1="36" y1="14" x2="16" y2="34"/>
+      <line x1="16" y1="34" x2="-18" y2="28"/>
+      <line x1="-18" y1="28" x2="-33" y2="-5"/>
+      <line x1="-33" y1="-5" x2="0" y2="0"/>
+    </g>
+
+    <!-- North Star glow -->
+    <circle cx="0" cy="-38" r="8" fill="#F59E0B" opacity="0.2" filter="url(#c2-nsglow)"/>
+    <!-- Center hub glow -->
+    <circle cx="0" cy="0" r="6" fill="#60A5FA" opacity="0.15" filter="url(#c2-nodeglow)"/>
+
+    <!-- Constellation nodes (back to front) -->
+    <circle cx="36" cy="14" r="2.5" fill="#60A5FA" opacity="0.65"/>
+    <circle cx="-18" cy="28" r="2.5" fill="#60A5FA" opacity="0.65"/>
+    <circle cx="16" cy="34" r="3" fill="#60A5FA" opacity="0.75"/>
+    <circle cx="-33" cy="-5" r="3" fill="#60A5FA" opacity="0.75"/>
+    <circle cx="33" cy="-20" r="3" fill="#60A5FA" opacity="0.85"/>
+    <circle cx="0" cy="0" r="3.5" fill="#93C5FD"/>
+    <!-- North Star -->
+    <circle cx="0" cy="-38" r="4.5" fill="url(#c2-ns)"/>
+  </g>
+
+  <!-- Divider line -->
+  <line x1="138" y1="35" x2="138" y2="105" stroke="#475569" stroke-width="1" opacity="0.5"/>
+
+  <!-- Wordmark -->
+  <text x="330" y="76" text-anchor="middle"
+        font-family="Inter, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
+        font-size="40" font-weight="400" letter-spacing="5"
+        fill="url(#c2-txt)">Astriq</text>
+
+  <!-- Subtitle -->
+  <text x="330" y="98" text-anchor="middle"
+        font-family="Inter, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
+        font-size="8.5" font-weight="300" letter-spacing="4"
+        fill="#475569">STAR INTELLIGENCE</text>
+</svg>

@@ -4,7 +4,7 @@ import { Coins } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Credit Packs — Not a Bot",
+  title: "Credit Packs — Astriq",
   description:
     "Purchase additional sync credit packs from 100 to 1,500 credits. Credits never expire.",
 };

@@ -11,9 +11,9 @@ import { AnimateOnScroll } from "@/components/landing/animate-on-scroll";
 
 const FAQ_ITEMS = [
   {
-    question: "What is Not a Bot?",
+    question: "What is Astriq?",
     answer:
-      "Not a Bot is an AI-powered TikTok analytics platform that helps creators understand their performance, discover trends, and grow their audience with data-driven insights.",
+      "Astriq is an AI-powered TikTok analytics platform that helps creators understand their performance, discover trends, and grow their audience with data-driven insights.",
   },
   {
     question: "How does the AI copilot work?",
@@ -64,7 +64,7 @@ export function Faq() {
             Frequently asked questions
           </h2>
           <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-            Everything you need to know about Not a Bot. Can&apos;t find what
+            Everything you need to know about Astriq. Can&apos;t find what
             you&apos;re looking for? Reach out to our support team.
           </p>
         </AnimateOnScroll>

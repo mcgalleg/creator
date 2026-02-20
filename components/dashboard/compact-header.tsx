@@ -2,7 +2,6 @@
 
 import { UserButton } from '@clerk/nextjs';
 import { Coins, LayoutDashboard, Settings, Sparkles, Plug, BookOpen } from 'lucide-react';
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +11,7 @@ import { useSync } from '@/contexts/sync-context';
 import { AccentColorPicker } from '@/components/accent-color-picker';
 import { Loader2 } from 'lucide-react';
 import { STARTER_BONUS_SYNC_CREDITS, STARTER_BONUS_AI_TOKENS } from '@/lib/credits';
+import { AstriqLogo } from '@/components/astriq-logo';
 
 interface CompactHeaderProps {
   subscriptionTier?: string;
@@ -45,13 +45,7 @@ export function CompactHeader({ subscriptionTier = "free" }: CompactHeaderProps)
       <div className="flex h-16 items-center px-3 md:px-4 gap-2 md:gap-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <Image
-            src="/logo.png"
-            alt="Not a Bot"
-            width={120}
-            height={40}
-            className="h-16 pb-2 w-auto dark:invert"
-          />
+          <AstriqLogo variant="combo" size="lg" />
         </Link>
 
         {/* Spacer */}

@@ -3,7 +3,7 @@ import { Bot } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "AI Copilot — Not a Bot",
+  title: "AI Copilot — Astriq",
   description:
     "Ask questions about your TikTok data in plain English and get interactive charts and actionable insights.",
 };

@@ -4,7 +4,7 @@ import { RefreshCw } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Syncing Data — Not a Bot",
+  title: "Syncing Data — Astriq",
   description:
     "Keep your analytics up to date with full, incremental, and quick sync options.",
 };

@@ -3,7 +3,7 @@ import { MessageSquare } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Comment Analysis — Not a Bot",
+  title: "Comment Analysis — Astriq",
   description:
     "AI-powered sentiment analysis and theme detection across your TikTok comments.",
 };

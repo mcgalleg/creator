@@ -4,9 +4,9 @@ import { Rocket } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Getting Started — Not a Bot",
+  title: "Getting Started — Astriq",
   description:
-    "Get up and running with Not a Bot in just a few minutes. Connect your TikTok account and start analyzing your content.",
+    "Get up and running with Astriq in just a few minutes. Connect your TikTok account and start analyzing your content.",
 };
 
 export default function GettingStartedPage() {
@@ -20,7 +20,7 @@ export default function GettingStartedPage() {
         </Badge>
         <h1 className="text-3xl font-bold tracking-tight">Getting Started</h1>
         <p className="text-lg text-muted-foreground">
-          Get up and running with Not a Bot in just a few minutes. Follow these
+          Get up and running with Astriq in just a few minutes. Follow these
           steps to connect your TikTok account and start analyzing your content.
         </p>
       </div>

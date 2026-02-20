@@ -21,7 +21,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Not a Bot",
+  title: "Astriq",
   description: "AI-powered analytics dashboard for content creators",
 };
 

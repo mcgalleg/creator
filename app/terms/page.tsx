@@ -6,9 +6,9 @@ import { Scale } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — Not a Bot",
+  title: "Terms of Service — Astriq",
   description:
-    "Terms of service for Not a Bot — AI-powered TikTok analytics for creators and brands.",
+    "Terms of service for Astriq — AI-powered TikTok analytics for creators and brands.",
 };
 
 export default function TermsPage() {
@@ -37,11 +37,11 @@ export default function TermsPage() {
           <section className="space-y-4">
             <h2 className="text-xl font-semibold">1. Acceptance of Terms</h2>
             <p className="text-muted-foreground">
-              By accessing or using Not a Bot, you agree to be bound by these
+              By accessing or using Astriq, you agree to be bound by these
               Terms of Service and all applicable laws and regulations. If you do
               not agree with any of these terms, you are prohibited from using or
               accessing the service. These terms constitute a legally binding
-              agreement between you and Not a Bot.
+              agreement between you and Astriq.
             </p>
           </section>
 
@@ -51,7 +51,7 @@ export default function TermsPage() {
           <section className="space-y-4">
             <h2 className="text-xl font-semibold">2. Description of Service</h2>
             <p className="text-muted-foreground">
-              Not a Bot is an AI-powered TikTok analytics platform that provides
+              Astriq is an AI-powered TikTok analytics platform that provides
               creators and brands with actionable insights into their content
               performance. Our service includes:
             </p>
@@ -79,7 +79,7 @@ export default function TermsPage() {
           <section className="space-y-4">
             <h2 className="text-xl font-semibold">3. Account Registration</h2>
             <p className="text-muted-foreground">
-              To use Not a Bot, you must create an account. By registering, you
+              To use Astriq, you must create an account. By registering, you
               agree to the following:
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground">
@@ -110,7 +110,7 @@ export default function TermsPage() {
               4. Subscription Plans &amp; Billing
             </h2>
             <p className="text-muted-foreground">
-              Not a Bot offers two subscription tiers:
+              Astriq offers two subscription tiers:
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground">
               <li>
@@ -179,7 +179,7 @@ export default function TermsPage() {
               6. TikTok Data &amp; API Usage
             </h2>
             <p className="text-muted-foreground">
-              Not a Bot accesses TikTok data through the official TikTok API. By
+              Astriq accesses TikTok data through the official TikTok API. By
               using our service, you acknowledge and agree that:
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground">
@@ -188,7 +188,7 @@ export default function TermsPage() {
                 data for all TikTok accounts you link to the service
               </li>
               <li>
-                Not a Bot is not affiliated with, endorsed by, or sponsored by
+                Astriq is not affiliated with, endorsed by, or sponsored by
                 TikTok or ByteDance Ltd.
               </li>
               <li>
@@ -205,7 +205,7 @@ export default function TermsPage() {
           <section className="space-y-4">
             <h2 className="text-xl font-semibold">7. AI-Generated Content</h2>
             <p className="text-muted-foreground">
-              Not a Bot uses artificial intelligence to provide analytics,
+              Astriq uses artificial intelligence to provide analytics,
               insights, and recommendations. You acknowledge that:
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground">
@@ -268,9 +268,9 @@ export default function TermsPage() {
           <section className="space-y-4">
             <h2 className="text-xl font-semibold">9. Intellectual Property</h2>
             <p className="text-muted-foreground">
-              Not a Bot and its underlying technology, including software,
+              Astriq and its underlying technology, including software,
               algorithms, designs, and documentation, are the intellectual
-              property of Not a Bot and are protected by applicable intellectual
+              property of Astriq and are protected by applicable intellectual
               property laws. You retain full ownership of your TikTok data.
               Analytics, visualizations, and exports generated through the
               service are yours to use freely for any purpose.
@@ -313,7 +313,7 @@ export default function TermsPage() {
             <p className="text-muted-foreground">
               The service is provided &ldquo;as is&rdquo; and &ldquo;as
               available&rdquo; without warranties of any kind, either express or
-              implied. To the fullest extent permitted by law, Not a Bot shall
+              implied. To the fullest extent permitted by law, Astriq shall
               not be liable for:
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground">
@@ -332,7 +332,7 @@ export default function TermsPage() {
             <p className="text-muted-foreground">
               Our maximum aggregate liability for any claims arising from your
               use of the service shall be limited to the total fees you have paid
-              to Not a Bot in the 12 months preceding the claim.
+              to Astriq in the 12 months preceding the claim.
             </p>
           </section>
 
@@ -374,10 +374,10 @@ export default function TermsPage() {
               If you have any questions about these Terms of Service, please
               contact us at{" "}
               <a
-                href="mailto:support@notabot.app"
+                href="mailto:support@astriq.ai"
                 className="text-foreground underline underline-offset-4 hover:text-foreground/80"
               >
-                support@notabot.app
+                support@astriq.ai
               </a>
               .
             </p>

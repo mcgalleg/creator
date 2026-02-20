@@ -3,7 +3,7 @@ import { Paintbrush } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Canvas Workspace — Not a Bot",
+  title: "Canvas Workspace — Astriq",
   description:
     "An infinite canvas for visual data exploration, brainstorming, and content strategy planning.",
 };

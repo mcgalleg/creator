@@ -4,7 +4,7 @@ import { CreditCard } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Plans & Pricing — Not a Bot",
+  title: "Plans & Pricing — Astriq",
   description:
     "Compare Creator and Pro subscription plans with features and pricing.",
 };

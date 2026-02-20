@@ -57,13 +57,12 @@ export const CtaScene: React.FC<CtaSceneProps> = ({ bassIntensity }) => {
       >
         {/* Logo */}
         <Img
-          src={staticFile("logo.png")}
+          src={staticFile("astriq-logo-dark.png")}
           style={{
-            width: 350,
+            width: 520,
             height: "auto",
             opacity: logoOpacity,
             transform: `scale(${logoS})`,
-            filter: "invert(1) brightness(2)",
           }}
         />
 

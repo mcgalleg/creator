@@ -3,9 +3,9 @@ import { Palette } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Themes & Customization — Not a Bot",
+  title: "Themes & Customization — Astriq",
   description:
-    "17 color palettes with light and dark mode support to make Not a Bot your own.",
+    "17 color palettes with light and dark mode support to make Astriq your own.",
 };
 
 export default function ThemesPage() {
@@ -21,7 +21,7 @@ export default function ThemesPage() {
           Themes & Customization
         </h1>
         <p className="text-lg text-muted-foreground">
-          Make Not a Bot your own with extensive theming options. Choose from 17
+          Make Astriq your own with extensive theming options. Choose from 17
           color palettes and switch between light and dark modes.
         </p>
       </div>

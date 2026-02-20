@@ -20,9 +20,9 @@ import {
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Documentation — Not a Bot",
+  title: "Documentation — Astriq",
   description:
-    "Learn how to use Not a Bot — AI-powered TikTok analytics for creators and brands.",
+    "Learn how to use Astriq — AI-powered TikTok analytics for creators and brands.",
 };
 
 const DOC_SECTIONS = [
@@ -143,7 +143,7 @@ export default function DocsOverviewPage() {
         </Badge>
         <h1 className="text-4xl font-bold tracking-tight">Documentation</h1>
         <p className="text-lg text-muted-foreground">
-          Everything you need to know about using Not a Bot — from getting
+          Everything you need to know about using Astriq — from getting
           started to advanced features. Learn how to unlock AI-powered insights
           for your TikTok content.
         </p>

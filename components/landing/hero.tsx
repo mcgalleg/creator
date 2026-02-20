@@ -73,7 +73,7 @@ export function Hero() {
                   <div className="size-3 rounded-full bg-green-400" />
                 </div>
                 <div className="ml-2 flex-1 rounded-md bg-background/60 px-3 py-1 text-xs text-muted-foreground">
-                  notabot.app/dashboard
+                  astriq.ai/dashboard
                 </div>
               </div>
 

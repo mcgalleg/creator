@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useUser, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +36,7 @@ import {
 } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/lib/subscriptions";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AstriqLogo } from "@/components/astriq-logo";
 
 function formatPrice(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
@@ -94,14 +94,7 @@ export default function PricingPage() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-16 items-center justify-between px-3 md:px-4">
           <div className="flex items-center gap-2">
-            <Image
-              src="/logo.png"
-              alt="Not a Bot"
-              width={120}
-              height={40}
-              className="h-16 pb-2 w-auto dark:invert"
-              priority
-            />
+            <AstriqLogo variant="combo" size="lg" />
           </div>
           <nav className="flex items-center gap-4">
             <ThemeToggle />
@@ -369,13 +362,7 @@ export default function PricingPage() {
         <div className="container mx-auto max-w-6xl px-4">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <div className="flex items-center gap-2">
-              <Image
-                src="/logo.png"
-                alt="Not a Bot"
-                width={100}
-                height={33}
-                className="h-6 w-auto dark:invert"
-              />
+              <AstriqLogo variant="combo" size="sm" />
             </div>
             <p className="text-sm text-muted-foreground">
               Built with AI. Designed for creators.

@@ -33,13 +33,12 @@ export const LogoScene: React.FC<LogoSceneProps> = ({ bassIntensity }) => {
     <AbsoluteFill style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
       <BassGlow bassIntensity={bassIntensity} />
       <Img
-        src={staticFile("logo.png")}
+        src={staticFile("astriq-logo-dark.png")}
         style={{
-          width: 300,
+          width: 500,
           height: "auto",
           opacity,
           transform: `scale(${scale})`,
-          filter: "invert(1) brightness(2)",
         }}
       />
     </AbsoluteFill>

@@ -19,7 +19,7 @@ import {
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "MCP Apps Documentation — Not a Bot",
+  title: "MCP Apps Documentation — Astriq",
   description:
     "Connect Claude Desktop, ChatGPT, or any MCP-compatible AI client to your TikTok analytics. Setup guides, available visualizations, and example queries.",
 };
@@ -168,13 +168,13 @@ const EXAMPLE_QUESTIONS = [
 
 const CLAUDE_DESKTOP_CONFIG = `{
   "mcpServers": {
-    "not-a-bot": {
-      "url": "https://notabot.cc/api/mcp-app/sse"
+    "astriq": {
+      "url": "https://astriq.ai/api/mcp-app/sse"
     }
   }
 }`;
 
-const CLAUDE_CODE_COMMAND = `claude mcp add not-a-bot https://notabot.cc/api/mcp-app/sse`;
+const CLAUDE_CODE_COMMAND = `claude mcp add astriq https://astriq.ai/api/mcp-app/sse`;
 
 export default function McpDocsPage() {
   return (
@@ -209,7 +209,7 @@ export default function McpDocsPage() {
         </div>
         <p className="text-muted-foreground">
           MCP (Model Context Protocol) is an open standard that lets AI
-          assistants connect to external data sources. Not a Bot&apos;s MCP
+          assistants connect to external data sources. Astriq&apos;s MCP
           server exposes your TikTok analytics as tools that any
           MCP-compatible AI client can use.
         </p>
@@ -224,7 +224,7 @@ export default function McpDocsPage() {
           </p>
           <h3 className="text-lg font-medium">Zero AI Cost on Our End</h3>
           <p className="text-sm text-muted-foreground">
-            Your AI client handles all the reasoning. Not a Bot&apos;s MCP
+            Your AI client handles all the reasoning. Astriq&apos;s MCP
             server is a pure data pipe — it receives the tool call, queries
             your analytics database, and returns structured data. You only
             pay for sync credits to keep your data fresh.
@@ -286,7 +286,7 @@ export default function McpDocsPage() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Add the MCP server URL to Claude Desktop, ChatGPT, or Claude
-                Code. You will be prompted to authorize with your Not a Bot
+                Code. You will be prompted to authorize with your Astriq
                 account.
               </p>
             </CardContent>
@@ -307,7 +307,7 @@ export default function McpDocsPage() {
           </h2>
         </div>
         <p className="text-muted-foreground">
-          Add Not a Bot to your Claude Desktop configuration file. Claude
+          Add Astriq to your Claude Desktop configuration file. Claude
           will prompt you to authorize when you first use it.
         </p>
         <div className="space-y-4">
@@ -344,14 +344,14 @@ export default function McpDocsPage() {
           </h2>
         </div>
         <p className="text-muted-foreground">
-          Connect Not a Bot as an MCP server in ChatGPT&apos;s settings.
+          Connect Astriq as an MCP server in ChatGPT&apos;s settings.
         </p>
         <div className="space-y-3 text-sm text-muted-foreground">
           <ol className="list-decimal list-inside space-y-2">
             <li>Open ChatGPT and go to <strong className="text-foreground">Settings</strong></li>
             <li>Navigate to <strong className="text-foreground">Connected Apps</strong> or <strong className="text-foreground">MCP Servers</strong></li>
-            <li>Click <strong className="text-foreground">Add Server</strong> and enter the URL: <code className="rounded bg-muted px-1 py-0.5">https://notabot.cc/api/mcp-app/sse</code></li>
-            <li>Authorize with your Not a Bot account when prompted</li>
+            <li>Click <strong className="text-foreground">Add Server</strong> and enter the URL: <code className="rounded bg-muted px-1 py-0.5">https://astriq.ai/api/mcp-app/sse</code></li>
+            <li>Authorize with your Astriq account when prompted</li>
           </ol>
         </div>
       </section>
@@ -561,7 +561,7 @@ export default function McpDocsPage() {
             <p className="text-sm text-muted-foreground">
               No. MCP Apps uses your own AI client (Claude Desktop, ChatGPT,
               etc.), so the AI reasoning happens on your client&apos;s plan,
-              not ours. You only consume Not a Bot sync credits for data
+              not ours. You only consume Astriq sync credits for data
               syncing.
             </p>
           </div>
@@ -582,7 +582,7 @@ export default function McpDocsPage() {
             </h3>
             <p className="text-sm text-muted-foreground">
               MCP Apps supports up to 10 connected TikTok accounts. Connect
-              them through the MCP Hub at notabot.cc after signing in. Each
+              them through the MCP Hub at astriq.ai after signing in. Each
               account can be synced independently.
             </p>
           </div>

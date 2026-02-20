@@ -4,7 +4,7 @@ import { Download } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Exporting — Not a Bot",
+  title: "Exporting — Astriq",
   description:
     "Export analytics as PDF reports or CSV data files from the Dashboard and Canvas.",
 };

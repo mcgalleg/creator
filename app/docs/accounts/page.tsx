@@ -4,9 +4,9 @@ import { Users } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Multi-Account Management — Not a Bot",
+  title: "Multi-Account Management — Astriq",
   description:
-    "Manage multiple TikTok accounts from a single Not a Bot dashboard.",
+    "Manage multiple TikTok accounts from a single Astriq dashboard.",
 };
 
 export default function AccountsPage() {
@@ -22,7 +22,7 @@ export default function AccountsPage() {
           Multi-Account Management
         </h1>
         <p className="text-lg text-muted-foreground">
-          Manage multiple TikTok accounts from a single Not a Bot dashboard.
+          Manage multiple TikTok accounts from a single Astriq dashboard.
           Perfect for agencies, brands, or creators with multiple channels.
         </p>
       </div>

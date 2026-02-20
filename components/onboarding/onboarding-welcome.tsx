@@ -34,7 +34,7 @@ export function OnboardingWelcome({ onContinue, onSkip }: OnboardingWelcomeProps
       <div className="max-w-2xl mx-auto w-full text-center space-y-8">
         <div className="space-y-3">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            Welcome to Not a Bot
+            Welcome to Astriq
           </h1>
           <p className="text-muted-foreground text-lg">
             Connect your TikTok account to unlock powerful analytics and insights.
