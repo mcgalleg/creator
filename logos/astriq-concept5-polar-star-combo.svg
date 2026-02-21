@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 140" width="520" height="140">
+  <defs>
+    <linearGradient id="ps-star-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B"/>
+      <stop offset="100%" style="stop-color:#FBBF24"/>
+    </linearGradient>
+    <linearGradient id="ps-ray-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#93C5FD;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#93C5FD;stop-opacity:0"/>
+    </linearGradient>
+    <radialGradient id="ps-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FBBF24;stop-opacity:0.3"/>
+      <stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.08"/>
+      <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/>
+    </radialGradient>
+    <filter id="ps-blur">
+      <feGaussianBlur stdDeviation="2"/>
+    </filter>
+  </defs>
+
+  <!-- Icon area centered at 70,70 -->
+  <g transform="translate(70,70)">
+    <!-- Outer glow -->
+    <circle cx="0" cy="0" r="45" fill="url(#ps-glow)"/>
+
+    <!-- Radiating data lines — 8 directions -->
+    <line x1="0" y1="-14" x2="0" y2="-42" stroke="#93C5FD" stroke-width="1" stroke-opacity="0.25" stroke-linecap="round"/>
+    <line x1="0" y1="14" x2="0" y2="42" stroke="#93C5FD" stroke-width="1" stroke-opacity="0.25" stroke-linecap="round"/>
+    <line x1="-14" y1="0" x2="-42" y2="0" stroke="#93C5FD" stroke-width="1" stroke-opacity="0.25" stroke-linecap="round"/>
+    <line x1="14" y1="0" x2="42" y2="0" stroke="#93C5FD" stroke-width="1" stroke-opacity="0.25" stroke-linecap="round"/>
+    <line x1="-10" y1="-10" x2="-30" y2="-30" stroke="#93C5FD" stroke-width="0.75" stroke-opacity="0.15" stroke-linecap="round"/>
+    <line x1="10" y1="-10" x2="30" y2="-30" stroke="#93C5FD" stroke-width="0.75" stroke-opacity="0.15" stroke-linecap="round"/>
+    <line x1="-10" y1="10" x2="-30" y2="30" stroke="#93C5FD" stroke-width="0.75" stroke-opacity="0.15" stroke-linecap="round"/>
+    <line x1="10" y1="10" x2="30" y2="30" stroke="#93C5FD" stroke-width="0.75" stroke-opacity="0.15" stroke-linecap="round"/>
+
+    <!-- Small data-point dots at ray ends -->
+    <circle cx="0" cy="-42" r="2" fill="#60A5FA" opacity="0.5"/>
+    <circle cx="0" cy="42" r="2" fill="#60A5FA" opacity="0.5"/>
+    <circle cx="-42" cy="0" r="2" fill="#60A5FA" opacity="0.5"/>
+    <circle cx="42" cy="0" r="2" fill="#60A5FA" opacity="0.5"/>
+    <circle cx="-30" cy="-30" r="1.5" fill="#60A5FA" opacity="0.35"/>
+    <circle cx="30" cy="-30" r="1.5" fill="#60A5FA" opacity="0.35"/>
+    <circle cx="-30" cy="30" r="1.5" fill="#60A5FA" opacity="0.35"/>
+    <circle cx="30" cy="30" r="1.5" fill="#60A5FA" opacity="0.35"/>
+
+    <!-- Core 4-pointed star -->
+    <polygon points="0,-18 4,-4 18,0 4,4 0,18 -4,4 -18,0 -4,-4" fill="url(#ps-star-grad)"/>
+
+    <!-- Bright center -->
+    <circle cx="0" cy="0" r="3.5" fill="#FEF3C7"/>
+    <circle cx="0" cy="0" r="2" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(148, 82)">
+    <text font-family="'Inter','SF Pro Display','Helvetica Neue',system-ui,sans-serif" font-size="42" font-weight="200" letter-spacing="10" fill="#F1F5F9">ASTRIQ</text>
+  </g>
+</svg>

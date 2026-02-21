@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-labelledby="c4-title">
+  <title id="c4-title">Astriq Stellar A Lettermark</title>
+  <defs>
+    <radialGradient id="c4-bg" cx="50%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </radialGradient>
+    <linearGradient id="c4-leg" x1="50%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="65%" stop-color="#818CF8"/>
+      <stop offset="100%" stop-color="#A78BFA"/>
+    </linearGradient>
+    <linearGradient id="c4-star" x1="30%" y1="0%" x2="70%" y2="100%">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+    <filter id="c4-sg" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+    <filter id="c4-legglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="200" height="200" rx="40" fill="url(#c4-bg)"/>
+
+  <!-- Subtle leg glow -->
+  <g opacity="0.15" filter="url(#c4-legglow)">
+    <line x1="50" y1="165" x2="88" y2="52" stroke="#818CF8" stroke-width="12" stroke-linecap="round"/>
+    <line x1="150" y1="165" x2="112" y2="52" stroke="#818CF8" stroke-width="12" stroke-linecap="round"/>
+  </g>
+
+  <!-- A letterform -->
+  <g stroke="url(#c4-leg)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Left leg -->
+    <line x1="50" y1="165" x2="88" y2="52"/>
+    <!-- Right leg -->
+    <line x1="150" y1="165" x2="112" y2="52"/>
+    <!-- Crossbar -->
+    <line x1="67" y1="118" x2="133" y2="118"/>
+  </g>
+
+  <!-- Star glow at apex -->
+  <path d="M100,24 L103.5,36 L116,40 L103.5,44 L100,56 L96.5,44 L84,40 L96.5,36 Z"
+        fill="#F59E0B" opacity="0.35" filter="url(#c4-sg)"/>
+  <!-- Star at apex -->
+  <path d="M100,24 L103.5,36 L116,40 L103.5,44 L100,56 L96.5,44 L84,40 L96.5,36 Z"
+        fill="url(#c4-star)"/>
+
+  <!-- Secondary twinkle -->
+  <path d="M118,30 L119,33.5 L122.5,34.5 L119,35.5 L118,39 L117,35.5 L113.5,34.5 L117,33.5 Z"
+        fill="#FDE68A" opacity="0.4"/>
+</svg>

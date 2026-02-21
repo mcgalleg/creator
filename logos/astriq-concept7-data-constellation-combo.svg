@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 140" width="520" height="140">
+  <defs>
+    <linearGradient id="dc-line-grad" x1="0%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#A78BFA"/>
+    </linearGradient>
+    <linearGradient id="dc-apex-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B"/>
+      <stop offset="100%" style="stop-color:#FBBF24"/>
+    </linearGradient>
+  </defs>
+
+  <!-- "A" constellation icon centered at 70,70 -->
+  <g transform="translate(70,70)">
+    <!--
+      The letter A built from constellation points:
+      - Apex star at top
+      - Two legs going down-left and down-right
+      - Crossbar in the middle
+      Points form the skeleton, lines connect them
+    -->
+
+    <!-- Left leg line segments -->
+    <line x1="0" y1="-40" x2="-12" y2="-18" stroke="url(#dc-line-grad)" stroke-width="1" stroke-opacity="0.5"/>
+    <line x1="-12" y1="-18" x2="-22" y2="2" stroke="url(#dc-line-grad)" stroke-width="1" stroke-opacity="0.45"/>
+    <line x1="-22" y1="2" x2="-30" y2="18" stroke="url(#dc-line-grad)" stroke-width="1" stroke-opacity="0.4"/>
+    <line x1="-30" y1="18" x2="-38" y2="38" stroke="url(#dc-line-grad)" stroke-width="1" stroke-opacity="0.35"/>
+
+    <!-- Right leg line segments -->
+    <line x1="0" y1="-40" x2="12" y2="-18" stroke="url(#dc-line-grad)" stroke-width="1" stroke-opacity="0.5"/>
+    <line x1="12" y1="-18" x2="22" y2="2" stroke="url(#dc-line-grad)" stroke-width="1" stroke-opacity="0.45"/>
+    <line x1="22" y1="2" x2="30" y2="18" stroke="url(#dc-line-grad)" stroke-width="1" stroke-opacity="0.4"/>
+    <line x1="30" y1="18" x2="38" y2="38" stroke="url(#dc-line-grad)" stroke-width="1" stroke-opacity="0.35"/>
+
+    <!-- Crossbar -->
+    <line x1="-22" y1="2" x2="-8" y2="2" stroke="#60A5FA" stroke-width="0.8" stroke-opacity="0.4"/>
+    <line x1="-8" y1="2" x2="8" y2="2" stroke="#60A5FA" stroke-width="0.8" stroke-opacity="0.4"/>
+    <line x1="8" y1="2" x2="22" y2="2" stroke="#60A5FA" stroke-width="0.8" stroke-opacity="0.4"/>
+
+    <!-- Extra constellation scatter lines -->
+    <line x1="-12" y1="-18" x2="12" y2="-18" stroke="#818CF8" stroke-width="0.5" stroke-opacity="0.15"/>
+    <line x1="-30" y1="18" x2="30" y2="18" stroke="#818CF8" stroke-width="0.5" stroke-opacity="0.12"/>
+
+    <!-- Data point nodes -->
+    <!-- Apex — gold star -->
+    <circle cx="0" cy="-40" r="5" fill="url(#dc-apex-grad)"/>
+    <circle cx="0" cy="-40" r="2" fill="#FEF3C7"/>
+
+    <!-- Left leg nodes -->
+    <circle cx="-12" cy="-18" r="3" fill="#60A5FA" opacity="0.7"/>
+    <circle cx="-22" cy="2" r="3.5" fill="#60A5FA" opacity="0.8"/>
+    <circle cx="-30" cy="18" r="2.5" fill="#60A5FA" opacity="0.6"/>
+    <circle cx="-38" cy="38" r="3" fill="#60A5FA" opacity="0.7"/>
+
+    <!-- Right leg nodes -->
+    <circle cx="12" cy="-18" r="3" fill="#60A5FA" opacity="0.7"/>
+    <circle cx="22" cy="2" r="3.5" fill="#60A5FA" opacity="0.8"/>
+    <circle cx="30" cy="18" r="2.5" fill="#60A5FA" opacity="0.6"/>
+    <circle cx="38" cy="38" r="3" fill="#60A5FA" opacity="0.7"/>
+
+    <!-- Crossbar mid nodes -->
+    <circle cx="-8" cy="2" r="2" fill="#93C5FD" opacity="0.5"/>
+    <circle cx="8" cy="2" r="2" fill="#93C5FD" opacity="0.5"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(148, 82)">
+    <text font-family="'Inter','SF Pro Display','Helvetica Neue',system-ui,sans-serif" font-size="42" font-weight="200" letter-spacing="10" fill="#F1F5F9">ASTRIQ</text>
+  </g>
+</svg>

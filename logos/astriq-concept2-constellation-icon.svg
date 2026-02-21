@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-labelledby="c2i-title">
+  <title id="c2i-title">Astriq Constellation Icon</title>
+  <defs>
+    <radialGradient id="c2i-bg" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </radialGradient>
+    <radialGradient id="c2i-ns" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </radialGradient>
+    <filter id="c2i-nsg" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+    <filter id="c2i-ng" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="200" height="200" rx="40" fill="url(#c2i-bg)"/>
+
+  <!-- Constellation scaled up -->
+  <g transform="translate(100, 105) scale(1.8)">
+    <!-- Connection lines -->
+    <g stroke="#3B82F6" stroke-width="0.7" opacity="0.3" stroke-linecap="round">
+      <line x1="0" y1="-38" x2="0" y2="0"/>
+      <line x1="0" y1="-38" x2="33" y2="-20"/>
+      <line x1="0" y1="-38" x2="-33" y2="-5"/>
+      <line x1="33" y1="-20" x2="36" y2="14"/>
+      <line x1="33" y1="-20" x2="0" y2="0"/>
+      <line x1="36" y1="14" x2="16" y2="34"/>
+      <line x1="16" y1="34" x2="-18" y2="28"/>
+      <line x1="-18" y1="28" x2="-33" y2="-5"/>
+      <line x1="-33" y1="-5" x2="0" y2="0"/>
+    </g>
+
+    <!-- North Star glow -->
+    <circle cx="0" cy="-38" r="6" fill="#F59E0B" opacity="0.25" filter="url(#c2i-nsg)"/>
+    <!-- Center glow -->
+    <circle cx="0" cy="0" r="5" fill="#60A5FA" opacity="0.15" filter="url(#c2i-ng)"/>
+
+    <!-- Nodes -->
+    <circle cx="36" cy="14" r="2" fill="#60A5FA" opacity="0.6"/>
+    <circle cx="-18" cy="28" r="2" fill="#60A5FA" opacity="0.6"/>
+    <circle cx="16" cy="34" r="2.5" fill="#60A5FA" opacity="0.7"/>
+    <circle cx="-33" cy="-5" r="2.5" fill="#60A5FA" opacity="0.7"/>
+    <circle cx="33" cy="-20" r="2.5" fill="#60A5FA" opacity="0.8"/>
+    <circle cx="0" cy="0" r="3" fill="#93C5FD"/>
+    <!-- North Star -->
+    <circle cx="0" cy="-38" r="3.5" fill="url(#c2i-ns)"/>
+  </g>
+</svg>

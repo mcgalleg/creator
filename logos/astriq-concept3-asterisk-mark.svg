@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-labelledby="c3-title">
+  <title id="c3-title">Astriq Asterisk Mark</title>
+  <defs>
+    <radialGradient id="c3-bg" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </radialGradient>
+    <radialGradient id="c3-arm" cx="100" cy="100" r="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E0E7FF"/>
+      <stop offset="45%" stop-color="#818CF8"/>
+      <stop offset="100%" stop-color="#4F46E5"/>
+    </radialGradient>
+    <filter id="c3-tipglow" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+    <filter id="c3-center" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="200" height="200" rx="40" fill="url(#c3-bg)"/>
+
+  <!-- Center glow -->
+  <circle cx="100" cy="100" r="22" fill="#818CF8" opacity="0.1" filter="url(#c3-center)"/>
+
+  <!-- 6 Arms -->
+  <g stroke="url(#c3-arm)" stroke-width="5.5" stroke-linecap="round" fill="none">
+    <!-- 0deg (up) -->
+    <line x1="100" y1="100" x2="100" y2="42"/>
+    <!-- 60deg -->
+    <line x1="100" y1="100" x2="150.2" y2="71"/>
+    <!-- 120deg -->
+    <line x1="100" y1="100" x2="150.2" y2="129"/>
+    <!-- 180deg (down) -->
+    <line x1="100" y1="100" x2="100" y2="158"/>
+    <!-- 240deg -->
+    <line x1="100" y1="100" x2="49.8" y2="129"/>
+    <!-- 300deg -->
+    <line x1="100" y1="100" x2="49.8" y2="71"/>
+  </g>
+
+  <!-- Tip dot glows -->
+  <g opacity="0.3" filter="url(#c3-tipglow)">
+    <circle cx="100" cy="38" r="6" fill="#818CF8"/>
+    <circle cx="153" cy="69" r="5.5" fill="#818CF8"/>
+    <circle cx="153" cy="131" r="5.5" fill="#818CF8"/>
+    <circle cx="100" cy="162" r="6" fill="#818CF8"/>
+    <circle cx="47" cy="131" r="5.5" fill="#818CF8"/>
+    <circle cx="47" cy="69" r="5.5" fill="#818CF8"/>
+  </g>
+
+  <!-- Tip dots -->
+  <circle cx="100" cy="38" r="4.5" fill="#A5B4FC"/>
+  <circle cx="153" cy="69" r="3.5" fill="#818CF8"/>
+  <circle cx="153" cy="131" r="3.5" fill="#818CF8"/>
+  <circle cx="100" cy="162" r="4.5" fill="#A5B4FC"/>
+  <circle cx="47" cy="131" r="3.5" fill="#818CF8"/>
+  <circle cx="47" cy="69" r="3.5" fill="#818CF8"/>
+
+  <!-- Center dot -->
+  <circle cx="100" cy="100" r="5.5" fill="#E0E7FF"/>
+</svg>

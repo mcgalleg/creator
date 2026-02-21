@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 140" width="520" height="140">
+  <defs>
+    <linearGradient id="sf-iris-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#818CF8"/>
+    </linearGradient>
+    <linearGradient id="sf-pupil-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B"/>
+      <stop offset="100%" style="stop-color:#FBBF24"/>
+    </linearGradient>
+    <radialGradient id="sf-inner-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#F59E0B;stop-opacity:0.2"/>
+      <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Icon centered at 70,70 -->
+  <g transform="translate(70,70)">
+    <!-- Outer eye shape from constellation dots and curves -->
+    <!-- Upper lid arc — dots connected by thin line -->
+    <path d="M-44,0 Q-28,-32 0,-36 Q28,-32 44,0" fill="none" stroke="#60A5FA" stroke-width="0.8" stroke-opacity="0.3"/>
+    <!-- Lower lid arc -->
+    <path d="M-44,0 Q-28,32 0,36 Q28,32 44,0" fill="none" stroke="#60A5FA" stroke-width="0.8" stroke-opacity="0.3"/>
+
+    <!-- Constellation dots along the eye shape -->
+    <circle cx="-44" cy="0" r="2" fill="#93C5FD" opacity="0.6"/>
+    <circle cx="-32" cy="-22" r="1.5" fill="#93C5FD" opacity="0.5"/>
+    <circle cx="-16" cy="-32" r="1.5" fill="#93C5FD" opacity="0.5"/>
+    <circle cx="0" cy="-36" r="2" fill="#93C5FD" opacity="0.6"/>
+    <circle cx="16" cy="-32" r="1.5" fill="#93C5FD" opacity="0.5"/>
+    <circle cx="32" cy="-22" r="1.5" fill="#93C5FD" opacity="0.5"/>
+    <circle cx="44" cy="0" r="2" fill="#93C5FD" opacity="0.6"/>
+    <circle cx="32" cy="22" r="1.5" fill="#93C5FD" opacity="0.5"/>
+    <circle cx="16" cy="32" r="1.5" fill="#93C5FD" opacity="0.5"/>
+    <circle cx="0" cy="36" r="2" fill="#93C5FD" opacity="0.6"/>
+    <circle cx="-16" cy="32" r="1.5" fill="#93C5FD" opacity="0.5"/>
+    <circle cx="-32" cy="22" r="1.5" fill="#93C5FD" opacity="0.5"/>
+
+    <!-- Inner connecting lines (iris ring) -->
+    <circle cx="0" cy="0" r="18" fill="none" stroke="url(#sf-iris-grad)" stroke-width="1.2" stroke-opacity="0.5"/>
+
+    <!-- Cross-connections to inner ring (constellation lines) -->
+    <line x1="-44" y1="0" x2="-18" y2="0" stroke="#60A5FA" stroke-width="0.5" stroke-opacity="0.2"/>
+    <line x1="44" y1="0" x2="18" y2="0" stroke="#60A5FA" stroke-width="0.5" stroke-opacity="0.2"/>
+    <line x1="0" y1="-36" x2="0" y2="-18" stroke="#60A5FA" stroke-width="0.5" stroke-opacity="0.2"/>
+    <line x1="0" y1="36" x2="0" y2="18" stroke="#60A5FA" stroke-width="0.5" stroke-opacity="0.2"/>
+    <line x1="-32" y1="-22" x2="-13" y2="-13" stroke="#60A5FA" stroke-width="0.5" stroke-opacity="0.15"/>
+    <line x1="32" y1="-22" x2="13" y2="-13" stroke="#60A5FA" stroke-width="0.5" stroke-opacity="0.15"/>
+    <line x1="-32" y1="22" x2="-13" y2="13" stroke="#60A5FA" stroke-width="0.5" stroke-opacity="0.15"/>
+    <line x1="32" y1="22" x2="13" y2="13" stroke="#60A5FA" stroke-width="0.5" stroke-opacity="0.15"/>
+
+    <!-- Inner glow -->
+    <circle cx="0" cy="0" r="16" fill="url(#sf-inner-glow)"/>
+
+    <!-- Iris dots on inner ring -->
+    <circle cx="0" cy="-18" r="2" fill="#60A5FA" opacity="0.7"/>
+    <circle cx="18" cy="0" r="2" fill="#60A5FA" opacity="0.7"/>
+    <circle cx="0" cy="18" r="2" fill="#60A5FA" opacity="0.7"/>
+    <circle cx="-18" cy="0" r="2" fill="#60A5FA" opacity="0.7"/>
+    <circle cx="13" cy="-13" r="1.5" fill="#60A5FA" opacity="0.5"/>
+    <circle cx="13" cy="13" r="1.5" fill="#60A5FA" opacity="0.5"/>
+    <circle cx="-13" cy="-13" r="1.5" fill="#60A5FA" opacity="0.5"/>
+    <circle cx="-13" cy="13" r="1.5" fill="#60A5FA" opacity="0.5"/>
+
+    <!-- Pupil — gold star point -->
+    <circle cx="0" cy="0" r="6" fill="url(#sf-pupil-grad)"/>
+    <circle cx="0" cy="0" r="2.5" fill="#FEF3C7"/>
+    <!-- Tiny sparkle -->
+    <polygon points="0,-4 0.8,-0.8 4,0 0.8,0.8 0,4 -0.8,0.8 -4,0 -0.8,-0.8" fill="#FFFFFF" opacity="0.7"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(148, 82)">
+    <text font-family="'Inter','SF Pro Display','Helvetica Neue',system-ui,sans-serif" font-size="42" font-weight="200" letter-spacing="10" fill="#F1F5F9">ASTRIQ</text>
+  </g>
+</svg>

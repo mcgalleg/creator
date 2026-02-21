@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Astriq Logo Concepts</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #030712;
+      color: #E2E8F0;
+      font-family: Inter, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif;
+      padding: 60px 40px;
+      min-height: 100vh;
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: 200;
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #93C5FD, #C4B5FD);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle {
+      text-align: center;
+      color: #475569;
+      font-size: 12px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 60px;
+    }
+    .concept {
+      max-width: 900px;
+      margin: 0 auto 80px;
+      padding-bottom: 80px;
+      border-bottom: 1px solid #1E293B;
+    }
+    .concept:last-child { border-bottom: none; }
+    .concept-header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .concept-number {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #3B82F6;
+      opacity: 0.7;
+    }
+    .concept-name {
+      font-size: 22px;
+      font-weight: 300;
+      color: #F1F5F9;
+    }
+    .concept-desc {
+      color: #64748B;
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 32px;
+      max-width: 600px;
+    }
+    .logo-display {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 32px;
+      align-items: center;
+    }
+    .logo-card {
+      background: #0F172A;
+      border: 1px solid #1E293B;
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-card img {
+      display: block;
+    }
+    .logo-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #475569;
+    }
+    .logo-card.primary {
+      border-color: #1E3A5F;
+    }
+    .themes {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .theme-tag {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 100px;
+      border: 1px solid #1E293B;
+      color: #64748B;
+    }
+    .color-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 20px;
+    }
+    .color-swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      border: 1px solid #1E293B;
+    }
+    .color-label {
+      font-size: 11px;
+      color: #475569;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Astriq</h1>
+  <p class="subtitle">Logo Design Concepts</p>
+
+  <!-- Concept 1 -->
+  <div class="concept">
+    <div class="concept-header">
+      <span class="concept-number">Concept 01</span>
+      <span class="concept-name">Stellar Wordmark</span>
+    </div>
+    <div class="themes">
+      <span class="theme-tag">Wordmark</span>
+      <span class="theme-tag">Minimal</span>
+      <span class="theme-tag">Premium</span>
+    </div>
+    <p class="concept-desc">
+      A clean, wide-tracked wordmark in light weight sans-serif. A gold 4-pointed star sparkle
+      floats above the "I" — the asterisk that marks something worth paying attention to.
+      Faint constellation dots and lines frame the word in the cosmic background, placing the
+      brand name among the stars. The light font weight conveys intelligence and elegance.
+    </p>
+    <div class="logo-display">
+      <div class="logo-card primary">
+        <img src="astriq-concept1-stellar-wordmark.svg" width="500" height="160" alt="Concept 1: Stellar Wordmark"/>
+        <span class="logo-label">Horizontal &mdash; Primary</span>
+      </div>
+    </div>
+    <div class="color-row">
+      <div class="color-swatch" style="background:#F1F5F9"></div><span class="color-label">#F1F5F9 Frost</span>
+      <div class="color-swatch" style="background:#F59E0B"></div><span class="color-label">#F59E0B Gold</span>
+      <div class="color-swatch" style="background:#0F172A"></div><span class="color-label">#0F172A Navy</span>
+    </div>
+  </div>
+
+  <!-- Concept 2 -->
+  <div class="concept">
+    <div class="concept-header">
+      <span class="concept-number">Concept 02</span>
+      <span class="concept-name">Constellation Network</span>
+    </div>
+    <div class="themes">
+      <span class="theme-tag">Combination Mark</span>
+      <span class="theme-tag">Data Visualization</span>
+      <span class="theme-tag">Navigation</span>
+    </div>
+    <p class="concept-desc">
+      Seven data-point stars connected by faint lines form an organic constellation — a direct
+      visualization of "connecting the dots." The brightest gold node at the top is the North Star,
+      the signal in the noise. A central hub star represents the AI connecting everything.
+      The constellation doubles as a data network graph, bridging the cosmic and analytical themes.
+    </p>
+    <div class="logo-display">
+      <div class="logo-card primary">
+        <img src="astriq-concept2-constellation-combo.svg" width="520" height="140" alt="Concept 2: Constellation Combo"/>
+        <span class="logo-label">Combination Mark &mdash; Primary</span>
+      </div>
+      <div class="logo-card">
+        <img src="astriq-concept2-constellation-icon.svg" width="200" height="200" alt="Concept 2: Icon Only"/>
+        <span class="logo-label">Icon &mdash; App / Favicon</span>
+      </div>
+    </div>
+    <div class="color-row">
+      <div class="color-swatch" style="background:#60A5FA"></div><span class="color-label">#60A5FA Blue</span>
+      <div class="color-swatch" style="background:#93C5FD"></div><span class="color-label">#93C5FD Light</span>
+      <div class="color-swatch" style="background:#F59E0B"></div><span class="color-label">#F59E0B Gold</span>
+      <div class="color-swatch" style="background:#020617"></div><span class="color-label">#020617 Void</span>
+    </div>
+  </div>
+
+  <!-- Concept 3 -->
+  <div class="concept">
+    <div class="concept-header">
+      <span class="concept-number">Concept 03</span>
+      <span class="concept-name">The Asterisk</span>
+    </div>
+    <div class="themes">
+      <span class="theme-tag">Abstract Mark</span>
+      <span class="theme-tag">Asterisk / Star</span>
+      <span class="theme-tag">Geometric</span>
+    </div>
+    <p class="concept-desc">
+      A reimagined asterisk (*) — six arms radiating from a bright center with glowing data-point
+      dots at each tip. The asterisk is the "little star" (asteriskos) that marks something worth
+      noticing. Rendered in indigo-to-violet gradient with a luminous white center, it feels both
+      cosmic and digital. Works beautifully at any size, from app icon to billboard.
+    </p>
+    <div class="logo-display">
+      <div class="logo-card primary">
+        <img src="astriq-concept3-asterisk-mark.svg" width="200" height="200" alt="Concept 3: Asterisk Mark"/>
+        <span class="logo-label">Icon Mark &mdash; Primary</span>
+      </div>
+    </div>
+    <div class="color-row">
+      <div class="color-swatch" style="background:#818CF8"></div><span class="color-label">#818CF8 Indigo</span>
+      <div class="color-swatch" style="background:#A5B4FC"></div><span class="color-label">#A5B4FC Lavender</span>
+      <div class="color-swatch" style="background:#E0E7FF"></div><span class="color-label">#E0E7FF Ice</span>
+      <div class="color-swatch" style="background:#4F46E5"></div><span class="color-label">#4F46E5 Deep</span>
+    </div>
+  </div>
+
+  <!-- Concept 4 -->
+  <div class="concept">
+    <div class="concept-header">
+      <span class="concept-number">Concept 04</span>
+      <span class="concept-name">Stellar A</span>
+    </div>
+    <div class="themes">
+      <span class="theme-tag">Lettermark</span>
+      <span class="theme-tag">Monumental</span>
+      <span class="theme-tag">Iconic</span>
+    </div>
+    <p class="concept-desc">
+      The letter "A" — for Astriq — drawn as two ascending lines that reach toward a golden star
+      at the apex. The star replaces the traditional pointed peak, turning the letterform into
+      a monument to navigation. The gradient shifts from electric blue at the base to soft violet
+      at the top, suggesting the journey from data to insight. The crossbar grounds the mark.
+    </p>
+    <div class="logo-display">
+      <div class="logo-card primary">
+        <img src="astriq-concept4-stellar-a-combo.svg" width="480" height="140" alt="Concept 4: Stellar A Combo"/>
+        <span class="logo-label">Combination Mark &mdash; Primary</span>
+      </div>
+      <div class="logo-card">
+        <img src="astriq-concept4-stellar-a-icon.svg" width="200" height="200" alt="Concept 4: Icon Only"/>
+        <span class="logo-label">Lettermark &mdash; App / Favicon</span>
+      </div>
+    </div>
+    <div class="color-row">
+      <div class="color-swatch" style="background:#3B82F6"></div><span class="color-label">#3B82F6 Blue</span>
+      <div class="color-swatch" style="background:#818CF8"></div><span class="color-label">#818CF8 Indigo</span>
+      <div class="color-swatch" style="background:#A78BFA"></div><span class="color-label">#A78BFA Violet</span>
+      <div class="color-swatch" style="background:#F59E0B"></div><span class="color-label">#F59E0B Gold</span>
+    </div>
+  </div>
+
+  <!-- Concept 5 -->
+  <div class="concept">
+    <div class="concept-header">
+      <span class="concept-number">Concept 05</span>
+      <span class="concept-name">Polar Star</span>
+    </div>
+    <div class="themes">
+      <span class="theme-tag">Combination Mark</span>
+      <span class="theme-tag">North Star</span>
+      <span class="theme-tag">Navigation</span>
+    </div>
+    <p class="concept-desc">
+      A single, brilliant North Star radiates eight data-lines outward like a compass rose &mdash;
+      four cardinal beams and four fainter diagonals. Each ray terminates in a small data-point dot,
+      suggesting signals being gathered from all directions. The gold 4-pointed star at the center
+      is the insight, the signal found in noise. Paired with an ultra-light tracked wordmark.
+    </p>
+    <div class="logo-display">
+      <div class="logo-card primary">
+        <img src="astriq-concept5-polar-star-combo.svg" width="520" height="140" alt="Concept 5: Polar Star Combo"/>
+        <span class="logo-label">Combination Mark &mdash; Primary</span>
+      </div>
+      <div class="logo-card">
+        <img src="astriq-concept5-polar-star-icon.svg" width="200" height="200" alt="Concept 5: Icon Only"/>
+        <span class="logo-label">Icon &mdash; App / Favicon</span>
+      </div>
+    </div>
+    <div class="color-row">
+      <div class="color-swatch" style="background:#F59E0B"></div><span class="color-label">#F59E0B Gold</span>
+      <div class="color-swatch" style="background:#93C5FD"></div><span class="color-label">#93C5FD Light</span>
+      <div class="color-swatch" style="background:#60A5FA"></div><span class="color-label">#60A5FA Blue</span>
+      <div class="color-swatch" style="background:#0F172A"></div><span class="color-label">#0F172A Navy</span>
+    </div>
+  </div>
+
+  <!-- Concept 6 -->
+  <div class="concept">
+    <div class="concept-header">
+      <span class="concept-number">Concept 06</span>
+      <span class="concept-name">Signal Finder</span>
+    </div>
+    <div class="themes">
+      <span class="theme-tag">Abstract Mark</span>
+      <span class="theme-tag">AI Vision</span>
+      <span class="theme-tag">Constellation Eye</span>
+    </div>
+    <p class="concept-desc">
+      An abstract eye shape constructed entirely from constellation dots and arcs &mdash; the AI
+      "seeing" patterns in data. Twelve outer data-points trace the upper and lower lid curves,
+      connected to an inner iris ring of eight nodes. At the center, a golden pupil with a tiny
+      sparkle represents the moment of insight. The eye is both a lens and a constellation map.
+    </p>
+    <div class="logo-display">
+      <div class="logo-card primary">
+        <img src="astriq-concept6-signal-finder-combo.svg" width="520" height="140" alt="Concept 6: Signal Finder Combo"/>
+        <span class="logo-label">Combination Mark &mdash; Primary</span>
+      </div>
+      <div class="logo-card">
+        <img src="astriq-concept6-signal-finder-icon.svg" width="200" height="200" alt="Concept 6: Icon Only"/>
+        <span class="logo-label">Icon &mdash; App / Favicon</span>
+      </div>
+    </div>
+    <div class="color-row">
+      <div class="color-swatch" style="background:#3B82F6"></div><span class="color-label">#3B82F6 Blue</span>
+      <div class="color-swatch" style="background:#818CF8"></div><span class="color-label">#818CF8 Indigo</span>
+      <div class="color-swatch" style="background:#60A5FA"></div><span class="color-label">#60A5FA Blue</span>
+      <div class="color-swatch" style="background:#F59E0B"></div><span class="color-label">#F59E0B Gold</span>
+    </div>
+  </div>
+
+  <!-- Concept 7 -->
+  <div class="concept">
+    <div class="concept-header">
+      <span class="concept-number">Concept 07</span>
+      <span class="concept-name">Data Constellation A</span>
+    </div>
+    <div class="themes">
+      <span class="theme-tag">Lettermark</span>
+      <span class="theme-tag">Constellation</span>
+      <span class="theme-tag">Data Network</span>
+    </div>
+    <p class="concept-desc">
+      The letter "A" built entirely from connected constellation data-points &mdash; no solid
+      lines, just nodes and the thin threads between them. A gold apex star crowns the top,
+      blue nodes trace both legs and the crossbar, with faint ghost-lines hinting at the
+      full letterform. It's a data visualization that happens to spell the brand initial.
+      Reads as both a network graph and a star map.
+    </p>
+    <div class="logo-display">
+      <div class="logo-card primary">
+        <img src="astriq-concept7-data-constellation-combo.svg" width="520" height="140" alt="Concept 7: Data Constellation Combo"/>
+        <span class="logo-label">Combination Mark &mdash; Primary</span>
+      </div>
+      <div class="logo-card">
+        <img src="astriq-concept7-data-constellation-icon.svg" width="200" height="200" alt="Concept 7: Icon Only"/>
+        <span class="logo-label">Lettermark &mdash; App / Favicon</span>
+      </div>
+    </div>
+    <div class="color-row">
+      <div class="color-swatch" style="background:#3B82F6"></div><span class="color-label">#3B82F6 Blue</span>
+      <div class="color-swatch" style="background:#A78BFA"></div><span class="color-label">#A78BFA Violet</span>
+      <div class="color-swatch" style="background:#60A5FA"></div><span class="color-label">#60A5FA Blue</span>
+      <div class="color-swatch" style="background:#F59E0B"></div><span class="color-label">#F59E0B Gold</span>
+    </div>
+  </div>
+
+  <!-- Concept 8 -->
+  <div class="concept">
+    <div class="concept-header">
+      <span class="concept-number">Concept 08</span>
+      <span class="concept-name">Astral Ring</span>
+    </div>
+    <div class="themes">
+      <span class="theme-tag">Abstract Mark</span>
+      <span class="theme-tag">Orbital</span>
+      <span class="theme-tag">Cycles &amp; Insight</span>
+    </div>
+    <p class="concept-desc">
+      Two concentric orbital rings with data-point dots tracing their circumference &mdash;
+      representing the continuous cycle of content creation, measurement, and optimization.
+      Faint spoke-lines connect the inner and outer orbits. A bright gold star sits slightly
+      above center like a North Star focal point, the insight emerging from the cycle. The
+      dual rings suggest both planetary orbits and dashboard dials.
+    </p>
+    <div class="logo-display">
+      <div class="logo-card primary">
+        <img src="astriq-concept8-astral-ring-combo.svg" width="520" height="140" alt="Concept 8: Astral Ring Combo"/>
+        <span class="logo-label">Combination Mark &mdash; Primary</span>
+      </div>
+      <div class="logo-card">
+        <img src="astriq-concept8-astral-ring-icon.svg" width="200" height="200" alt="Concept 8: Icon Only"/>
+        <span class="logo-label">Icon &mdash; App / Favicon</span>
+      </div>
+    </div>
+    <div class="color-row">
+      <div class="color-swatch" style="background:#3B82F6"></div><span class="color-label">#3B82F6 Blue</span>
+      <div class="color-swatch" style="background:#818CF8"></div><span class="color-label">#818CF8 Indigo</span>
+      <div class="color-swatch" style="background:#A78BFA"></div><span class="color-label">#A78BFA Violet</span>
+      <div class="color-swatch" style="background:#F59E0B"></div><span class="color-label">#F59E0B Gold</span>
+    </div>
+  </div>
+
+</body>
+</html>

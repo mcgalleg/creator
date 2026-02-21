@@ -1,6 +1,3 @@
-"use client";
-
-import { useId } from "react";
 import { cn } from "@/lib/utils";
 
 interface AstriqLogoProps {
@@ -20,17 +17,14 @@ export function AstriqLogo({
   size = "md",
   className,
 }: AstriqLogoProps) {
-  const id = useId();
-  const prefix = `astriq-${id.replace(/:/g, "")}`;
-
   if (variant === "icon") {
-    return <AstriqIcon prefix={prefix} className={cn(SIZES[size], "w-auto", className)} />;
+    return <AstriqIcon className={cn(SIZES[size], "w-auto", className)} />;
   }
 
-  return <AstriqCombo prefix={prefix} className={cn(SIZES[size], "w-auto", className)} />;
+  return <AstriqCombo className={cn(SIZES[size], "w-auto", className)} />;
 }
 
-function AstriqIcon({ prefix, className }: { prefix: string; className?: string }) {
+function AstriqIcon({ className }: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -39,121 +33,69 @@ function AstriqIcon({ prefix, className }: { prefix: string; className?: string 
       aria-label="Astriq"
       className={className}
     >
-      <defs>
-        <radialGradient id={`${prefix}-ns`} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#FDE68A" />
-          <stop offset="100%" stopColor="#F59E0B" />
-        </radialGradient>
-        <filter id={`${prefix}-nsg`} x="-200%" y="-200%" width="500%" height="500%">
-          <feGaussianBlur stdDeviation="5" />
-        </filter>
-        <filter id={`${prefix}-ng`} x="-200%" y="-200%" width="500%" height="500%">
-          <feGaussianBlur stdDeviation="3" />
-        </filter>
-      </defs>
-
-      <g transform="translate(100, 105) scale(1.8)">
-        {/* Connection lines */}
-        <g
-          className="stroke-blue-500/30 dark:stroke-blue-400/30"
-          strokeWidth="0.7"
-          strokeLinecap="round"
-          fill="none"
-        >
-          <line x1="0" y1="-38" x2="0" y2="0" />
-          <line x1="0" y1="-38" x2="33" y2="-20" />
-          <line x1="0" y1="-38" x2="-33" y2="-5" />
-          <line x1="33" y1="-20" x2="36" y2="14" />
-          <line x1="33" y1="-20" x2="0" y2="0" />
-          <line x1="36" y1="14" x2="16" y2="34" />
-          <line x1="16" y1="34" x2="-18" y2="28" />
-          <line x1="-18" y1="28" x2="-33" y2="-5" />
-          <line x1="-33" y1="-5" x2="0" y2="0" />
-        </g>
-
-        {/* North Star glow */}
-        <circle cx="0" cy="-38" r="6" className="fill-amber-500 dark:fill-amber-500" opacity="0.25" filter={`url(#${prefix}-nsg)`} />
-        {/* Center glow */}
-        <circle cx="0" cy="0" r="5" className="fill-blue-400 dark:fill-blue-400" opacity="0.15" filter={`url(#${prefix}-ng)`} />
-
-        {/* Nodes */}
-        <circle cx="36" cy="14" r="2" className="fill-[#1E3A5F] dark:fill-[#60A5FA]" opacity="0.6" />
-        <circle cx="-18" cy="28" r="2" className="fill-[#1E3A5F] dark:fill-[#60A5FA]" opacity="0.6" />
-        <circle cx="16" cy="34" r="2.5" className="fill-[#1E3A5F] dark:fill-[#60A5FA]" opacity="0.7" />
-        <circle cx="-33" cy="-5" r="2.5" className="fill-[#1E3A5F] dark:fill-[#60A5FA]" opacity="0.7" />
-        <circle cx="33" cy="-20" r="2.5" className="fill-[#1E3A5F] dark:fill-[#60A5FA]" opacity="0.8" />
-        <circle cx="0" cy="0" r="3" className="fill-[#2563EB] dark:fill-[#93C5FD]" />
-        {/* North Star */}
-        <circle cx="0" cy="-38" r="3.5" fill={`url(#${prefix}-ns)`} />
+      {/* 6 Arms */}
+      <g className="stroke-[#0F172A] dark:stroke-white" strokeWidth="5.5" strokeLinecap="round" fill="none">
+        <line x1="100" y1="100" x2="100" y2="42" />
+        <line x1="100" y1="100" x2="150.2" y2="71" />
+        <line x1="100" y1="100" x2="150.2" y2="129" />
+        <line x1="100" y1="100" x2="100" y2="158" />
+        <line x1="100" y1="100" x2="49.8" y2="129" />
+        <line x1="100" y1="100" x2="49.8" y2="71" />
       </g>
+
+      {/* Tip dots */}
+      <circle cx="100" cy="38" r="4.5" className="fill-[#0F172A] dark:fill-white" />
+      <circle cx="153" cy="69" r="3.5" className="fill-[#0F172A] dark:fill-white" />
+      <circle cx="153" cy="131" r="3.5" className="fill-[#0F172A] dark:fill-white" />
+      <circle cx="100" cy="162" r="4.5" className="fill-[#0F172A] dark:fill-white" />
+      <circle cx="47" cy="131" r="3.5" className="fill-[#0F172A] dark:fill-white" />
+      <circle cx="47" cy="69" r="3.5" className="fill-[#0F172A] dark:fill-white" />
+
+      {/* Center dot */}
+      <circle cx="100" cy="100" r="5.5" className="fill-[#0F172A] dark:fill-white" />
     </svg>
   );
 }
 
-function AstriqCombo({ prefix, className }: { prefix: string; className?: string }) {
+function AstriqCombo({ className }: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 520 140"
+      viewBox="0 0 420 140"
       role="img"
       aria-label="Astriq"
       className={className}
     >
-      <defs>
-        <radialGradient id={`${prefix}-ns`} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#FDE68A" />
-          <stop offset="100%" stopColor="#F59E0B" />
-        </radialGradient>
-        <filter id={`${prefix}-nsglow`} x="-200%" y="-200%" width="500%" height="500%">
-          <feGaussianBlur stdDeviation="4" />
-        </filter>
-        <filter id={`${prefix}-nodeglow`} x="-200%" y="-200%" width="500%" height="500%">
-          <feGaussianBlur stdDeviation="2.5" />
-        </filter>
-      </defs>
-
-      {/* Constellation Icon */}
+      {/* Asterisk Icon */}
       <g transform="translate(72, 70)">
-        {/* Connection lines */}
-        <g
-          className="stroke-blue-500/30 dark:stroke-blue-400/30"
-          strokeWidth="1"
-          strokeLinecap="round"
-          fill="none"
-        >
-          <line x1="0" y1="-38" x2="0" y2="0" />
-          <line x1="0" y1="-38" x2="33" y2="-20" />
-          <line x1="0" y1="-38" x2="-33" y2="-5" />
-          <line x1="33" y1="-20" x2="36" y2="14" />
-          <line x1="33" y1="-20" x2="0" y2="0" />
-          <line x1="36" y1="14" x2="16" y2="34" />
-          <line x1="16" y1="34" x2="-18" y2="28" />
-          <line x1="-18" y1="28" x2="-33" y2="-5" />
-          <line x1="-33" y1="-5" x2="0" y2="0" />
+        {/* 6 Arms */}
+        <g className="stroke-[#0F172A] dark:stroke-white" strokeWidth="3.8" strokeLinecap="round" fill="none">
+          <line x1="0" y1="0" x2="0" y2="-40" />
+          <line x1="0" y1="0" x2="34.6" y2="-20" />
+          <line x1="0" y1="0" x2="34.6" y2="20" />
+          <line x1="0" y1="0" x2="0" y2="40" />
+          <line x1="0" y1="0" x2="-34.6" y2="20" />
+          <line x1="0" y1="0" x2="-34.6" y2="-20" />
         </g>
 
-        {/* North Star glow */}
-        <circle cx="0" cy="-38" r="8" className="fill-amber-500 dark:fill-amber-500" opacity="0.2" filter={`url(#${prefix}-nsglow)`} />
-        {/* Center hub glow */}
-        <circle cx="0" cy="0" r="6" className="fill-blue-400 dark:fill-blue-400" opacity="0.15" filter={`url(#${prefix}-nodeglow)`} />
+        {/* Tip dots */}
+        <circle cx="0" cy="-43" r="3" className="fill-[#0F172A] dark:fill-white" />
+        <circle cx="37" cy="-21.5" r="2.5" className="fill-[#0F172A] dark:fill-white" />
+        <circle cx="37" cy="21.5" r="2.5" className="fill-[#0F172A] dark:fill-white" />
+        <circle cx="0" cy="43" r="3" className="fill-[#0F172A] dark:fill-white" />
+        <circle cx="-37" cy="21.5" r="2.5" className="fill-[#0F172A] dark:fill-white" />
+        <circle cx="-37" cy="-21.5" r="2.5" className="fill-[#0F172A] dark:fill-white" />
 
-        {/* Constellation nodes */}
-        <circle cx="36" cy="14" r="2.5" className="fill-[#1E3A5F] dark:fill-[#60A5FA]" opacity="0.65" />
-        <circle cx="-18" cy="28" r="2.5" className="fill-[#1E3A5F] dark:fill-[#60A5FA]" opacity="0.65" />
-        <circle cx="16" cy="34" r="3" className="fill-[#1E3A5F] dark:fill-[#60A5FA]" opacity="0.75" />
-        <circle cx="-33" cy="-5" r="3" className="fill-[#1E3A5F] dark:fill-[#60A5FA]" opacity="0.75" />
-        <circle cx="33" cy="-20" r="3" className="fill-[#1E3A5F] dark:fill-[#60A5FA]" opacity="0.85" />
-        <circle cx="0" cy="0" r="3.5" className="fill-[#2563EB] dark:fill-[#93C5FD]" />
-        {/* North Star */}
-        <circle cx="0" cy="-38" r="4.5" fill={`url(#${prefix}-ns)`} />
+        {/* Center dot */}
+        <circle cx="0" cy="0" r="4" className="fill-[#0F172A] dark:fill-white" />
       </g>
 
       {/* Divider line */}
-      <line x1="138" y1="35" x2="138" y2="105" className="stroke-slate-300 dark:stroke-slate-800" strokeWidth="1" opacity="0.5" />
+      <line x1="120" y1="35" x2="120" y2="105" className="stroke-slate-300 dark:stroke-slate-800" strokeWidth="1" opacity="0.5" />
 
       {/* Wordmark */}
       <text
-        x="330"
+        x="270"
         y="80"
         textAnchor="middle"
         fontFamily="var(--font-sans), Inter, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
@@ -167,7 +109,7 @@ function AstriqCombo({ prefix, className }: { prefix: string; className?: string
 
       {/* Subtitle */}
       <text
-        x="330"
+        x="270"
         y="104"
         textAnchor="middle"
         fontFamily="var(--font-sans), Inter, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
