@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { tiktokAccounts, posts, syncJobs } from "@/lib/db/schema";
 import { eq, and, inArray, count } from "drizzle-orm";
 import { cancelSyncJob } from "@/lib/services/sync-service";
+import { proxyImageUrl } from "@/lib/image-proxy";
 
 interface RouteParams {
   params: Promise<{ accountId: string }>;
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         id: account.id,
         username: account.username,
         displayName: account.displayName,
-        avatarUrl: account.avatarUrl,
+        avatarUrl: proxyImageUrl(account.avatarUrl),
         followerCount: account.followerCount,
         followingCount: account.followingCount,
         likesCount: account.likesCount,

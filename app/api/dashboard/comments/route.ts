@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
           tiktokId: posts.tiktokId,
           description: posts.description,
           thumbnailUrl: posts.thumbnailUrl,
+          updatedAt: posts.updatedAt,
         },
       })
       .from(comments)
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
         id: comment.post.id,
         tiktokId: comment.post.tiktokId,
         description: comment.post.description,
-        thumbnailUrl: proxyImageUrl(comment.post.thumbnailUrl),
+        thumbnailUrl: proxyImageUrl(comment.post.thumbnailUrl, { updatedAt: comment.post.updatedAt }),
       },
     }));
 

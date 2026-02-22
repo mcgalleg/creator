@@ -132,6 +132,7 @@ export async function GET(request: NextRequest) {
         postedAt: posts.postedAt,
         commentsSyncedAt: posts.commentsSyncedAt,
         syncedCommentCount: posts.syncedCommentCount,
+        updatedAt: posts.updatedAt,
       })
       .from(posts)
       .where(whereClause)
@@ -154,7 +155,7 @@ export async function GET(request: NextRequest) {
         id: post.id,
         tiktokId: post.tiktokId,
         description: post.description,
-        thumbnailUrl: proxyImageUrl(post.thumbnailUrl),
+        thumbnailUrl: proxyImageUrl(post.thumbnailUrl, { updatedAt: post.updatedAt }),
         likes: post.likes ?? 0,
         comments: post.comments ?? 0,
         shares: post.shares ?? 0,

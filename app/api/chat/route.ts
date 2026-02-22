@@ -17,6 +17,7 @@ import { tiktokAccounts, posts, comments, accountMetricsHistory } from "@/lib/db
 import { eq, desc, and, gte, sql, inArray, isNotNull } from "drizzle-orm";
 import { calculateEngagementRate } from "@/lib/dashboard-utils";
 import { getAnalyticsCatalogPrompt } from "@/lib/catalog";
+import { getVideoCatalogPrompt } from "@/lib/video-catalog";
 import { createDiagramTool, EXCALIDRAW_FORMAT_REFERENCE } from "@/lib/ai-tools/excalidraw-tools";
 import { addCacheControlToMessages, ANTHROPIC_CACHE_CONTROL } from "@/lib/ai-tools/prompt-cache";
 
@@ -128,7 +129,7 @@ When creating BarChart, LineChart, or AreaChart, the xKey and yKeys values MUST 
 
 ### Rendering data in tables:
 When using DataTable, you MUST copy every row from the fetched result into the \`data\` prop array. Aggregation queries return arrays with simple column-ready keys:
-- **top_commenters**: use the \`commenters\` array. Column keys: rank, username, comments, likes.
+- **top_commenters**: use the \`commenters\` array. Column keys: rank, username, avatarUrl, comments, likes. To showcase fans visually, use an **Avatar** clip on the main track (pass the commenter's \`username\` prop and first two initials as \`fallback\`) with a **LowerThird** overlay for their name and stats. The Avatar component auto-fetches the profile image from the username.
 - **duration_performance**: use the \`buckets\` array. Column keys: bucket, postCount, avgPlays, avgLikes, engagementRate.
 - **engagement_breakdown**: use the \`breakdown\` array. Column keys: type, value, percentage. Or use PieChart.
 - **posting_times**: use \`summary.byDayOfWeek\` array. Column keys: dayName, postCount, avgEngagementRate.
@@ -194,7 +195,7 @@ export async function POST(req: Request) {
     // - Dynamic account context → uncached (changes per user/session)
     // - Conversation messages → incrementally cached via prepareStep
     const staticSystemPrompt =
-      getAnalyticsCatalogPrompt() + additionalInstructions + EXCALIDRAW_FORMAT_REFERENCE;
+      getAnalyticsCatalogPrompt() + additionalInstructions + EXCALIDRAW_FORMAT_REFERENCE + "\n\n" + getVideoCatalogPrompt();
 
     const allMessages: ModelMessage[] = [
       {
@@ -365,7 +366,7 @@ export async function POST(req: Request) {
 
                 return {
                   type: "overview",
-                  accounts,
+                  accounts: accounts.map(a => ({ ...a, avatarUrl: `/api/avatar?accountId=${a.id}` })),
                   aggregateStats: postStats[0] || {
                     totalPosts: 0,
                     totalLikes: 0,
@@ -421,7 +422,7 @@ export async function POST(req: Request) {
 
                 return {
                   type: "posts",
-                  posts: postData,
+                  posts: postData.map(p => ({ ...p, thumbnailUrl: `/api/thumbnail?postId=${p.id}` })),
                   totalCount: Number(postsTotalCount),
                   returnedCount: postData.length,
                 };
@@ -529,7 +530,7 @@ export async function POST(req: Request) {
 
                 return {
                   type: "top_content",
-                  posts: topPosts,
+                  posts: topPosts.map(p => ({ ...p, thumbnailUrl: `/api/thumbnail?postId=${p.id}` })),
                   totalCount: Number(topContentTotalCount),
                   returnedCount: topPosts.length,
                 };
@@ -683,7 +684,7 @@ export async function POST(req: Request) {
                 const topCommentersData = await db
                   .select({
                     authorUsername: comments.authorUsername,
-                    authorAvatarUrl: sql<string>`MAX(${comments.authorAvatarUrl})`,
+                    authorAvatarUrl: sql<string>`(array_agg(${comments.authorAvatarUrl} ORDER BY ${comments.createdAt} DESC))[1]`,
                     commentCount: sql<number>`COUNT(*)`,
                     totalLikes: sql<number>`COALESCE(SUM(${comments.likes}), 0)`,
                   })
@@ -706,7 +707,7 @@ export async function POST(req: Request) {
                   commenters: topCommentersData.map((c, i) => ({
                     rank: i + 1,
                     username: c.authorUsername,
-                    avatarUrl: c.authorAvatarUrl || null,
+                    avatarUrl: c.authorUsername ? `/api/avatar?username=${encodeURIComponent(c.authorUsername)}` : null,
                     comments: Number(c.commentCount),
                     likes: Number(c.totalLikes),
                   })),
@@ -1078,6 +1079,78 @@ export async function POST(req: Request) {
         }),
 
         createDiagram: createDiagramTool,
+
+        generateVideo: tool({
+          description:
+            "Generate an animated video report from analytics data. Creates a timeline spec that renders as an inline video player. Use this when the user asks for a video, animation, or video report of their analytics.",
+          inputSchema: z.object({
+            composition: z.object({
+              id: z.string().default("video"),
+              fps: z.number().default(30),
+              width: z.number().default(1920),
+              height: z.number().default(1080),
+              durationInFrames: z.number(),
+            }),
+            tracks: z.array(z.object({
+              id: z.string(),
+              name: z.string(),
+              type: z.enum(["video", "audio"]),
+              enabled: z.boolean().default(true),
+            })),
+            clips: z.array(z.object({
+              id: z.string(),
+              trackId: z.string(),
+              component: z.string(),
+              props: z.record(z.string(), z.any()),
+              from: z.number(),
+              durationInFrames: z.number(),
+              transitionIn: z.object({
+                type: z.enum(["fade", "slideLeft", "slideRight", "slideUp", "slideDown", "zoom", "wipe", "none"]),
+                durationInFrames: z.number(),
+              }).optional(),
+              transitionOut: z.object({
+                type: z.enum(["fade", "slideLeft", "slideRight", "slideUp", "slideDown", "zoom", "wipe", "none"]),
+                durationInFrames: z.number(),
+              }).optional(),
+              motion: z.object({
+                enter: z.object({
+                  opacity: z.number().optional(),
+                  scale: z.number().optional(),
+                  x: z.number().optional(),
+                  y: z.number().optional(),
+                  rotate: z.number().optional(),
+                  duration: z.number().optional(),
+                }).optional(),
+                exit: z.object({
+                  opacity: z.number().optional(),
+                  scale: z.number().optional(),
+                  x: z.number().optional(),
+                  y: z.number().optional(),
+                  rotate: z.number().optional(),
+                  duration: z.number().optional(),
+                }).optional(),
+                spring: z.object({
+                  damping: z.number().optional(),
+                  stiffness: z.number().optional(),
+                  mass: z.number().optional(),
+                }).optional(),
+                loop: z.object({
+                  property: z.enum(["scale", "rotate", "x", "y", "opacity"]),
+                  from: z.number(),
+                  to: z.number(),
+                  duration: z.number(),
+                  easing: z.enum(["linear", "ease", "spring"]).optional(),
+                }).optional(),
+              }).optional(),
+            })),
+            audio: z.object({
+              tracks: z.array(z.any()).default([]),
+            }).default({ tracks: [] }),
+          }),
+          execute: async ({ composition, tracks, clips, audio }) => {
+            return { composition, tracks, clips, audio };
+          },
+        }),
 
         generateUI: tool({
           description:

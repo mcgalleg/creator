@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
         plays: posts.plays,
         saves: posts.saves,
         postedAt: posts.postedAt,
+        updatedAt: posts.updatedAt,
       })
       .from(posts)
       .where(
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
         id: video.id,
         tiktokId: video.tiktokId,
         description: video.description,
-        thumbnailUrl: proxyImageUrl(video.thumbnailUrl),
+        thumbnailUrl: proxyImageUrl(video.thumbnailUrl, { updatedAt: video.updatedAt }),
         videoUrl: video.videoUrl,
         likes,
         comments,

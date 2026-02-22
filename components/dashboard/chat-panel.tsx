@@ -40,6 +40,7 @@ export function ChatPanel({ onClose }: { onClose?: () => void }) {
     isLoading,
     isGenerating,
     uiTrees,
+    videoSpecs,
     error,
     getMessageText,
   } = useAnalyticsChat({
@@ -97,6 +98,7 @@ export function ChatPanel({ onClose }: { onClose?: () => void }) {
           <MessageList
             messages={messages}
             uiTrees={uiTrees}
+            videoSpecs={videoSpecs}
             getMessageText={getMessageText}
           />
         )}

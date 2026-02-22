@@ -12,6 +12,7 @@ import { CreditsProvider } from "@/components/dashboard/credits-provider";
 import { FeatureAccessProvider } from "@/contexts/feature-context";
 import { SyncProvider } from "@/contexts/sync-context";
 import { ensureUserExists } from "@/lib/services/user-service";
+import { proxyImageUrl } from "@/lib/image-proxy";
 
 export default async function DashboardLayout({
   children,
@@ -31,7 +32,7 @@ export default async function DashboardLayout({
   }
 
   // Fetch user's TikTok accounts, onboarding status, and subscription tier
-  const accounts = userId
+  const rawAccounts = userId
     ? await db
         .select({
           id: tiktokAccounts.id,
@@ -41,6 +42,10 @@ export default async function DashboardLayout({
         .from(tiktokAccounts)
         .where(eq(tiktokAccounts.userId, userId))
     : [];
+  const accounts = rawAccounts.map((a) => ({
+    ...a,
+    avatarUrl: proxyImageUrl(a.avatarUrl),
+  }));
 
   const userRecord = userId
     ? await db

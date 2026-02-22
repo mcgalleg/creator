@@ -733,8 +733,8 @@ async function processPostResults(
 ): Promise<ProcessedSyncResults> {
   let profileUpdated = false;
 
-  // Update profile from channel data of the first result
-  const channel = typedItems[0]?.channel;
+  // Update profile from channel data (search all items, not just the first)
+  const channel = typedItems.find(item => item.channel?.avatar)?.channel;
   if (channel) {
     await db
       .update(tiktokAccounts)

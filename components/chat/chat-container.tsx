@@ -28,6 +28,7 @@ export function ChatContainer() {
     isLoading,
     isGenerating,
     uiTrees,
+    videoSpecs,
     error,
     getMessageText,
   } = useAnalyticsChat({
@@ -101,6 +102,7 @@ export function ChatContainer() {
           <MessageList
             messages={messages}
             uiTrees={uiTrees}
+            videoSpecs={videoSpecs}
             getMessageText={getMessageText}
           />
         )}
