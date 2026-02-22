@@ -57,9 +57,13 @@ function renderTreeRecursive(
     props: tree.props,
   };
 
+  // Stub emit/on for ComponentRenderProps (we don't use action bindings in analytics)
+  const emit = () => {};
+  const on = () => ({ emit: () => {}, shouldPreventDefault: false, bound: false });
+
   // Render the component with children nested (not as a prop)
   return (
-    <Component key={elementKey} element={element}>
+    <Component key={elementKey} element={element} emit={emit} on={on}>
       {renderedChildren}
     </Component>
   );

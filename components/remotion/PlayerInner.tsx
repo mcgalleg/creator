@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
 import { DemoVideo } from "./DemoVideo";
 import { VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_FPS, TOTAL_FRAMES } from "./constants";
-import { Volume2, VolumeX } from "lucide-react";
+import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 
 class PlayerErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -38,6 +38,8 @@ class PlayerErrorBoundary extends React.Component<
 const PlayerContent: React.FC = () => {
   const playerRef = useRef<PlayerRef>(null);
   const [muted, setMuted] = useState(true);
+  const [playing, setPlaying] = useState(true);
+  const [showPauseIcon, setShowPauseIcon] = useState(false);
 
   // Force-mute on mount (belt-and-suspenders with initiallyMuted) and keep
   // the React icon in sync with the Player's actual mute state via the
@@ -57,7 +59,20 @@ const PlayerContent: React.FC = () => {
     };
 
     player.addEventListener("volumechange", syncMuted);
-    return () => player.removeEventListener("volumechange", syncMuted);
+
+    const syncPlaying = () => {
+      if (playerRef.current) {
+        setPlaying(playerRef.current.isPlaying());
+      }
+    };
+    player.addEventListener("play", syncPlaying);
+    player.addEventListener("pause", syncPlaying);
+
+    return () => {
+      player.removeEventListener("volumechange", syncMuted);
+      player.removeEventListener("play", syncPlaying);
+      player.removeEventListener("pause", syncPlaying);
+    };
   }, []);
 
   const toggleMute = useCallback(
@@ -79,8 +94,24 @@ const PlayerContent: React.FC = () => {
     [muted],
   );
 
+  const togglePlay = useCallback(() => {
+    const player = playerRef.current;
+    if (!player) return;
+
+    if (!player.isPlaying()) {
+      player.play();
+    } else {
+      player.pause();
+    }
+    setShowPauseIcon(true);
+    setTimeout(() => setShowPauseIcon(false), 600);
+  }, []);
+
   return (
-    <div style={{ position: "relative", width: "100%", cursor: "none" }}>
+    <div
+      style={{ position: "relative", width: "100%", cursor: playing ? "none" : "pointer" }}
+      onClick={togglePlay}
+    >
       <Player
         ref={playerRef}
         component={DemoVideo}
@@ -92,7 +123,7 @@ const PlayerContent: React.FC = () => {
         loop
         initiallyMuted
         clickToPlay={false}
-        style={{ width: "100%" }}
+        style={{ width: "100%", pointerEvents: "none" }}
         errorFallback={() => (
           <div
             style={{
@@ -103,6 +134,35 @@ const PlayerContent: React.FC = () => {
           />
         )}
       />
+      {/* Play/Pause indicator */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          pointerEvents: "none",
+          opacity: showPauseIcon ? 1 : 0,
+          transition: "opacity 0.3s ease",
+        }}
+      >
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: 32,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#FAFAFA",
+          }}
+        >
+          {playing ? <Play size={28} /> : <Pause size={28} />}
+        </div>
+      </div>
       <button
         onClick={toggleMute}
         style={{

@@ -1,6 +1,5 @@
 import React from "react";
 import { AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
-import { BassGlow } from "./BassGlow";
 import { ACCENT_AMBER, ACCENT_AMBER_DIM, TEXT_WHITE, SPRING_SMOOTH } from "./constants";
 
 interface CtaSceneProps {
@@ -45,7 +44,6 @@ export const CtaScene: React.FC<CtaSceneProps> = ({ bassIntensity }) => {
 
   return (
     <AbsoluteFill style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <BassGlow bassIntensity={bassIntensity} />
       <div
         style={{
           display: "flex",
@@ -57,9 +55,9 @@ export const CtaScene: React.FC<CtaSceneProps> = ({ bassIntensity }) => {
       >
         {/* Logo */}
         <Img
-          src={staticFile("astriq-logo-dark.png")}
+          src={staticFile("astriq-logo-dark.svg")}
           style={{
-            width: 520,
+            width: 800,
             height: "auto",
             opacity: logoOpacity,
             transform: `scale(${logoS})`,

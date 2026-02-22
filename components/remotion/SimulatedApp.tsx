@@ -1,10 +1,10 @@
 import React from "react";
-import { interpolate } from "remotion";
+import { interpolate, spring, useVideoConfig } from "remotion";
 import { SimulatedHeader } from "./SimulatedHeader";
 import { SimulatedDashboard } from "./SimulatedDashboard";
 import { SimulatedChat } from "./SimulatedChat";
 import { SimulatedCanvas } from "./SimulatedCanvas";
-import { DARK, TEXT_WHITE, SCENES } from "./constants";
+import { DARK, TEXT_WHITE, SCENES, SPRING_SMOOTH } from "./constants";
 
 interface SimulatedAppProps {
   frame: number;
@@ -56,6 +56,8 @@ const ViewTabs: React.FC<{ activeTab: "dashboard" | "draw" }> = ({ activeTab }) 
 };
 
 export const SimulatedApp: React.FC<SimulatedAppProps> = ({ frame }) => {
+  const { fps } = useVideoConfig();
+
   // Determine active tab based on frame
   const activeTab: "dashboard" | "draw" = frame >= SCENES.canvas.start ? "draw" : "dashboard";
 
@@ -86,6 +88,35 @@ export const SimulatedApp: React.FC<SimulatedAppProps> = ({ frame }) => {
   const opacity = fadeIn * exitOpacity;
   const scale = exitScale;
 
+  // ─── Chat scene camera zoom ───
+  // Smoothly zoom into the chat panel during the chat scene for readability.
+  // Pins left edge + bottom edge so the typing input and latest messages stay visible.
+  const CHAT_ZOOM_SCALE = 1.25;
+  const chatZoomInStart = SCENES.chat.start + 15;
+  const chatZoomOutStart = SCENES.canvas.start - 45;
+
+  let chatZoomProgress: number;
+  if (frame < chatZoomInStart) {
+    chatZoomProgress = 0;
+  } else if (frame < chatZoomOutStart) {
+    chatZoomProgress = spring({
+      frame: frame - chatZoomInStart,
+      fps,
+      config: SPRING_SMOOTH,
+    });
+  } else {
+    chatZoomProgress = 1 - spring({
+      frame: frame - chatZoomOutStart,
+      fps,
+      config: SPRING_SMOOTH,
+    });
+  }
+
+  const chatZoom = 1 + chatZoomProgress * (CHAT_ZOOM_SCALE - 1);
+  // Translate to pin left edge (push right) and bottom edge (push up)
+  const chatTx = 960 * (chatZoom - 1);
+  const chatTy = 540 * (1 - chatZoom);
+
   // Cross-fade between dashboard and canvas
   const canvasOpacity = interpolate(
     frame,
@@ -109,7 +140,7 @@ export const SimulatedApp: React.FC<SimulatedAppProps> = ({ frame }) => {
         width: 1920,
         height: 1080,
         opacity,
-        transform: `translateY(${slideY}px) scale(${scale})`,
+        transform: `translate(${chatTx}px, ${slideY + chatTy}px) scale(${scale * chatZoom})`,
         transformOrigin: "center center",
         display: "flex",
         flexDirection: "column",

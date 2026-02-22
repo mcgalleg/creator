@@ -32,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider appearance={{ theme: shadcn }}>
-      <html lang="en" data-accent="amber" suppressHydrationWarning>
+      <html lang="en" data-accent="blue" suppressHydrationWarning>
         <head>
           <script
             dangerouslySetInnerHTML={{
@@ -45,7 +45,7 @@ export default function RootLayout({
         >
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
+            defaultTheme="dark"
             enableSystem
             disableTransitionOnChange
           >

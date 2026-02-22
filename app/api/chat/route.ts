@@ -180,9 +180,9 @@ export async function POST(req: Request) {
     if (userAccounts.length === 0) {
       accountContext = "\n\nThe user has no connected TikTok accounts yet. Suggest they connect an account to see their analytics.";
     } else if (activeAccount) {
-      accountContext = `\n\nThe user has ${userAccounts.length} connected TikTok account(s): ${userAccounts.map((a) => `@${a.username} (${a.displayName || a.username})`).join(", ")}. The user is currently viewing @${activeAccount.username} (${activeAccount.displayName || activeAccount.username}, account ID ${activeAccount.id}). Unless the user asks about a different account or all accounts, focus queries on this account by passing accountIds: ["${activeAccount.id}"].`;
+      accountContext = `\n\nThe user is viewing their TikTok account @${activeAccount.username} (${activeAccount.displayName || activeAccount.username}). All analytics queries are automatically scoped to this account. Do not reference or discuss other accounts.`;
     } else {
-      accountContext = `\n\nThe user has ${userAccounts.length} connected TikTok account(s): ${userAccounts.map((a) => `@${a.username} (${a.displayName || a.username})`).join(", ")}.`;
+      accountContext = `\n\nThe user has ${userAccounts.length} connected TikTok account(s). No specific account is selected.`;
     }
 
     const modelMessages = sanitizeModelMessages(
@@ -280,12 +280,8 @@ export async function POST(req: Request) {
               .describe(
                 "Aggregation queries: post_stats (counts/averages), top_commenters (ranked fans), engagement_breakdown (likes/comments/shares/saves split), posting_times (best day/hour), comment_activity (daily comment trend), growth (follower/engagement trends), duration_performance (best video length). Raw data queries: overview, posts, engagement, top_content, comments."
               ),
-            accountIds: z
-              .array(z.string())
-              .optional()
-              .describe(
-                "Optional list of account IDs to filter by. If omitted, aggregate all user accounts."
-              ),
+            // accountIds removed — account scoping is enforced server-side
+            // based on the selected account in the UI
             timeRange: z
               .enum(["7d", "30d", "90d", "all"])
               .optional()
@@ -299,13 +295,22 @@ export async function POST(req: Request) {
               .optional()
               .describe("Maximum number of results to return"),
           }),
-          execute: async ({ query, accountIds, timeRange, metric, limit }) => {
-            // Get user's accounts if not specified
+          execute: async ({ query, timeRange, metric, limit }) => {
+            // Scope to the selected account when one is active.
+            // The AI's accountIds parameter is ignored — scoping is enforced
+            // server-side to prevent cross-account data leakage.
             let targetAccountIds: number[] = [];
 
-            if (accountIds && accountIds.length > 0) {
-              targetAccountIds = accountIds.map((id) => parseInt(id, 10));
-            } else {
+            if (selectedAccountId) {
+              // Verify the selected account belongs to this user
+              const valid = userAccounts.find((a) => a.id === selectedAccountId);
+              if (valid) {
+                targetAccountIds = [selectedAccountId];
+              }
+            }
+
+            // Fallback: no selected account — use all user accounts
+            if (targetAccountIds.length === 0) {
               const accounts = await db
                 .select({ id: tiktokAccounts.id })
                 .from(tiktokAccounts)
@@ -1086,10 +1091,10 @@ export async function POST(req: Request) {
                 "The root component type from the catalog (e.g., MetricGroup, LineChart, DataTable, Card, Grid)"
               ),
             props: z
-              .record(z.any())
+              .record(z.string(), z.any())
               .describe("The props for the component according to its schema"),
             children: z
-              .array(z.record(z.any()))
+              .array(z.record(z.string(), z.any()))
               .optional()
               .describe(
                 "Optional array of nested component objects, each with {component, props, children?}"

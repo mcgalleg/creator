@@ -1,6 +1,5 @@
 import React from "react";
 import { AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
-import { BassGlow } from "./BassGlow";
 import { SPRING_SMOOTH } from "./constants";
 
 interface LogoSceneProps {
@@ -31,11 +30,10 @@ export const LogoScene: React.FC<LogoSceneProps> = ({ bassIntensity }) => {
 
   return (
     <AbsoluteFill style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <BassGlow bassIntensity={bassIntensity} />
       <Img
-        src={staticFile("astriq-logo-dark.png")}
+        src={staticFile("astriq-logo-dark.svg")}
         style={{
-          width: 500,
+          width: 900,
           height: "auto",
           opacity,
           transform: `scale(${scale})`,

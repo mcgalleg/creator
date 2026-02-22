@@ -27,8 +27,9 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@excalidraw/excalidraw": "^0.18.0",
-    "@json-render/core": "^0.3.0",
-    "@json-render/react": "^0.2.0",
+    "@json-render/core": "^0.8.0",
+    "@json-render/react": "^0.8.0",
+    "@json-render/remotion": "^0.8.0",
     "@modelcontextprotocol/ext-apps": "^1.0.1",
     "@modelcontextprotocol/sdk": "^1.25.2",
     "@neondatabase/serverless": "^1.0.2",
@@ -79,7 +80,7 @@
     "swr": "^2.4.0",
     "tailwind-merge": "^3.4.0",
     "three": "^0.182.0",
-    "zod": "^3.25.76"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@clerk/testing": "^1.13.35",

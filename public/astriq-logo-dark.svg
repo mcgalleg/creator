@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100" width="400" height="100" role="img" aria-labelledby="title desc">
+  <title id="title">Astriq Logo</title>
+  <desc id="desc">A rising analytics pulse with data points and a star, with the ASTRIQ wordmark</desc>
+
+  <polyline
+    points="22,70 32,66 40,61 47,52 54,56 61,38 68,31 75,20"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <circle cx="40" cy="61" r="1.6" fill="#FFFFFF"/>
+  <circle cx="47" cy="52" r="1.6" fill="#FFFFFF"/>
+  <circle cx="54" cy="56" r="1.6" fill="#FFFFFF"/>
+  <circle cx="61" cy="38" r="1.6" fill="#FFFFFF"/>
+  <circle cx="68" cy="31" r="1.6" fill="#FFFFFF"/>
+
+  <g transform="translate(75, 20)">
+    <path d="M0,-10 C0.4,-2.5 2.5,-0.4 10,0 C2.5,0.4 0.4,2.5 0,10 C-0.4,2.5 -2.5,0.4 -10,0 C-2.5,-0.4 -0.4,-2.5 0,-10Z" fill="#FFFFFF"/>
+  </g>
+
+  <g transform="translate(112, 0)">
+    <text y="55" font-family="'Georgia', 'Times New Roman', serif" font-size="40" font-weight="400" letter-spacing="4" fill="#FFFFFF">
+      ASTRIQ
+    </text>
+    <text x="2" y="70" font-family="'SF Pro Display', 'Inter', 'Helvetica Neue', sans-serif" font-size="9" font-weight="500" letter-spacing="5.5" fill="#888888">
+      STAR INTELLIGENCE
+    </text>
+  </g>
+</svg>

@@ -1,9 +1,9 @@
 import {
-  createCatalog,
-  generateCatalogPrompt,
+  defineCatalog,
   type ComponentSchema,
   type ValidationFunction,
 } from "@json-render/core";
+import { schema } from "@json-render/react/schema";
 import { z } from "zod";
 
 /**
@@ -135,7 +135,7 @@ const ColumnDefSchema = z.object({
 
 const DataTableSchema = z.object({
   columns: z.array(ColumnDefSchema).min(1),
-  data: z.array(z.record(z.unknown())),
+  data: z.array(z.record(z.string(), z.unknown())),
   title: z.string().optional(),
   pageSize: z.number().optional().default(10),
 });
@@ -305,7 +305,7 @@ const validationFunctions: Record<string, ValidationFunction> = {
 // Catalog Definition
 // =============================================================================
 
-export const catalog = createCatalog({
+export const catalog = defineCatalog(schema, {
   components: {
     // Layout Components
     Row: {
@@ -523,7 +523,7 @@ export const catalog = createCatalog({
  * This should be included in the AI's system message to enable guardrailed generation.
  */
 export function getCatalogPrompt(): string {
-  return generateCatalogPrompt(catalog);
+  return catalog.prompt();
 }
 
 /**
@@ -532,7 +532,7 @@ export function getCatalogPrompt(): string {
  * (Actions, Visibility Conditions, Validation Functions) to save tokens.
  */
 export function getAnalyticsCatalogPrompt(): string {
-  let prompt = generateCatalogPrompt(catalog);
+  let prompt = catalog.prompt();
 
   // Remove sections that don't apply to the analytics chat
   prompt = prompt.replace(/## Available Actions[\s\S]*?(?=## |$)/, "");

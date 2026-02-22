@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "json-render-remotion": {
+      "source": "vercel-labs/json-render",
+      "sourceType": "github",
+      "computedHash": "1525694637a5211e329c339f614f352b1d4ac8d52e1c4d30c898ff1e84e0895d"
+    }
+  }
+}
