@@ -1,10 +1,10 @@
 import {
   defineCatalog,
-  type ComponentSchema,
   type ValidationFunction,
 } from "@json-render/core";
 import { schema } from "@json-render/react/schema";
 import { z } from "zod";
+import { asProps, chartDataPointSchema } from "./schema-helpers";
 
 /**
  * Component Catalog for AI-Generated Analytics UI
@@ -13,18 +13,6 @@ import { z } from "zod";
  * for TikTok analytics dashboards. Each component has a Zod schema
  * that validates its props, ensuring type-safe generation.
  */
-
-// =============================================================================
-// Helper to cast schemas for json-render compatibility
-// =============================================================================
-
-/**
- * Helper function to cast Zod schemas to ComponentSchema type
- * This is needed due to Zod 4 type changes
- */
-function asProps<T extends z.ZodTypeAny>(schema: T): ComponentSchema {
-  return schema as unknown as ComponentSchema;
-}
 
 // =============================================================================
 // Shared Schemas
@@ -36,9 +24,6 @@ const justifySchema = z
   .optional();
 const gapSchema = z.enum(["none", "xs", "sm", "md", "lg", "xl"]).optional();
 const trendSchema = z.enum(["up", "down", "neutral"]).optional();
-
-// Chart data point schema - flexible for different chart types
-const chartDataPointSchema = z.record(z.string(), z.union([z.string(), z.number()]));
 
 // =============================================================================
 // Layout Components
@@ -565,7 +550,9 @@ When generating components:
 - For Accordion and Tabs, the children array maps BY INDEX to the items/tabs array
 - Ensure the children array length matches the items/tabs array length
 
-Always include meaningful titles and consider the user's analytical needs when selecting components.`;
+Always include meaningful titles and consider the user's analytical needs when selecting components.
+
+**Important:** Do NOT use emoji characters anywhere in generated UI content — titles, labels, descriptions, badge text, alert messages, or any other text. Use plain text only.`;
 }
 
 // =============================================================================

@@ -1,19 +1,10 @@
 import { ClipWrapper, type Clip } from "@json-render/remotion";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring } from "remotion";
-import { DARK, SNAPPY, countUp, formatCompact } from "./_shared";
+import type { VideoVideoCardProps } from "@/lib/video-catalog";
+import { DARK, PUNCHY, countUp, formatCompact, copy18, label13, heading24 } from "./_shared";
 import { ProxyImg } from "./_shared/ProxyImg";
 
-interface VideoCardProps {
-  thumbnailUrl?: string;
-  postId?: number;
-  description: string;
-  likes: number;
-  comments: number;
-  shares: number;
-  plays: number;
-}
-
-const STATS_CONFIG: { key: keyof VideoCardProps; label: string }[] = [
+const STATS_CONFIG: { key: keyof VideoVideoCardProps; label: string }[] = [
   { key: "plays", label: "Plays" },
   { key: "likes", label: "Likes" },
   { key: "comments", label: "Comments" },
@@ -47,9 +38,9 @@ function FilmPlaceholder() {
 export function VideoCardClip({ clip }: { clip: Clip }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const props = clip.props as unknown as VideoCardProps;
+  const props = clip.props as unknown as VideoVideoCardProps;
   const thumbnailSrc = props.thumbnailUrl || (props.postId ? `/api/thumbnail?postId=${props.postId}` : undefined);
-  const s = spring({ fps, frame, config: SNAPPY });
+  const s = spring({ fps, frame, config: PUNCHY });
 
   return (
     <ClipWrapper clip={clip}>
@@ -66,9 +57,10 @@ export function VideoCardClip({ clip }: { clip: Clip }) {
         <div
           style={{
             backgroundColor: DARK.card,
+            border: `1px solid ${DARK.borderSubtle}`,
             borderRadius: 16,
             padding: 32,
-            maxWidth: 700,
+            maxWidth: 900,
             width: "100%",
             opacity: s,
             transform: `scale(${0.9 + s * 0.1})`,
@@ -78,7 +70,7 @@ export function VideoCardClip({ clip }: { clip: Clip }) {
           <div
             style={{
               width: "100%",
-              height: 360,
+              height: 420,
               backgroundColor: DARK.muted,
               borderRadius: 12,
               display: "flex",
@@ -105,10 +97,9 @@ export function VideoCardClip({ clip }: { clip: Clip }) {
           {/* Description */}
           <div
             style={{
-              fontSize: 20,
+              ...copy18,
               color: DARK.foreground,
               marginBottom: 20,
-              lineHeight: 1.4,
               overflow: "hidden",
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -130,7 +121,7 @@ export function VideoCardClip({ clip }: { clip: Clip }) {
                 <div key={stat.key} style={{ display: "flex", flexDirection: "column" }}>
                   <div
                     style={{
-                      fontSize: 14,
+                      ...label13,
                       color: DARK.mutedFg,
                       textTransform: "uppercase",
                       letterSpacing: 1,
@@ -141,8 +132,7 @@ export function VideoCardClip({ clip }: { clip: Clip }) {
                   </div>
                   <div
                     style={{
-                      fontSize: 24,
-                      fontWeight: 700,
+                      ...heading24,
                       color: DARK.foreground,
                       fontFamily: "var(--font-mono), monospace",
                     }}

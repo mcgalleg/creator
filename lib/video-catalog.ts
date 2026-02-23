@@ -1,7 +1,4 @@
-import {
-  defineCatalog,
-  type ComponentSchema,
-} from "@json-render/core";
+import { defineCatalog } from "@json-render/core";
 import {
   schema,
   standardComponentDefinitions,
@@ -9,20 +6,7 @@ import {
   standardEffectDefinitions,
 } from "@json-render/remotion/server";
 import { z } from "zod";
-
-// =============================================================================
-// Helper to cast schemas for json-render compatibility
-// =============================================================================
-
-function asProps<T extends z.ZodTypeAny>(schema: T): ComponentSchema {
-  return schema as unknown as ComponentSchema;
-}
-
-// =============================================================================
-// Shared Schemas
-// =============================================================================
-
-const chartDataPointSchema = z.record(z.string(), z.union([z.string(), z.number()]));
+import { asProps, chartDataPointSchema } from "./schema-helpers";
 
 // =============================================================================
 // Chart Components
@@ -131,17 +115,85 @@ const AlertSchema = z.object({
   variant: z.enum(["default", "destructive"]).optional().default("default"),
 });
 
-const SeparatorSchema = z.object({});
-
 const AvatarSchema = z.object({
   src: z.string().optional(),
   username: z.string().optional(),
   fallback: z.string().max(2),
 });
 
-const SkeletonSchema = z.object({
-  width: z.string().optional(),
-  height: z.string().optional(),
+// =============================================================================
+// Geist-style Components
+// =============================================================================
+
+const CodeBlockSchema = z.object({
+  code: z.string(),
+  language: z.string().optional().default("typescript"),
+  title: z.string().optional(),
+  highlightLines: z.array(z.number()).optional(),
+  animate: z.boolean().optional().default(true),
+  fontSize: z.number().optional().default(18),
+});
+
+const CardGridSchema = z.object({
+  cards: z
+    .array(
+      z.object({
+        title: z.string(),
+        description: z.string(),
+        icon: z.string().optional(),
+        value: z.string().optional(),
+      })
+    )
+    .min(1)
+    .max(6),
+  title: z.string().optional(),
+  columns: z.number().min(1).max(3).optional(),
+});
+
+const ChecklistSchema = z.object({
+  items: z.array(z.string()).min(1).max(8),
+  title: z.string().optional(),
+  variant: z.enum(["success", "info", "warning"]).optional().default("success"),
+});
+
+// =============================================================================
+// Cinematic Components
+// =============================================================================
+
+const formatEnum = z.enum(["number", "percent", "currency"]).optional();
+
+const CountUpSchema = z.object({
+  value: z.number(),
+  label: z.string(),
+  format: formatEnum,
+  prefix: z.string().optional(),
+  suffix: z.string().optional(),
+});
+
+const ComparisonSchema = z.object({
+  leftLabel: z.string(),
+  leftValue: z.number(),
+  rightLabel: z.string(),
+  rightValue: z.number(),
+  format: formatEnum,
+  title: z.string().optional(),
+});
+
+const RankingSchema = z.object({
+  items: z.array(z.object({ label: z.string(), value: z.number() })).min(1).max(8),
+  title: z.string().optional(),
+  format: formatEnum,
+});
+
+const CalloutSchema = z.object({
+  value: z.string(),
+  label: z.string(),
+  sublabel: z.string().optional(),
+});
+
+const AnimatedListSchema = z.object({
+  items: z.array(z.object({ label: z.string(), value: z.string().optional() })).min(1).max(8),
+  title: z.string().optional(),
 });
 
 // =============================================================================
@@ -234,13 +286,6 @@ export const videoCatalog = defineCatalog(schema, {
       description:
         "Alert banner for important messages or callouts in video clips.",
     },
-    Separator: {
-      props: asProps(SeparatorSchema),
-      type: "scene" as const,
-      defaultDuration: 15,
-      description:
-        "Visual divider line between video sections. Draws on with animation.",
-    },
     Avatar: {
       props: asProps(AvatarSchema),
       type: "scene" as const,
@@ -248,13 +293,66 @@ export const videoCatalog = defineCatalog(schema, {
       description:
         "User avatar showing an image with fallback initials. Scales in with spring animation.",
     },
-    Skeleton: {
-      props: asProps(SkeletonSchema),
+    // Geist-style Components
+    CodeBlock: {
+      props: asProps(CodeBlockSchema),
       type: "scene" as const,
-      defaultDuration: 60,
+      defaultDuration: 150,
       description:
-        "Animated loading placeholder with pulse effect for video transitions.",
+        "Syntax-highlighted code block with optional typewriter animation, line numbers, and line highlighting. Uses Geist Mono font and a Geist-aligned dark theme.",
     },
+    CardGrid: {
+      props: asProps(CardGridSchema),
+      type: "scene" as const,
+      defaultDuration: 120,
+      description:
+        "Animated card grid layout (2-6 cards) with staggered entrance. Each card has a title, description, and optional icon or value badge.",
+    },
+    Checklist: {
+      props: asProps(ChecklistSchema),
+      type: "scene" as const,
+      defaultDuration: 120,
+      description:
+        "Animated checklist with items sliding in sequentially. Each item has a colored check icon. Great for summaries and key takeaways.",
+    },
+
+    // Cinematic Components
+    CountUp: {
+      props: asProps(CountUpSchema),
+      type: "scene" as const,
+      defaultDuration: 90,
+      description:
+        "Giant animated number that counts up dramatically. Full-screen centered stat with bouncy spring entrance.",
+    },
+    Comparison: {
+      props: asProps(ComparisonSchema),
+      type: "scene" as const,
+      defaultDuration: 120,
+      description:
+        "Side-by-side before/after comparison with two values separated by an animated divider.",
+    },
+    Ranking: {
+      props: asProps(RankingSchema),
+      type: "scene" as const,
+      defaultDuration: 150,
+      description:
+        "Animated racing horizontal bar chart with items ranked top to bottom by value.",
+    },
+    Callout: {
+      props: asProps(CalloutSchema),
+      type: "scene" as const,
+      defaultDuration: 90,
+      description:
+        "Single stat spotlight with radial glow pulse effect. Dramatic emphasis for key numbers.",
+    },
+    AnimatedList: {
+      props: asProps(AnimatedListSchema),
+      type: "scene" as const,
+      defaultDuration: 120,
+      description:
+        "Full-width items that slam in one by one from the right with impact animation.",
+    },
+
   },
 
   transitions: standardTransitionDefinitions,
@@ -288,19 +386,51 @@ You generate animated video reports using the \`generateVideo\` tool. The tool a
 - **TitleCard** (min 75 frames): Full-screen title slide. Props: { title: string, subtitle?: string, backgroundColor?: string, textColor?: string }
 - **StatCard** (min 75 frames): Large statistic display. Props: { value: string, label: string, prefix?: string, suffix?: string, backgroundColor?: string }
 - **QuoteCard** (min 90 frames): Quote with attribution. Props: { quote: string, author?: string, backgroundColor?: string, textColor?: string }
-- **TypingText** (min 90 frames): Typewriter text effect. Props: { text: string, fontSize?: number, fontFamily?: "monospace" | "sans-serif" | "serif", showCursor?: boolean, charsPerSecond?: number }
+- **TypingText** (min 90 frames): Typewriter text effect with blinking cursor. Uses Geist Mono font by default. Props: { text: string, fontSize?: number (default 64 — use 48-80 depending on text length), fontFamily?: "monospace" | "sans-serif" | "serif", textColor?: string (default "#fafafa"), backgroundColor?: string (default "#1a1a1a"), showCursor?: boolean, charsPerSecond?: number (default 15) }
 - **SplitScreen** (min 90 frames): Side-by-side comparison. Props: { leftTitle: string, rightTitle: string, leftColor?: string, rightColor?: string }
 
 #### Overlay Components (place on "overlay" track, layered on top of scenes)
 - **LowerThird** (min 60 frames): Name/title banner at bottom of screen. Props: { name: string, title?: string, backgroundColor?: string }
 - **TextOverlay** (min 60 frames): Text positioned over scene. Props: { text: string, position?: "top" | "center" | "bottom", fontSize?: "small" | "medium" | "large" }
 
+#### Geist-style Components
+- **CodeBlock** (min 120 frames): Syntax-highlighted code block with Geist Mono font, line numbers, optional typewriter animation, and line highlighting. Includes a macOS-style title bar. Props: { code: string, language?: string ("typescript" | "javascript" | "jsx" | "tsx" | "json" | "bash" | "css" | "html" | "python" | "go" | "rust"), title?: string, highlightLines?: number[], animate?: boolean (default true — typewriter effect), fontSize?: number (default 18) }
+- **CardGrid** (min 90 frames): Animated card grid (1-6 cards in 1-3 columns) with staggered entrance animations. Each card has title, description, and optional icon character or value badge. Props: { cards: [{ title: string, description: string, icon?: string (single character — do NOT use emoji, use a letter or symbol like "#", "*", "→"), value?: string (short text in badge) }], title?: string, columns?: number (1-3, auto-detected) }
+- **Checklist** (min 90 frames): Animated checklist with items sliding in sequentially from the left. Each item has a colored check circle. Great for summaries, key takeaways, and conclusions. Props: { items: string[] (1-8 items), title?: string, variant?: "success" | "info" | "warning" (default "success" — controls check icon color) }
+
+#### Cinematic Components (dramatic, full-screen emphasis)
+- **CountUp** (min 90 frames): Giant animated number that counts up dramatically. Full-screen centered, bouncy spring entrance. Props: { value: number, label: string, format?: "number" | "percent" | "currency", prefix?: string, suffix?: string }
+- **Comparison** (min 120 frames): Side-by-side before/after with animated divider. Props: { leftLabel: string, leftValue: number, rightLabel: string, rightValue: number, format?: "number" | "percent" | "currency", title?: string }
+- **Ranking** (min 150 frames): Animated racing horizontal bars ranked by value. Props: { items: [{ label: string, value: number }] (1-8 items), title?: string, format?: "number" | "percent" | "currency" }
+- **Callout** (min 90 frames): Single stat spotlight with radial glow pulse. Props: { value: string, label: string, sublabel?: string }
+- **AnimatedList** (min 120 frames): Items slam in one by one from the right. Props: { items: [{ label: string, value?: string }] (1-8 items), title?: string }
+
 #### UI Components
 - **Badge** (min 45 frames): Small label/tag. Props: { text: string, variant?: "default" | "secondary" | "destructive" | "outline" }
 - **Progress** (min 75 frames): Animated progress bar. Props: { value: number (0-100), label?: string }
 - **Alert** (min 60 frames): Alert banner. Props: { title?: string, description: string, variant?: "default" | "destructive" }
-- **Separator** (min 30 frames): Visual divider line. Props: {}
 - **Avatar** (min 45 frames): User avatar circle showing a profile image (or fallback initials if image fails). Scales in with spring animation. Props: { username?: string (TikTok username — preferred, auto-fetches their avatar), src?: string (direct image URL), fallback: string (1-2 character initials) }. Pass \`username\` for commenter avatars (the component resolves the image automatically). Use with a LowerThird or TextOverlay on the overlay track to label the person.
+
+### Color Palette — Geist Design System (MANDATORY)
+
+All videos use the Geist dark theme. You MUST only use colors from this system — never pick arbitrary colors.
+
+**Surface colors** (for backgroundColor props on TitleCard, StatCard, QuoteCard, SplitScreen, LowerThird):
+- \`"#0a0a0a"\` — deep black (Geist background-100)
+- \`"#171717"\` — elevated surface (Geist background-200)
+- \`"#1a1a1a"\` — primary dark background (default — use this most often)
+- \`"#2d2d2d"\` — card surface
+
+**Accent backgrounds** (use sparingly for emphasis — at most 1-2 clips per video):
+- \`"#0070F3"\` — Geist blue (info, highlights)
+- \`"#46A758"\` — Geist green (success, celebration)
+- \`"#6366f1"\` — indigo (feature accent)
+
+**Text colors** (for textColor props):
+- \`"#fafafa"\` — primary text (Geist gray-1000 dark mode)
+- \`"#a3a3a3"\` — muted/secondary text (Geist gray-900 dark mode)
+
+**NEVER use**: bright pink, magenta, red, orange, yellow, or any saturated/neon color as a full-screen backgroundColor. These clash with the dark theme.
 
 ### Transition System
 
@@ -350,20 +480,16 @@ Use for: pulsing emphasis on key metrics, subtle floating effects on overlay ele
 ### Composition Guidelines
 
 **Track layout:** Use 2 tracks:
-- \`"main"\` (type: "video") — sequential scene clips (TitleCard, MetricCard, charts, etc.)
+- \`"main"\` (type: "video") — sequential scene clips
 - \`"overlay"\` (type: "video") — LowerThird, TextOverlay layered on top of main scenes
 
-**Recommended video flow:**
-1. TitleCard (75-90 frames) — introduce the topic
-2. MetricCard (120 frames) — show key KPIs with count-up animation
-3. Charts (90-120 frames each) — BarChart, LineChart, PieChart for data visualization
-4. DataTable (90-120 frames) — detailed breakdown if applicable
-5. StatCard or TitleCard (75-90 frames) — summary/outro
+**Narrative structure:** Build videos with a clear arc — open with context, build with data, close with a takeaway. You have full creative freedom to choose which components best tell the story. A simple answer might be a single MetricCard; a deep analysis might combine a title, multiple charts, a table, and a closing checklist. Match the complexity of the video to the complexity of the question.
 
 **Default clip settings:**
 - Every scene clip should have: \`transitionIn: { type: "fade", durationInFrames: 15 }\`
 - Every scene clip should have: \`motion: { enter: { opacity: 0, y: 30, duration: 20 } }\`
 - Overlay clips use \`motion.enter\` for slide-in effects instead of transitions
+- Vary transitions and motion between clips to keep the video dynamic — don't apply the same transition to every clip
 
 **Timing rules:**
 - Composition: 1920×1080, 30fps
@@ -372,29 +498,22 @@ Use for: pulsing emphasis on key metrics, subtle floating effects on overlay ele
 - Overlay clips set \`from\` to align with the main clip they annotate
 - Account for transition overlap: when a clip has transitionIn of 15 frames, it can overlap the previous clip by that amount
 
-### TikTok Analytics Context
-
-The data available for video reports includes:
-- Video performance metrics (plays, likes, comments, shares, saves)
-- Account growth data (followers over time)
-- Engagement rates and trends
-- Top performing content rankings
-- Posting patterns and timing analysis
-- Comment activity and top commenters
-
-Use BarChart for comparisons, LineChart/AreaChart for trends, PieChart for proportions, EngagementTimeline for multi-metric series, MetricCard for KPIs, DataTable for detailed data.
+**Important:** Do NOT use emoji characters anywhere in video content — titles, labels, descriptions, card icons, text overlays, or any other text. Use plain text, symbols, or punctuation only.
 
 ### Composing Clips Together
 
-Components are atomic building blocks. Combine them by placing scene clips on the "main" track and labels on the "overlay" track at the same \`from\` time.
+Components are atomic building blocks. Combine them freely — place scene clips on the "main" track and annotations on the "overlay" track at the same \`from\` time. Use overlays to add context to any scene, not just avatars.
 
 **Example — Fan showcase (Avatar + LowerThird):**
-Place an Avatar clip on "main" and a LowerThird on "overlay" at the same \`from\` value:
 \`\`\`
 main track:    [TitleCard 0-90] [Avatar 90-150] [Avatar 150-210] ...
 overlay track:                  [LowerThird 90-150] [LowerThird 150-210] ...
 \`\`\`
-For commenter avatars, pass \`username\` (e.g. \`{ username: "liliarochel", fallback: "LR" }\`) — the component auto-fetches their profile image. The LowerThird \`name\` is their @username and \`title\` is their stats (e.g. "#1 Super Fan · 57 Comments").`;
+For commenter avatars, pass \`username\` (e.g. \`{ username: "liliarochel", fallback: "LR" }\`) — the component auto-fetches their profile image. The LowerThird \`name\` is their @username and \`title\` is their stats (e.g. "#1 Super Fan · 57 Comments").
+
+### Creative Direction
+
+Prefer cinematic components (CountUp, Comparison, Ranking, Callout, AnimatedList) for emphasis moments — hero stats, key findings, dramatic reveals. Use chart components (BarChart, LineChart, AreaChart, PieChart) for detailed data analysis and trends. Mix both for engaging storytelling: open with a dramatic CountUp or Callout, dive into charts for analysis, close with a Ranking or AnimatedList for key takeaways.`;
 }
 
 // =============================================================================
@@ -414,6 +533,12 @@ export type VideoVideoCardProps = z.infer<typeof VideoCardSchema>;
 export type VideoBadgeProps = z.infer<typeof BadgeSchema>;
 export type VideoProgressProps = z.infer<typeof ProgressSchema>;
 export type VideoAlertProps = z.infer<typeof AlertSchema>;
-export type VideoSeparatorProps = z.infer<typeof SeparatorSchema>;
 export type VideoAvatarProps = z.infer<typeof AvatarSchema>;
-export type VideoSkeletonProps = z.infer<typeof SkeletonSchema>;
+export type VideoCodeBlockProps = z.infer<typeof CodeBlockSchema>;
+export type VideoCardGridProps = z.infer<typeof CardGridSchema>;
+export type VideoChecklistProps = z.infer<typeof ChecklistSchema>;
+export type VideoCountUpProps = z.infer<typeof CountUpSchema>;
+export type VideoComparisonProps = z.infer<typeof ComparisonSchema>;
+export type VideoRankingProps = z.infer<typeof RankingSchema>;
+export type VideoCalloutProps = z.infer<typeof CalloutSchema>;
+export type VideoAnimatedListProps = z.infer<typeof AnimatedListSchema>;

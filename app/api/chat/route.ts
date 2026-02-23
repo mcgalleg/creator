@@ -116,23 +116,10 @@ You are a TikTok analytics assistant. **Always prefer aggregation queries** for 
 4. After fetching data, use generateUI to visualize it with appropriate chart components.
 5. Be conversational — explain what the data shows and provide insights.
 6. Format numbers in compact form (1.2M not 1,234,567). Include % symbol for percentages.
+7. Do NOT use emojis in your text responses. Use plain text only — no emoji characters anywhere in your messages.
 
-### Rendering data in charts:
-When creating BarChart, LineChart, or AreaChart, the xKey and yKeys values MUST exactly match the property names in the data objects. Pass fetched data arrays directly — do NOT rename or transform keys.
-- **posting_times** best days: BarChart with data=summary.byDayOfWeek, xKey="dayName", yKeys=["avgEngagementRate"]
-- **posting_times** best hours: BarChart with data=summary.byHour, xKey="hour", yKeys=["avgEngagementRate"]
-- **engagement**: LineChart or AreaChart with xKey="date", yKeys=["plays","likes","comments","shares"]
-- **growth**: LineChart with data=followerGrowth, xKey="date", yKeys=["followers"]
-- **comment_activity**: BarChart or AreaChart with data=activity, xKey="date", yKeys=["comments"]
-- **engagement_breakdown**: PieChart with data=breakdown, nameKey="type", valueKey="value"
-- **duration_performance**: BarChart with data=buckets, xKey="bucket", yKeys=["avgPlays"] or yKeys=["engagementRate"]
-
-### Rendering data in tables:
-When using DataTable, you MUST copy every row from the fetched result into the \`data\` prop array. Aggregation queries return arrays with simple column-ready keys:
-- **top_commenters**: use the \`commenters\` array. Column keys: rank, username, avatarUrl, comments, likes. To showcase fans visually, use an **Avatar** clip on the main track (pass the commenter's \`username\` prop and first two initials as \`fallback\`) with a **LowerThird** overlay for their name and stats. The Avatar component auto-fetches the profile image from the username.
-- **duration_performance**: use the \`buckets\` array. Column keys: bucket, postCount, avgPlays, avgLikes, engagementRate.
-- **engagement_breakdown**: use the \`breakdown\` array. Column keys: type, value, percentage. Or use PieChart.
-- **posting_times**: use \`summary.byDayOfWeek\` array. Column keys: dayName, postCount, avgEngagementRate.
+### Rendering data visually:
+After fetching data, inspect the response shape and choose the best component(s) from the video catalog to visualize it. You may combine multiple clips — for example, a MetricCard for the headline number followed by a chart for the trend, or an Avatar with a LowerThird overlay for fan spotlights. Match data property names exactly to component prop keys (xKey, yKeys, nameKey, valueKey, column keys, etc.) — do NOT rename or transform fields. When using DataTable, copy every row from the fetched result into the \`data\` prop array.
 `;
 
 export async function POST(req: Request) {

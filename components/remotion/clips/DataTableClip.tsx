@@ -1,17 +1,12 @@
 import { ClipWrapper, type Clip } from "@json-render/remotion";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring } from "remotion";
-import { DARK, SMOOTH } from "./_shared";
-
-interface DataTableProps {
-  columns: { key: string; header: string }[];
-  data: Record<string, unknown>[];
-  title?: string;
-}
+import type { VideoDataTableProps } from "@/lib/video-catalog";
+import { DARK, PUNCHY, heading32, label14Mono, copy18 } from "./_shared";
 
 export function DataTableClip({ clip }: { clip: Clip }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const props = clip.props as unknown as DataTableProps;
+  const props = clip.props as unknown as VideoDataTableProps;
   const columns = Array.isArray(props.columns) ? props.columns : [];
   const rows = Array.isArray(props.data) ? props.data.slice(0, 8) : [];
 
@@ -30,8 +25,7 @@ export function DataTableClip({ clip }: { clip: Clip }) {
         {props.title && (
           <div
             style={{
-              fontSize: 36,
-              fontWeight: 700,
+              ...heading32,
               color: DARK.foreground,
               marginBottom: 32,
             }}
@@ -42,6 +36,7 @@ export function DataTableClip({ clip }: { clip: Clip }) {
         <div
           style={{
             backgroundColor: DARK.card,
+            border: `1px solid ${DARK.borderSubtle}`,
             borderRadius: 16,
             overflow: "hidden",
           }}
@@ -58,8 +53,8 @@ export function DataTableClip({ clip }: { clip: Clip }) {
               <div
                 key={col.key}
                 style={{
+                  ...label14Mono,
                   flex: 1,
-                  fontSize: 16,
                   fontWeight: 600,
                   color: DARK.mutedFg,
                   textTransform: "uppercase",
@@ -72,7 +67,7 @@ export function DataTableClip({ clip }: { clip: Clip }) {
           </div>
           {/* Data rows */}
           {rows.map((row, i) => {
-            const s = spring({ fps, frame, config: SMOOTH, delay: i * 3 });
+            const s = spring({ fps, frame, config: PUNCHY, delay: i * 3 });
             return (
               <div
                 key={i}
@@ -82,15 +77,15 @@ export function DataTableClip({ clip }: { clip: Clip }) {
                   backgroundColor:
                     i % 2 === 1 ? "rgba(255,255,255,0.03)" : "transparent",
                   opacity: s,
-                  transform: `translateY(${(1 - s) * 20}px)`,
+                  transform: `translateY(${(1 - s) * 40}px)`,
                 }}
               >
                 {columns.map((col) => (
                   <div
                     key={col.key}
                     style={{
+                      ...copy18,
                       flex: 1,
-                      fontSize: 18,
                       color: DARK.foreground,
                     }}
                   >

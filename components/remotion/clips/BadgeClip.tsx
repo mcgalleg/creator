@@ -1,11 +1,7 @@
 import { ClipWrapper, type Clip } from "@json-render/remotion";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring } from "remotion";
-import { DARK, BOUNCY } from "./_shared";
-
-interface BadgeProps {
-  text: string;
-  variant?: string;
-}
+import type { VideoBadgeProps } from "@/lib/video-catalog";
+import { DARK, BOUNCY, heading20 } from "./_shared";
 
 function getVariantStyles(variant?: string): {
   bg: string;
@@ -16,7 +12,7 @@ function getVariantStyles(variant?: string): {
     case "secondary":
       return { bg: DARK.muted, color: DARK.foreground };
     case "destructive":
-      return { bg: "#ef4444", color: "#ffffff" };
+      return { bg: DARK.error, color: "#ffffff" };
     case "outline":
       return { bg: "transparent", color: DARK.foreground, border: `2px solid ${DARK.border}` };
     default:
@@ -27,7 +23,7 @@ function getVariantStyles(variant?: string): {
 export function BadgeClip({ clip }: { clip: Clip }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const props = clip.props as unknown as BadgeProps;
+  const props = clip.props as unknown as VideoBadgeProps;
   const scale = spring({ fps, frame, config: BOUNCY });
   const styles = getVariantStyles(props.variant);
 
@@ -44,11 +40,11 @@ export function BadgeClip({ clip }: { clip: Clip }) {
       >
         <div
           style={{
+            ...heading20,
             backgroundColor: styles.bg,
             color: styles.color,
             border: styles.border,
             fontSize: 32,
-            fontWeight: 600,
             padding: "16px 48px",
             borderRadius: 9999,
             transform: `scale(${scale})`,

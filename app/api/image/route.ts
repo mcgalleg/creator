@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error - heic-convert has no type declarations
 import convert from "heic-convert";
 

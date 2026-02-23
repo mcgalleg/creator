@@ -2,11 +2,7 @@ import React from "react";
 import { AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
 import { SPRING_SMOOTH } from "./constants";
 
-interface LogoSceneProps {
-  bassIntensity: number;
-}
-
-export const LogoScene: React.FC<LogoSceneProps> = ({ bassIntensity }) => {
+export const LogoScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 

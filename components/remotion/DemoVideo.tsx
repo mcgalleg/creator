@@ -102,7 +102,7 @@ export const DemoVideo: React.FC = () => {
 
       {/* ===== Scene 1: Logo (0-50) ===== */}
       <Sequence from={SCENES.logo.start} durationInFrames={SCENES.logo.end - SCENES.logo.start}>
-        <LogoScene bassIntensity={bassIntensity} />
+        <LogoScene />
       </Sequence>
 
       {/* ===== App UI + Cursor (206-1349) ===== */}

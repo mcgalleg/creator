@@ -1,16 +1,12 @@
 import { ClipWrapper, type Clip } from "@json-render/remotion";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
-import { DARK, clampedInterpolate, countUp } from "./_shared";
-
-interface ProgressProps {
-  value: number;
-  label?: string;
-}
+import type { VideoProgressProps } from "@/lib/video-catalog";
+import { DARK, clampedInterpolate, countUp, heading24, heading32 } from "./_shared";
 
 export function ProgressClip({ clip }: { clip: Clip }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const props = clip.props as unknown as ProgressProps;
+  const props = clip.props as unknown as VideoProgressProps;
   const fillWidth = clampedInterpolate(frame, [0, fps], [0, props.value]);
   const displayValue = countUp(frame, fps, props.value, 1);
 
@@ -30,7 +26,7 @@ export function ProgressClip({ clip }: { clip: Clip }) {
         {props.label && (
           <div
             style={{
-              fontSize: 24,
+              ...heading24,
               color: DARK.mutedFg,
               marginBottom: 16,
               alignSelf: "flex-start",
@@ -67,8 +63,7 @@ export function ProgressClip({ clip }: { clip: Clip }) {
           </div>
           <div
             style={{
-              fontSize: 32,
-              fontWeight: 700,
+              ...heading32,
               color: DARK.foreground,
               fontFamily: "var(--font-mono), monospace",
               minWidth: 80,

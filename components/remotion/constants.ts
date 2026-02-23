@@ -1,3 +1,4 @@
+// Demo video constants — specific to the tutorial/promotional video
 export const VIDEO_WIDTH = 1920;
 export const VIDEO_HEIGHT = 1080;
 export const VIDEO_FPS = 30;
@@ -23,20 +24,5 @@ export const SCENES = {
   cta:       { start: 1305, end: 1545 },
 } as const;
 
-// Dark mode palette (from app's CSS variables, converted to hex for Remotion)
-export const DARK = {
-  bg: "#1a1a1a",
-  card: "#2d2d2d",
-  foreground: "#fafafa",
-  muted: "#3d3d3d",
-  mutedFg: "#a3a3a3",
-  border: "rgba(255,255,255,0.1)",
-  primary: "#e5e5e5",
-  primaryFg: "#2d2d2d",
-  green: "#4ade80",
-  chart1: "#6366f1",
-  chart2: "#2dd4bf",
-  chart3: "#fbbf24",
-  chart4: "#c084fc",
-  chart5: "#fb7185",
-};
+// Re-export DARK for demo files that import from ./constants
+export { DARK } from "./clips/_shared/palette";

@@ -1,20 +1,15 @@
 import { ClipWrapper, type Clip } from "@json-render/remotion";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring } from "remotion";
-import { DARK, SNAPPY } from "./_shared";
-
-interface AlertProps {
-  title?: string;
-  description: string;
-  variant?: string;
-}
+import type { VideoAlertProps } from "@/lib/video-catalog";
+import { DARK, SNAPPY, heading24, copy18 } from "./_shared";
 
 export function AlertClip({ clip }: { clip: Clip }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const props = clip.props as unknown as AlertProps;
+  const props = clip.props as unknown as VideoAlertProps;
   const s = spring({ fps, frame, config: SNAPPY });
   const borderColor =
-    props.variant === "destructive" ? "#ef4444" : DARK.chart1;
+    props.variant === "destructive" ? DARK.error : DARK.info;
 
   return (
     <ClipWrapper clip={clip}>
@@ -31,6 +26,7 @@ export function AlertClip({ clip }: { clip: Clip }) {
         <div
           style={{
             backgroundColor: DARK.card,
+            border: `1px solid ${DARK.borderSubtle}`,
             borderRadius: 16,
             padding: 32,
             borderLeft: `4px solid ${borderColor}`,
@@ -43,8 +39,7 @@ export function AlertClip({ clip }: { clip: Clip }) {
           {props.title && (
             <div
               style={{
-                fontSize: 28,
-                fontWeight: 700,
+                ...heading24,
                 color: DARK.foreground,
                 marginBottom: 8,
               }}
@@ -54,9 +49,8 @@ export function AlertClip({ clip }: { clip: Clip }) {
           )}
           <div
             style={{
-              fontSize: 20,
+              ...copy18,
               color: DARK.mutedFg,
-              lineHeight: 1.5,
             }}
           >
             {props.description}

@@ -1,18 +1,13 @@
 import { ClipWrapper, type Clip } from "@json-render/remotion";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring } from "remotion";
+import type { VideoAvatarProps } from "@/lib/video-catalog";
 import { DARK, BOUNCY } from "./_shared";
 import { ProxyImg } from "./_shared/ProxyImg";
-
-interface AvatarProps {
-  src?: string;
-  username?: string;
-  fallback: string;
-}
 
 export function AvatarClip({ clip }: { clip: Clip }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const props = clip.props as unknown as AvatarProps;
+  const props = clip.props as unknown as VideoAvatarProps;
   const imageSrc = props.src || (props.username ? `/api/avatar?username=${encodeURIComponent(props.username)}` : undefined);
   const scale = spring({ fps, frame, config: BOUNCY });
 

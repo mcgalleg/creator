@@ -1,18 +1,7 @@
 import { ClipWrapper, type Clip } from "@json-render/remotion";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring } from "remotion";
-import { DARK, SMOOTH, countUp, formatCompact } from "./_shared";
-
-interface MetricDef {
-  label: string;
-  value: number;
-  format?: string;
-  change?: string;
-}
-
-interface MetricCardProps {
-  metrics: MetricDef[];
-  title?: string;
-}
+import type { VideoMetricCardProps } from "@/lib/video-catalog";
+import { DARK, PUNCHY, countUp, formatCompact, heading32, heading48, label13, label14Mono } from "./_shared";
 
 function formatValue(raw: number, fmt?: string): string {
   if (fmt === "percent") return `${raw.toFixed(1)}%`;
@@ -23,7 +12,7 @@ function formatValue(raw: number, fmt?: string): string {
 export function MetricCardClip({ clip }: { clip: Clip }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const props = clip.props as unknown as MetricCardProps;
+  const props = clip.props as unknown as VideoMetricCardProps;
   const metrics = Array.isArray(props.metrics) ? props.metrics.slice(0, 4) : [];
 
   return (
@@ -41,8 +30,7 @@ export function MetricCardClip({ clip }: { clip: Clip }) {
         {props.title && (
           <div
             style={{
-              fontSize: 36,
-              fontWeight: 700,
+              ...heading32,
               color: DARK.foreground,
               marginBottom: 32,
             }}
@@ -53,7 +41,7 @@ export function MetricCardClip({ clip }: { clip: Clip }) {
         <div style={{ display: "flex", gap: 24 }}>
           {metrics.map((metric, i) => {
             const delay = i * 5;
-            const s = spring({ fps, frame, config: SMOOTH, delay });
+            const s = spring({ fps, frame, config: PUNCHY, delay });
             const value = countUp(
               Math.max(0, frame - delay),
               fps,
@@ -63,7 +51,7 @@ export function MetricCardClip({ clip }: { clip: Clip }) {
             const changeOpacity = spring({
               fps,
               frame,
-              config: SMOOTH,
+              config: PUNCHY,
               delay: delay + fps,
             });
 
@@ -73,15 +61,16 @@ export function MetricCardClip({ clip }: { clip: Clip }) {
                 style={{
                   flex: 1,
                   backgroundColor: DARK.card,
+                  border: `1px solid ${DARK.borderSubtle}`,
                   borderRadius: 16,
                   padding: 32,
                   opacity: s,
-                  transform: `translateY(${(1 - s) * 20}px)`,
+                  transform: `translateY(${(1 - s) * 40}px)`,
                 }}
               >
                 <div
                   style={{
-                    fontSize: 16,
+                    ...label13,
                     textTransform: "uppercase",
                     letterSpacing: 1.5,
                     color: DARK.mutedFg,
@@ -92,10 +81,10 @@ export function MetricCardClip({ clip }: { clip: Clip }) {
                 </div>
                 <div
                   style={{
-                    fontSize: 56,
-                    fontWeight: 700,
+                    ...heading48,
+                    fontSize: 72,
                     color: DARK.foreground,
-                    lineHeight: 1.1,
+                    lineHeight: "1.1",
                   }}
                 >
                   {formatValue(value, metric.format)}
@@ -103,11 +92,10 @@ export function MetricCardClip({ clip }: { clip: Clip }) {
                 {metric.change && (
                   <div
                     style={{
+                      ...label14Mono,
                       marginTop: 12,
-                      fontSize: 18,
                       fontWeight: 600,
-                      color: DARK.green,
-                      fontFamily: "var(--font-mono), monospace",
+                      color: DARK.success,
                       opacity: changeOpacity,
                     }}
                   >
