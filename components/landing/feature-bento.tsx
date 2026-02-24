@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import {
   MessageSquareText,
   Layout,
@@ -17,39 +18,29 @@ import { Badge } from "@/components/ui/badge";
 import { CanvasInteractiveMockup } from "./canvas-interactive-mockup";
 import { DashboardInteractiveMockup } from "./dashboard-interactive-mockup";
 
-function BentoCard({
-  id,
-  className = "",
-  icon: Icon,
-  title,
-  description,
-  children,
-}: {
-  id?: string;
-  className?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div
-      id={id}
-      className={`group relative rounded-xl border bg-card/50 backdrop-blur-sm p-6 transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 ${className}`}
-    >
-      <div className="relative z-10">
-        <Icon className="size-5 text-primary mb-3" />
-        <h3 className="font-semibold mb-1">{title}</h3>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
-      {children}
-    </div>
-  );
+function useScrollAnimation() {
+  const [inView, setInView] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { threshold: 0.1 }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  return { ref, inView };
 }
 
 function ChatMockup() {
   return (
-    <div className="mt-4 flex flex-col rounded-lg border bg-card/80 overflow-hidden">
+    <div className="flex flex-col rounded-lg border bg-card/80 overflow-hidden">
       <style>{`
         @keyframes chatSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         @keyframes chatDraw{from{stroke-dashoffset:300}to{stroke-dashoffset:0}}
@@ -290,58 +281,197 @@ const THEME_COLORS = [
   "#8b5cf6", "#eab308",
 ];
 
+const STICKY_TOP = "100px";
+
+/* Neutral card backgrounds — stepping from lighter to darker (light mode)
+   and darker to lighter (dark mode) so each card is visually distinct */
+const CARD_STYLES = `
+  #features { --card-1: oklch(0.97 0 0); --card-2: oklch(0.94 0 0); --card-3: oklch(0.91 0 0); --card-4: oklch(0.88 0 0); --card-5: oklch(0.85 0 0); }
+  .dark #features { --card-1: oklch(0.20 0 0); --card-2: oklch(0.23 0 0); --card-3: oklch(0.26 0 0); --card-4: oklch(0.29 0 0); --card-5: oklch(0.32 0 0); }
+`;
+
 export function FeatureBento() {
+  const heading = useScrollAnimation();
+  const subtitle = useScrollAnimation();
+
   return (
-    <section id="features" className="py-24 bg-background">
+    <section id="features" className="py-24 md:py-32 bg-background">
+      <style>{CARD_STYLES}</style>
       <div className="container mx-auto max-w-6xl px-4">
-        <div className="text-center mb-12">
+        {/* Animated header */}
+        <div className="text-center max-w-3xl mx-auto mb-16">
           <Badge variant="secondary" className="mb-4">
             Features
           </Badge>
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-            Everything you need to grow
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            A complete toolkit for understanding your audience, crafting content,
-            and making data-driven decisions.
-          </p>
+          <div ref={heading.ref}>
+            <h2
+              className={`text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl mb-4 transition-all duration-700 ease-out ${
+                heading.inView
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-10"
+              }`}
+            >
+              Everything you need to grow
+            </h2>
+          </div>
+          <div ref={subtitle.ref}>
+            <p
+              className={`text-lg text-muted-foreground transition-all duration-700 ease-out delay-200 ${
+                subtitle.inView
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-10"
+              }`}
+            >
+              A complete toolkit for understanding your audience, crafting
+              content, and making data-driven decisions.
+            </p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 auto-rows-[minmax(180px,auto)]">
-          {/* Hero cards */}
-          <BentoCard
+        {/* Sticky scroll cards */}
+        <div className="w-full">
+          {/* Card 1: AI Chat Copilot */}
+          <div
             id="ai-copilot"
-            className="sm:col-span-2 lg:col-span-3 lg:row-span-2 scroll-mt-20"
-            icon={MessageSquareText}
-            title="AI Chat Copilot"
-            description="Ask questions about your data in plain English and get instant visual answers."
+            className="grid grid-cols-1 md:grid-cols-2 items-center gap-6 md:gap-10 p-8 md:p-12 rounded-3xl mb-10 sticky z-[1] scroll-mt-20 min-h-[500px]"
+            style={{ top: STICKY_TOP, backgroundColor: "var(--card-1)" }}
           >
-            <ChatMockup />
-          </BentoCard>
+            <div className="flex flex-col justify-center">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 mb-4">
+                <MessageSquareText className="size-5 text-primary" />
+              </div>
+              <h3 className="text-2xl md:text-3xl font-bold mb-3">
+                AI Chat Copilot
+              </h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Ask questions about your data in plain English and get instant
+                visual answers with charts, metrics, and actionable insights.
+              </p>
+            </div>
+            <div>
+              <ChatMockup />
+            </div>
+          </div>
 
-          <BentoCard
+          {/* Card 2: Canvas Workspace */}
+          <div
             id="canvas"
-            className="sm:col-span-2 lg:col-span-3 lg:row-span-2 scroll-mt-20"
-            icon={Layout}
-            title="Canvas Workspace"
-            description="Drag notes, shapes, and insights onto a freeform canvas for visual exploration."
+            className="grid grid-cols-1 md:grid-cols-2 items-center gap-6 md:gap-10 p-8 md:p-12 rounded-3xl mb-10 sticky z-[2] scroll-mt-20 min-h-[500px]"
+            style={{ top: STICKY_TOP, backgroundColor: "var(--card-2)" }}
           >
-            <CanvasInteractiveMockup />
-          </BentoCard>
+            <div className="flex flex-col justify-center">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 mb-4">
+                <Layout className="size-5 text-primary" />
+              </div>
+              <h3 className="text-2xl md:text-3xl font-bold mb-3">
+                Canvas Workspace
+              </h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Drag notes, shapes, and insights onto a freeform canvas for
+                visual exploration. Think and create at your own pace.
+              </p>
+            </div>
+            <div>
+              <CanvasInteractiveMockup />
+            </div>
+          </div>
 
-          {/* Medium cards */}
-          <BentoCard
+          {/* Card 3: Dynamic Dashboard */}
+          <div
             id="dashboard"
-            className="lg:col-span-2 scroll-mt-20"
-            icon={LayoutDashboard}
-            title="Dynamic Dashboard"
-            description="Drag-and-drop widgets to build your perfect analytics view."
+            className="grid grid-cols-1 md:grid-cols-2 items-center gap-6 md:gap-10 p-8 md:p-12 rounded-3xl mb-10 sticky z-[3] scroll-mt-20 min-h-[500px]"
+            style={{ top: STICKY_TOP, backgroundColor: "var(--card-3)" }}
           >
-            <DashboardInteractiveMockup />
-          </BentoCard>
+            <div className="flex flex-col justify-center">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 mb-4">
+                <LayoutDashboard className="size-5 text-primary" />
+              </div>
+              <h3 className="text-2xl md:text-3xl font-bold mb-3">
+                Dynamic Dashboard
+              </h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Drag-and-drop widgets to build your perfect analytics view.
+                Customize layouts and visualizations to match your workflow.
+              </p>
+            </div>
+            <div>
+              <DashboardInteractiveMockup />
+            </div>
+          </div>
 
-          {/* More features — consolidated */}
-          <div className="lg:col-span-4 group relative rounded-xl border bg-card/50 backdrop-blur-sm p-6 transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5">
+          {/* Card 4: MCP Apps */}
+          <div
+            id="mcp"
+            className="grid grid-cols-1 md:grid-cols-2 items-center gap-6 md:gap-10 p-8 md:p-12 rounded-3xl mb-10 sticky z-[4] scroll-mt-20 min-h-[500px]"
+            style={{ top: STICKY_TOP, backgroundColor: "var(--card-4)" }}
+          >
+            <div className="flex flex-col justify-center">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 mb-4">
+                <Plug className="size-5 text-primary" />
+              </div>
+              <h3 className="text-2xl md:text-3xl font-bold mb-3">
+                MCP Apps — Bring Your Own AI
+              </h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Connect Claude Desktop, ChatGPT, or any MCP-compatible client to
+                query your TikTok analytics with natural language. No
+                subscription required — just buy sync credits as you go.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Compatible Clients
+                </h4>
+                {["Claude Desktop", "ChatGPT", "Claude Code"].map((client) => (
+                  <div
+                    key={client}
+                    className="flex items-center gap-2 rounded-lg border bg-card/80 px-3 py-2 text-xs text-muted-foreground"
+                  >
+                    <Plug className="size-3 text-primary" />
+                    <span>{client}</span>
+                    <span className="ml-auto rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-600 dark:text-emerald-400">
+                      Supported
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-lg border bg-card/80 p-3 space-y-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  How It Works
+                </h4>
+                {[
+                  "Activate MCP Apps for free",
+                  "Buy a sync credit pack",
+                  "Add the MCP server URL to your AI client",
+                ].map((step, i) => (
+                  <div key={step} className="flex items-start gap-2">
+                    <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold bg-primary/10 text-primary">
+                      {i + 1}
+                    </span>
+                    <p className="text-xs text-muted-foreground">{step}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Card 5: More Features */}
+          <div
+            className="grid grid-cols-1 md:grid-cols-2 items-start gap-6 md:gap-10 p-8 md:p-12 rounded-3xl mb-10 sticky z-[5] min-h-[500px]"
+            style={{ top: STICKY_TOP, backgroundColor: "var(--card-5)" }}
+          >
+            <div className="flex flex-col justify-center">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 mb-4">
+                <Sparkles className="size-5 text-primary" />
+              </div>
+              <h3 className="text-2xl md:text-3xl font-bold mb-3">
+                And So Much More
+              </h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Everything else you need for a complete analytics workflow.
+              </p>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
               {MORE_FEATURES.map((f) => (
                 <div key={f.title} className="flex items-start gap-3">
@@ -376,76 +506,6 @@ export function FeatureBento() {
               </div>
             </div>
           </div>
-
-          {/* MCP Hero Card */}
-          <BentoCard
-            id="mcp"
-            className="sm:col-span-2 lg:col-span-6 lg:row-span-2 scroll-mt-20"
-            icon={Plug}
-            title="MCP Apps — Bring Your Own AI"
-            description="Connect Claude Desktop, ChatGPT, or any MCP-compatible client to query your TikTok analytics with natural language. No subscription required — just buy sync credits as you go."
-          >
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Compatible Clients</h4>
-                {["Claude Desktop", "ChatGPT", "Claude Code"].map((client) => (
-                  <div
-                    key={client}
-                    className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs text-muted-foreground"
-                  >
-                    <Plug className="size-3 text-primary" />
-                    <span>{client}</span>
-                    <span className="ml-auto rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-600 dark:text-emerald-400">
-                      Supported
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">How It Works</h4>
-                <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
-                  <div className="flex items-start gap-2">
-                    <span className="mt-0.5 flex size-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">1</span>
-                    <p className="text-xs text-muted-foreground">Activate MCP Apps for free</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="mt-0.5 flex size-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">2</span>
-                    <p className="text-xs text-muted-foreground">Buy a sync credit pack</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="mt-0.5 flex size-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">3</span>
-                    <p className="text-xs text-muted-foreground">Add the MCP server URL to your AI client</p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sample Chat</h4>
-                <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
-                  <div className="flex justify-end">
-                    <div className="rounded-lg bg-primary/10 px-2.5 py-1.5 text-[11px] text-muted-foreground max-w-[85%]">
-                      Who are my biggest fans?
-                    </div>
-                  </div>
-                  <div className="flex justify-start">
-                    <div className="rounded-lg bg-muted px-2.5 py-1.5 text-[11px] text-muted-foreground max-w-[85%] space-y-1.5">
-                      <div>Here are your top commenters:</div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="size-4 rounded-full bg-primary/20" />
-                        <span className="font-medium">@sarah_creates</span>
-                        <span className="ml-auto text-primary">47 comments</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="size-4 rounded-full bg-primary/15" />
-                        <span className="font-medium">@mike_fitness</span>
-                        <span className="ml-auto text-primary">32 comments</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </BentoCard>
-
         </div>
       </div>
     </section>

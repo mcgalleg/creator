@@ -372,6 +372,22 @@ export function PixelBlast({
   const threeRef = useRef<any>(null);
   const prevConfigRef = useRef<any>(null);
 
+  // Fix: Actually track visibility with IntersectionObserver
+  useEffect(() => {
+    if (!autoPauseOffscreen) return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        visibilityRef.current.visible = entry.isIntersecting;
+      },
+      { threshold: 0 }
+    );
+    io.observe(container);
+    return () => io.disconnect();
+  }, [autoPauseOffscreen]);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -412,7 +428,8 @@ export function PixelBlast({
       });
       renderer.domElement.style.width = "100%";
       renderer.domElement.style.height = "100%";
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      // Cap at 1x for background effects — halves GPU load on Retina displays
+      renderer.setPixelRatio(1);
       container.appendChild(renderer.domElement);
 
       if (transparent) renderer.setClearAlpha(0);
@@ -558,19 +575,27 @@ export function PixelBlast({
         touch.addTouch({ x: fx / w, y: fy / h });
       };
 
-      window.addEventListener("pointerdown", onPointerDown, {
+      container.addEventListener("pointerdown", onPointerDown, {
         passive: true,
       });
-      window.addEventListener("pointermove", onPointerMove, {
+      container.addEventListener("pointermove", onPointerMove, {
         passive: true,
       });
 
       let raf = 0;
-      const animate = () => {
-        if (autoPauseOffscreen && !visibilityRef.current.visible) {
-          raf = requestAnimationFrame(animate);
-          return;
-        }
+      const TARGET_FPS = 30;
+      const FRAME_INTERVAL = 1000 / TARGET_FPS;
+      let lastFrameTime = 0;
+
+      const animate = (now: number) => {
+        raf = requestAnimationFrame(animate);
+
+        if (autoPauseOffscreen && !visibilityRef.current.visible) return;
+
+        // Throttle to ~30fps
+        if (now - lastFrameTime < FRAME_INTERVAL) return;
+        lastFrameTime = now;
+
         uniforms.uTime.value =
           timeOffset + clock.getElapsedTime() * speedRef.current;
         if (liquidEffect)
@@ -589,7 +614,6 @@ export function PixelBlast({
         } else {
           renderer.render(scene, camera);
         }
-        raf = requestAnimationFrame(animate);
       };
       raf = requestAnimationFrame(animate);
 
@@ -643,8 +667,8 @@ export function PixelBlast({
       const t = threeRef.current;
       t.resizeObserver?.disconnect();
       cancelAnimationFrame(t.raf);
-      window.removeEventListener("pointerdown", t.onPointerDown);
-      window.removeEventListener("pointermove", t.onPointerMove);
+      container.removeEventListener("pointerdown", t.onPointerDown);
+      container.removeEventListener("pointermove", t.onPointerMove);
       t.quad?.geometry.dispose();
       t.material.dispose();
       t.composer?.dispose();
