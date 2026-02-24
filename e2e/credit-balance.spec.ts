@@ -28,7 +28,7 @@ const TEST_USER_ID = "test_user_123";
 
 // A real user that exists in both the local DB and Polar sandbox.
 // This is required to test sync-on-read (Polar as source of truth).
-const POLAR_USER_ID = "user_39SuUvteSYfaThpGv4VlUP2g8ED";
+const POLAR_USER_ID = "user_39PCiFKQL2GpsRA8cr221Ma1Lik";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -55,16 +55,13 @@ async function getTestState(userId: string = TEST_USER_ID) {
 }
 
 /**
- * Manipulate trial state via test API.
+ * Reset subscription state via test API.
  */
-async function setTrialState(
-  action: "start" | "expire" | "expire-and-downgrade" | "reset",
-  userId: string = TEST_USER_ID
-) {
-  const res = await fetch(`${BASE_URL}/api/test/trial`, {
+async function resetSubscription(userId: string = TEST_USER_ID) {
+  const res = await fetch(`${BASE_URL}/api/test/subscription`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action, userId }),
+    body: JSON.stringify({ action: "reset", userId }),
   });
   return res.json();
 }
@@ -87,11 +84,11 @@ async function goToDashboard(page: import("@playwright/test").Page) {
 
 test.describe("Real-time credit balance", () => {
   test.beforeEach(async () => {
-    await setTrialState("reset");
+    await resetSubscription();
   });
 
   test.afterAll(async () => {
-    await setTrialState("reset");
+    await resetSubscription();
   });
 
   // ─── 1. Sync-on-read: Polar balance returned over DB cache ──────────────
@@ -424,26 +421,4 @@ test.describe("Real-time credit balance", () => {
     expect(data.pricing).toHaveProperty("ai_chat");
   });
 
-  // ─── 10. Trial provisioning: no 0-credit race condition ─────────────────
-
-  test("trial start no longer calls syncCreditBalance", async ({
-    request,
-  }) => {
-    // Reset to free tier
-    await resetCredits(0);
-    await setTrialState("reset");
-
-    // Start a trial (ingests credits to Polar, should NOT sync local DB)
-    await setTrialState("start");
-
-    // The API should respond correctly regardless
-    const response = await request.get("/api/credits");
-    const data = await response.json();
-    console.log("Credits after trial start:", data);
-
-    // Response shape is correct
-    expect(data).toHaveProperty("balance");
-    expect(data).toHaveProperty("pricing");
-    expect(typeof data.balance).toBe("number");
-  });
 });

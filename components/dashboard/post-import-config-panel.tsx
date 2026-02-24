@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -27,7 +28,7 @@ import {
 } from "@/lib/credits";
 
 export interface PostImportConfigPanelProps {
-  accountUsername: string;
+  accountUsername?: string;
   totalPosts?: number;
   userCreditBalance: number;
   syncedPostCount?: number;
@@ -43,9 +44,6 @@ const DATE_RANGE_PRESETS: { value: DateRangePreset; label: string }[] = [
   { value: "custom", label: "Custom range" },
 ];
 
-const POSTS_LIMIT_OPTIONS = [10, 25, 50, 75, 100, 150, 200];
-const TOP_COUNT_OPTIONS = [5, 10, 15, 20, 25, 50];
-const COMMENTS_PER_POST_OPTIONS = [50, 100, 200, 500];
 
 export function PostImportConfigPanel({
   accountUsername,
@@ -146,6 +144,7 @@ export function PostImportConfigPanel({
   const estimate = calculateEstimate();
   const insufficientCredits = estimate.totalCredits > userCreditBalance;
   const newBalance = userCreditBalance - estimate.totalCredits;
+  const isEstimate = mode === "date_range";
 
   const formatNumber = (num: number): string => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
@@ -176,21 +175,13 @@ export function PostImportConfigPanel({
               <div className="mt-3 space-y-2 sm:space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Label className="text-xs sm:text-sm">Count</Label>
-                  <Select
-                    value={postsLimit.toString()}
-                    onValueChange={(v) => setPostsLimit(parseInt(v))}
-                  >
-                    <SelectTrigger className="w-20 sm:w-24 h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {POSTS_LIMIT_OPTIONS.map((n) => (
-                        <SelectItem key={n} value={n.toString()}>
-                          {n}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <NumberInput
+                    value={postsLimit}
+                    onChange={setPostsLimit}
+                    min={1}
+                    max={200}
+                    className="w-20"
+                  />
                   <span className="text-xs sm:text-sm text-muted-foreground">posts</span>
                 </div>
               </div>
@@ -267,21 +258,13 @@ export function PostImportConfigPanel({
             {mode === "top_performers" && (
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Label className="text-xs sm:text-sm">Top</Label>
-                <Select
-                  value={topCount.toString()}
-                  onValueChange={(v) => setTopCount(parseInt(v))}
-                >
-                  <SelectTrigger className="w-20 h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TOP_COUNT_OPTIONS.map((n) => (
-                      <SelectItem key={n} value={n.toString()}>
-                        {n}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <NumberInput
+                  value={topCount}
+                  onChange={setTopCount}
+                  min={1}
+                  max={50}
+                  className="w-20"
+                />
                 <span className="text-xs sm:text-sm text-muted-foreground">posts</span>
               </div>
             )}
@@ -305,21 +288,13 @@ export function PostImportConfigPanel({
         {includeComments && (
           <div className="flex flex-wrap items-center gap-2 ml-6">
             <Label className="text-xs sm:text-sm">Comments per post</Label>
-            <Select
-              value={commentsPerPost.toString()}
-              onValueChange={(v) => setCommentsPerPost(parseInt(v))}
-            >
-              <SelectTrigger className="w-20 sm:w-24 h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {COMMENTS_PER_POST_OPTIONS.map((n) => (
-                  <SelectItem key={n} value={n.toString()}>
-                    {n}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <NumberInput
+              value={commentsPerPost}
+              onChange={setCommentsPerPost}
+              min={1}
+              max={1000}
+              className="w-20"
+            />
           </div>
         )}
       </div>
@@ -341,8 +316,8 @@ export function PostImportConfigPanel({
       <div className="rounded-lg bg-muted p-3 sm:p-4 space-y-2 sm:space-y-3">
         <div className="space-y-1.5 sm:space-y-2">
           <div className="flex items-center justify-between text-xs sm:text-sm">
-            <span className="text-muted-foreground">Posts to import</span>
-            <span className="font-medium">{estimate.postsToImport}</span>
+            <span className="text-muted-foreground">{isEstimate ? "Est. posts to import" : "Posts to import"}</span>
+            <span className="font-medium">{isEstimate ? "~" : ""}{estimate.postsToImport}</span>
           </div>
           {includeComments && (
             <div className="flex items-center justify-between text-xs sm:text-sm">
@@ -354,12 +329,8 @@ export function PostImportConfigPanel({
 
         <div className="border-t pt-2 space-y-1 text-xs sm:text-sm">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span>Profile sync</span>
-            <span className="text-green-600">FREE</span>
-          </div>
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span>Posts ({estimate.postsToImport} &times; {CREDIT_RATES.PER_POST} credit)</span>
-            <span>{estimate.postsCost} credits</span>
+            <span>Posts ({isEstimate ? "~" : ""}{estimate.postsToImport} &times; {CREDIT_RATES.PER_POST} credit)</span>
+            <span>{isEstimate ? "~" : ""}{estimate.postsCost} credits</span>
           </div>
           {includeComments && (
             <div className="flex items-center justify-between text-muted-foreground">
@@ -375,7 +346,7 @@ export function PostImportConfigPanel({
             variant={insufficientCredits ? "destructive" : "secondary"}
             className="text-sm sm:text-base"
           >
-            {estimate.totalCredits} credits
+            {isEstimate ? "~" : ""}{estimate.totalCredits} credits
           </Badge>
         </div>
 
@@ -389,7 +360,22 @@ export function PostImportConfigPanel({
         {insufficientCredits && (
           <p className="text-xs text-destructive flex items-start gap-1">
             <AlertCircle className="size-3 mt-0.5 shrink-0" />
-            Insufficient credits. Reduce scope or add credits.
+            Insufficient credits. Reduce scope or{" "}
+            <a
+              href="/pricing#credits"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-destructive/80 font-medium"
+            >
+              add credits
+            </a>
+            .
+          </p>
+        )}
+
+        {isEstimate && (
+          <p className="text-xs text-muted-foreground">
+            Estimated based on posting frequency. You&apos;ll only be charged for posts actually imported &mdash; any difference is refunded automatically.
           </p>
         )}
       </div>

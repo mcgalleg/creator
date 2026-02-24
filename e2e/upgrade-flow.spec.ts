@@ -210,11 +210,15 @@ test.describe("Free to Pro upgrade flow", () => {
     await page.goto("/pricing");
     await page.waitForLoadState("networkidle");
 
-    // Should see all three tier cards
+    // Should see all 5 tier cards (Free, Creator, Pro, Agency, MCP)
     await expect(page.locator("text=Simple, transparent pricing")).toBeVisible();
 
-    // Creator card should have "Most Popular" badge (was Pro, now Creator)
+    // Pro card should have "Most Popular" badge
     await expect(page.locator("text=Most Popular")).toBeVisible();
+
+    // Verify all 5 tier names are visible
+    const tierCards = page.locator('[class*="card"]').filter({ has: page.locator("h3") });
+    await expect(tierCards).toHaveCount(5);
 
     // Subscribe buttons should be visible (not "Sign in to Subscribe")
     const subscribeButtons = page.locator('a:has-text("Subscribe")');
@@ -242,7 +246,7 @@ test.describe("Free to Pro upgrade flow", () => {
       'a:has-text("Subscribe")[href*="checkout"]'
     );
 
-    // There should be 2 subscribe links (Basic + Pro) — Pro is second
+    // There should be 3 subscribe links (Creator + Pro + Agency) — Pro is second
     const proLink = proSubscribeLink.nth(1);
     await expect(proLink).toBeVisible();
 
@@ -295,7 +299,7 @@ test.describe("Free to Pro upgrade flow", () => {
     // Should now show AI tokens allocation (Pro gets 3M)
     await expect(page.locator("text=AI tokens/month")).toBeVisible();
 
-    // Should show sync credits allocation (Pro gets 750)
+    // Should show sync credits allocation (Pro gets 1,500)
     await expect(page.locator("text=sync credits/month")).toBeVisible();
 
     // Should now show "Manage Subscription" button

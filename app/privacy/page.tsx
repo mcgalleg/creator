@@ -134,21 +134,13 @@ export default function PrivacyPage() {
               Data Storage &amp; Retention
             </h2>
             <p className="text-muted-foreground">
-              Your data is stored securely on managed infrastructure. We retain
-              your TikTok data based on your subscription tier:
+              Your data is stored securely on managed infrastructure. All data
+              is retained for as long as your subscription is active.
             </p>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-              <li>
-                <strong>Creator</strong> — 30 days of data retention
-              </li>
-              <li>
-                <strong>Pro</strong> — 90 days of data retention
-              </li>
-            </ul>
             <p className="text-muted-foreground">
-              Data beyond the retention window for your tier is automatically
-              removed. Account information is retained for as long as your
-              account is active.
+              60 days after cancellation, all TikTok data associated with your
+              account is permanently deleted. Account information is retained
+              for as long as your account is active.
             </p>
           </section>
 

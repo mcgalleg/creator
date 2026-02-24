@@ -2,12 +2,20 @@ import { redirect } from "next/navigation";
 import { auth, isAuthBypassed } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users, tiktokAccounts } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { Plug } from "lucide-react";
+import { eq, and } from "drizzle-orm";
+import Link from "next/link";
+import { Plug, Users, ArrowRight } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { McpConnectionSetup } from "@/components/settings/mcp-configuration";
-import { ConnectedAccountsPreview } from "@/components/settings/connected-accounts-preview";
-import { CreditDisplay } from "@/components/settings/credit-display";
+import { CreditBalanceTab } from "@/components/settings/credit-balance-tab";
 import { McpPlanInfo } from "./plan-info";
 
 export const metadata = {
@@ -42,7 +50,7 @@ export default async function McpHubPage() {
           username: tiktokAccounts.username,
         })
         .from(tiktokAccounts)
-        .where(eq(tiktokAccounts.userId, userId))
+        .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")))
     : [];
 
   return (
@@ -70,8 +78,26 @@ export default async function McpHubPage() {
 
         {/* Connected Accounts + Sync Credits side by side */}
         <section className="grid gap-6 md:grid-cols-2">
-          <ConnectedAccountsPreview />
-          <CreditDisplay />
+          <Card>
+            <CardHeader>
+              <CardTitle>Connected Accounts</CardTitle>
+              <CardDescription>
+                Manage your linked TikTok accounts
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center py-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
+                <Users className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/dashboard/accounts">
+                  Manage Accounts
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+          <CreditBalanceTab />
         </section>
 
         {/* Plan Info */}

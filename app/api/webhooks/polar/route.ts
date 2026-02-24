@@ -8,7 +8,7 @@ import {
 } from "@/lib/services/subscription-service";
 import { db } from "@/lib/db";
 import { creditTransactions } from "@/lib/db/schema/credits";
-import { getCreditPack } from "@/lib/subscriptions";
+import { getCreditPack, getAiTokenPack } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -21,13 +21,13 @@ export const POST = Webhooks({
     const tier = POLAR_PRODUCT_TO_TIER[productId];
     if (!userId || !tier) return;
 
-    // Free product activation: just sync balance, don't change tier (starter may be active)
+    // Free product activation: just sync balance, don't change tier
     if (tier === "free") {
       await syncCreditBalance(userId);
       return;
     }
 
-    // Paid tier: provision subscription (subscriptionStartedAt prevents starter expiry)
+    // Paid tier: provision subscription
     await provisionSubscription(userId, tier);
     await syncCreditBalance(userId);
   },
@@ -70,17 +70,30 @@ export const POST = Webhooks({
       return;
     }
 
-    // One-time credit pack purchase — Polar auto-granted sync-credits via Benefit
+    // One-time pack purchase — Polar auto-granted credits via Benefit
     if (!payload.data.subscriptionId) {
       await syncCreditBalance(userId);
       const packId = payload.data.product?.metadata?.packId;
-      const pack = typeof packId === "string" ? getCreditPack(packId) : null;
-      if (pack) {
+
+      // Sync credit pack
+      const creditPack = typeof packId === "string" ? getCreditPack(packId) : null;
+      if (creditPack) {
         await db.insert(creditTransactions).values({
           userId,
-          amount: pack.credits,
+          amount: creditPack.credits,
           type: "credit_pack_purchase",
-          description: `Purchased ${pack.name} credit pack (${pack.credits} sync credits)`,
+          description: `Purchased ${creditPack.name} credit pack (${creditPack.credits} sync credits)`,
+        });
+      }
+
+      // AI token pack
+      const aiPack = typeof packId === "string" ? getAiTokenPack(packId) : null;
+      if (aiPack) {
+        await db.insert(creditTransactions).values({
+          userId,
+          amount: aiPack.tokens,
+          type: "ai_token_pack_purchase",
+          description: `Purchased ${aiPack.name} AI token pack (${aiPack.tokens.toLocaleString()} tokens)`,
         });
       }
     }

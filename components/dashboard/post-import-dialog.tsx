@@ -63,6 +63,7 @@ export function PostImportDialog({
   };
 
   const insufficientCredits = currentCost > userCreditBalance;
+  const isEstimate = currentConfig?.mode === "date_range";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -109,7 +110,7 @@ export function PostImportDialog({
             ) : (
               <>
                 <Download className="size-4 mr-2" />
-                Import for {currentCost} credits
+                Import for {isEstimate ? "~" : ""}{currentCost} credits
               </>
             )}
           </Button>

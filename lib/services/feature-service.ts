@@ -2,7 +2,9 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
-export type SubscriptionTier = "free" | "basic" | "pro" | "mcp";
+// Re-export SubscriptionTier from the single source of truth
+export type { SubscriptionTier } from "@/lib/subscriptions";
+import type { SubscriptionTier } from "@/lib/subscriptions";
 
 /**
  * Get user's subscription tier from the database
@@ -34,25 +36,14 @@ export function getTierDetails(tier: SubscriptionTier): {
     { name: string; description: string; features: string[] }
   > = {
     free: {
-      name: "Unsubscribed",
-      description: "No active subscription",
+      name: "Free",
+      description: "Get started for free",
       features: [
-        "No monthly sync credits",
-        "No monthly AI tokens",
-        "No connected accounts",
-        "No data retention",
-      ],
-    },
-    pro: {
-      name: "Pro",
-      description: "Advanced analytics for serious creators",
-      features: [
-        "Canvas workspace for custom visualizations",
+        "100K monthly AI tokens",
+        "50 monthly sync credits",
+        "1 connected account",
+        "Canvas workspace",
         "AI Analytics Assistant",
-        "750 monthly sync credits",
-        "3M monthly AI tokens",
-        "Up to 25 connected accounts",
-        "90-day data retention",
         "Export reports",
       ],
     },
@@ -62,10 +53,33 @@ export function getTierDetails(tier: SubscriptionTier): {
       features: [
         "Canvas workspace for custom visualizations",
         "AI Analytics Assistant",
-        "250 monthly sync credits",
+        "500 monthly sync credits",
         "1M monthly AI tokens",
         "Up to 5 connected accounts",
-        "30-day data retention",
+        "Export reports",
+      ],
+    },
+    pro: {
+      name: "Pro",
+      description: "Advanced analytics for serious creators",
+      features: [
+        "Canvas workspace for custom visualizations",
+        "AI Analytics Assistant",
+        "1,500 monthly sync credits",
+        "3M monthly AI tokens",
+        "Up to 15 connected accounts",
+        "Export reports",
+      ],
+    },
+    agency: {
+      name: "Agency",
+      description: "For agencies and teams",
+      features: [
+        "Canvas workspace for custom visualizations",
+        "AI Analytics Assistant",
+        "4,000 monthly sync credits",
+        "10M monthly AI tokens",
+        "Up to 50 connected accounts",
         "Export reports",
       ],
     },
@@ -75,7 +89,6 @@ export function getTierDetails(tier: SubscriptionTier): {
       features: [
         "MCP server access for external AI clients",
         "Up to 10 connected accounts",
-        "90-day data retention",
         "Buy sync credit packs as needed",
       ],
     },

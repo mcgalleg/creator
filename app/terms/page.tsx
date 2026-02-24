@@ -27,7 +27,7 @@ export default function TermsPage() {
               Terms of Service
             </h1>
             <p className="text-muted-foreground">
-              Effective date: February 14, 2026
+              Effective date: February 24, 2026
             </p>
           </div>
 
@@ -110,20 +110,36 @@ export default function TermsPage() {
               4. Subscription Plans &amp; Billing
             </h2>
             <p className="text-muted-foreground">
-              Astriq offers two subscription tiers:
+              Astriq offers the following subscription tiers:
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground">
               <li>
-                <strong>Creator</strong> — $14.99/month with expanded features
-                and higher usage limits
+                <strong>Free</strong> — $0/month with 50 sync credits, 100K AI
+                tokens, and 1 connected account
               </li>
               <li>
-                <strong>Pro</strong> — $29.99/month with full access to all
-                features and maximum usage allocations
+                <strong>Creator</strong> — $14.99/month (or $11.99/mo billed
+                annually) with 500 sync credits, 1M AI tokens, and 5 connected
+                accounts
+              </li>
+              <li>
+                <strong>Pro</strong> — $29.99/month (or $23.99/mo billed
+                annually) with 1,500 sync credits, 3M AI tokens, and 15
+                connected accounts
+              </li>
+              <li>
+                <strong>Agency</strong> — $59.99/month (or $47.99/mo billed
+                annually) with 4,000 sync credits, 10M AI tokens, and 50
+                connected accounts
+              </li>
+              <li>
+                <strong>MCP Apps</strong> — Free to activate with pay-as-you-go
+                sync credit packs, bring your own AI client, and 10 connected
+                accounts
               </li>
             </ul>
             <p className="text-muted-foreground">
-              New users receive a 7-day free trial with Creator-level access. All billing
+              New users can get started with the Free tier at no cost. All billing
               is processed via Polar. Subscriptions automatically renew at the
               end of each billing period unless cancelled. You may cancel your
               subscription at any time and will retain access to your current
@@ -142,12 +158,24 @@ export default function TermsPage() {
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground">
               <li>
-                <strong>Creator</strong> — 250 sync credits + 1,000,000 AI
+                <strong>Free</strong> — 50 sync credits + 100,000 AI tokens per
+                month
+              </li>
+              <li>
+                <strong>Creator</strong> — 500 sync credits + 1,000,000 AI
                 tokens per month
               </li>
               <li>
-                <strong>Pro</strong> — 750 sync credits + 3,000,000 AI tokens
+                <strong>Pro</strong> — 1,500 sync credits + 3,000,000 AI tokens
                 per month
+              </li>
+              <li>
+                <strong>Agency</strong> — 4,000 sync credits + 10,000,000 AI
+                tokens per month
+              </li>
+              <li>
+                <strong>MCP Apps</strong> — No monthly allocation; buy sync
+                credit packs as needed (bring your own AI client)
               </li>
             </ul>
             <p className="text-muted-foreground">
@@ -285,16 +313,10 @@ export default function TermsPage() {
               10. Data Retention &amp; Deletion
             </h2>
             <p className="text-muted-foreground">
-              Data is retained based on your subscription tier:
+              All data is retained while your subscription is active. 60 days
+              after cancellation, all TikTok data associated with your account
+              is permanently deleted.
             </p>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-              <li>
-                <strong>Creator</strong> — 30 days of data retention
-              </li>
-              <li>
-                <strong>Pro</strong> — 90 days of data retention
-              </li>
-            </ul>
             <p className="text-muted-foreground">
               You may request full deletion of your data at any time by
               contacting us. Deleting your account will permanently remove all

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { tiktokAccounts } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export async function fetchAccounts(userId: string) {
   const accounts = await db
@@ -12,7 +12,7 @@ export async function fetchAccounts(userId: string) {
       lastSyncedAt: tiktokAccounts.lastSyncedAt,
     })
     .from(tiktokAccounts)
-    .where(eq(tiktokAccounts.userId, userId));
+    .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")));
 
   return {
     accounts: accounts.map((a) => ({
@@ -33,7 +33,7 @@ export async function getUserAccountIds(
   const accounts = await db
     .select({ id: tiktokAccounts.id })
     .from(tiktokAccounts)
-    .where(eq(tiktokAccounts.userId, userId));
+    .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")));
 
   if (accountIds && accountIds.length > 0) {
     const requested = new Set(accountIds.map((id) => parseInt(id, 10)));

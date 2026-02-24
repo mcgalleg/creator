@@ -32,14 +32,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Invalid account ID" }, { status: 400 });
     }
 
-    // Verify ownership
+    // Verify ownership (active only)
     const [account] = await db
       .select()
       .from(tiktokAccounts)
       .where(
         and(
           eq(tiktokAccounts.id, accountIdNum),
-          eq(tiktokAccounts.userId, userId)
+          eq(tiktokAccounts.userId, userId),
+          eq(tiktokAccounts.status, "active")
         )
       )
       .limit(1);

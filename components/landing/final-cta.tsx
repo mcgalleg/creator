@@ -28,7 +28,7 @@ export function FinalCta() {
                 </span>
               </h2>
               <p className="mt-4 text-muted-foreground text-lg max-w-xl mx-auto">
-                Get started with 250 free credits. No credit card required.
+                Get started free. 50 sync credits per month.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">

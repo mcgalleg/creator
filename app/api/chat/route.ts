@@ -158,7 +158,7 @@ export async function POST(req: Request) {
         displayName: tiktokAccounts.displayName,
       })
       .from(tiktokAccounts)
-      .where(eq(tiktokAccounts.userId, userId));
+      .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")));
 
     const activeAccount = selectedAccountId
       ? userAccounts.find((a) => a.id === selectedAccountId)
@@ -302,7 +302,7 @@ export async function POST(req: Request) {
               const accounts = await db
                 .select({ id: tiktokAccounts.id })
                 .from(tiktokAccounts)
-                .where(eq(tiktokAccounts.userId, userId));
+                .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")));
               targetAccountIds = accounts.map((a) => a.id);
             }
 

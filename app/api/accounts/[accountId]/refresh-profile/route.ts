@@ -29,14 +29,15 @@ export async function POST(
       return NextResponse.json({ error: "Invalid account ID" }, { status: 400 });
     }
 
-    // Get the account
+    // Get the account (active only)
     const [account] = await db
       .select()
       .from(tiktokAccounts)
       .where(
         and(
           eq(tiktokAccounts.id, accountId),
-          eq(tiktokAccounts.userId, userId)
+          eq(tiktokAccounts.userId, userId),
+          eq(tiktokAccounts.status, "active")
         )
       );
 

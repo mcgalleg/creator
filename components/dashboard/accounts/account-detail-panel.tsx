@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBreakpoint } from "@/hooks/use-breakpoint";
-import { AccountOverviewTab } from "./account-overview-tab";
 import { AccountPostsTab } from "./account-posts-tab";
 import { AccountCommentsTab } from "./account-comments-tab";
 import { AccountConnectPreview } from "./account-connect-preview";
@@ -94,6 +93,7 @@ export function AccountDetailPanel({
       onFetchSyncData?.(account.id);
       onRefreshCredits?.();
     }
+    onOpenChange(false);
   };
 
   return (
@@ -127,15 +127,12 @@ export function AccountDetailPanel({
             </div>
           </>
         ) : account ? (
-          <Tabs defaultValue="overview" className="flex flex-col flex-1 min-h-0">
+          <Tabs defaultValue="posts" className="flex flex-col flex-1 min-h-0">
             <SheetHeader className="shrink-0 pb-0">
               <SheetTitle className="text-base">
                 {account.displayName || account.username}
               </SheetTitle>
               <TabsList className="w-full mt-2">
-                <TabsTrigger value="overview" className="min-h-[44px]">
-                  Overview
-                </TabsTrigger>
                 <TabsTrigger value="posts" className="min-h-[44px]">
                   Posts
                 </TabsTrigger>
@@ -150,17 +147,6 @@ export function AccountDetailPanel({
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto px-4 pb-4 min-h-0">
-              <TabsContent value="overview">
-                <AccountOverviewTab
-                  account={account}
-                  syncData={syncData}
-                  isSyncing={isSyncing}
-                  isDisconnecting={isDisconnecting}
-                  onProfileRefresh={onProfileRefresh!}
-                  onDelete={onDelete!}
-                />
-              </TabsContent>
-
               <TabsContent value="posts">
                 <AccountPostsTab
                   totalPosts={stats?.totalPosts ?? account.videoCount ?? 0}

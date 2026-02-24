@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { tiktokAccounts, users } from "@/lib/db/schema";
 import { OnboardingFlow } from "@/components/onboarding";
@@ -16,7 +16,7 @@ export default async function OnboardingPage() {
   const accounts = await db
     .select({ id: tiktokAccounts.id })
     .from(tiktokAccounts)
-    .where(eq(tiktokAccounts.userId, userId))
+    .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")))
     .limit(1);
 
   const userRecord = await db

@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tiktokAccounts } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { validateUsername, estimateSyncCost, startSync } from "@/lib/services/sync-service";
 import { checkCredits } from "@/lib/services/credit-service";
 import { getUserTier } from "@/lib/services/feature-service";
@@ -40,7 +40,7 @@ export async function GET() {
         createdAt: tiktokAccounts.createdAt,
       })
       .from(tiktokAccounts)
-      .where(eq(tiktokAccounts.userId, userId))
+      .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")))
       .orderBy(tiktokAccounts.createdAt);
 
     return NextResponse.json({
@@ -105,14 +105,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if account already exists for this user
-    const existingAccount = await db
+    const existingAccounts = await db
       .select()
       .from(tiktokAccounts)
       .where(eq(tiktokAccounts.userId, userId))
       .limit(100);
 
-    const alreadyConnected = existingAccount.find(
-      (acc) => acc.username.toLowerCase() === cleanUsername
+    const alreadyConnected = existingAccounts.find(
+      (acc) => acc.username.toLowerCase() === cleanUsername && acc.status === "active"
     );
 
     if (alreadyConnected) {
@@ -122,16 +122,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Enforce account limit based on subscription tier
+    // Check for a previously disconnected account that can be reactivated
+    const disconnectedAccount = existingAccounts.find(
+      (acc) => acc.username.toLowerCase() === cleanUsername && acc.status === "disconnected"
+    );
+
+    // Enforce account limit based on subscription tier (count only active accounts)
+    const activeAccounts = existingAccounts.filter((acc) => acc.status === "active");
     const tier = await getUserTier(userId);
     const accountLimit = TIER_ACCOUNT_LIMITS[tier];
-    if (existingAccount.length >= accountLimit) {
+    if (activeAccounts.length >= accountLimit) {
       return NextResponse.json(
         {
           error: "Account limit reached",
           message: `Your ${tier} plan allows up to ${accountLimit} connected ${(accountLimit as number) === 1 ? "account" : "accounts"}. Upgrade to connect more.`,
           limit: accountLimit,
-          current: existingAccount.length,
+          current: activeAccounts.length,
         },
         { status: 403 }
       );
@@ -173,25 +179,55 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create the account record
-    const [account] = await db
-      .insert(tiktokAccounts)
-      .values({
-        userId,
-        username: validation.profile.username,
-        displayName: validation.profile.displayName,
-        avatarUrl: validation.profile.avatarUrl,
-        followerCount: validation.profile.followerCount,
-        followingCount: validation.profile.followingCount,
-        likesCount: validation.profile.likesCount,
-        videoCount: validation.profile.videoCount,
-        bio: validation.profile.bio,
-        isVerified: validation.profile.isVerified,
-        bioUrl: validation.profile.bioUrl ?? null,
-        profileCategory: validation.profile.profileCategory ?? null,
-        lastSyncedAt: new Date(),
-      })
-      .returning();
+    // Reactivate a previously disconnected account, or create a new one
+    let account: typeof tiktokAccounts.$inferSelect;
+    let reactivated = false;
+
+    if (disconnectedAccount) {
+      // Reactivate: update existing row with fresh profile data
+      const [updated] = await db
+        .update(tiktokAccounts)
+        .set({
+          status: "active",
+          displayName: validation.profile.displayName,
+          avatarUrl: validation.profile.avatarUrl,
+          followerCount: validation.profile.followerCount,
+          followingCount: validation.profile.followingCount,
+          likesCount: validation.profile.likesCount,
+          videoCount: validation.profile.videoCount,
+          bio: validation.profile.bio,
+          isVerified: validation.profile.isVerified,
+          bioUrl: validation.profile.bioUrl ?? null,
+          profileCategory: validation.profile.profileCategory ?? null,
+          lastSyncedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(tiktokAccounts.id, disconnectedAccount.id))
+        .returning();
+      account = updated;
+      reactivated = true;
+    } else {
+      // Create new account record
+      const [created] = await db
+        .insert(tiktokAccounts)
+        .values({
+          userId,
+          username: validation.profile.username,
+          displayName: validation.profile.displayName,
+          avatarUrl: validation.profile.avatarUrl,
+          followerCount: validation.profile.followerCount,
+          followingCount: validation.profile.followingCount,
+          likesCount: validation.profile.likesCount,
+          videoCount: validation.profile.videoCount,
+          bio: validation.profile.bio,
+          isVerified: validation.profile.isVerified,
+          bioUrl: validation.profile.bioUrl ?? null,
+          profileCategory: validation.profile.profileCategory ?? null,
+          lastSyncedAt: new Date(),
+        })
+        .returning();
+      account = created;
+    }
 
     // Optionally trigger initial sync
     let syncJob = null;
@@ -228,6 +264,7 @@ export async function POST(request: NextRequest) {
         lastSyncedAt: account.lastSyncedAt,
         createdAt: account.createdAt,
       },
+      reactivated,
       syncJob,
       syncError, // Include any sync error so frontend can display it
       profile: validation.profile,

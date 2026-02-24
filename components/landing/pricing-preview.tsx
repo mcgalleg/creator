@@ -20,7 +20,9 @@ import {
   TIER_AI_TOKENS,
   TIER_SYNC_CREDITS,
   TIER_ACCOUNT_LIMITS,
-  TIER_DATA_RETENTION,
+  TIER_MONTHLY_PRICE_CENTS,
+  TIER_ANNUAL_PRICE_CENTS,
+  DATA_PURGE_DAYS,
   CREDIT_PACKS,
   type SubscriptionTier,
 } from "@/lib/subscriptions";
@@ -31,10 +33,16 @@ function formatTokens(n: number): string {
   return n.toString();
 }
 
-const TIERS: { tier: SubscriptionTier; price: string; priceNote?: string; highlighted?: boolean }[] = [
-  { tier: "mcp" as SubscriptionTier, price: "Pay as you go", priceNote: "Buy sync credit packs" },
-  { tier: "basic", price: "$14.99/mo", highlighted: true },
-  { tier: "pro", price: "$29.99/mo" },
+function formatPriceCents(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+const TIERS: { tier: SubscriptionTier; highlighted?: boolean }[] = [
+  { tier: "free" },
+  { tier: "basic" },
+  { tier: "pro", highlighted: true },
+  { tier: "agency" },
+  { tier: "mcp" },
 ];
 
 type Tab = "plans" | "credits";
@@ -48,10 +56,21 @@ const bestValuePackId = CREDIT_PACKS.reduce((best, pack) => {
 
 export function PricingPreview() {
   const [activeTab, setActiveTab] = useState<Tab>("plans");
+  const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
+
+  function tierPrice(tier: SubscriptionTier): string {
+    if (tier === "mcp") return "Pay as you go";
+    if (tier === "free") return "$0";
+    const cents =
+      billing === "annual"
+        ? TIER_ANNUAL_PRICE_CENTS[tier]
+        : TIER_MONTHLY_PRICE_CENTS[tier];
+    return `${formatPriceCents(cents)}/mo`;
+  }
 
   return (
     <section id="pricing" className="bg-background py-24">
-      <div className="container mx-auto max-w-6xl px-4">
+      <div className="container mx-auto max-w-7xl px-4">
         <AnimateOnScroll className="text-center mb-12">
           <Badge variant="secondary" className="mb-4">
             Pricing
@@ -60,12 +79,12 @@ export function PricingPreview() {
             Simple, transparent pricing
           </h2>
           <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-            Bring your own AI client or use our full dashboard. Start exploring with free starter credits.
+            Bring your own AI client or use our full dashboard. Get started free.
           </p>
         </AnimateOnScroll>
 
         {/* Tab switcher */}
-        <div className="flex justify-center mb-10">
+        <div className="flex justify-center mb-6">
           <div className="inline-flex items-center rounded-full border bg-muted p-1 gap-1">
             <button
               onClick={() => setActiveTab("plans")}
@@ -90,12 +109,47 @@ export function PricingPreview() {
           </div>
         </div>
 
+        {/* Billing toggle */}
+        {activeTab === "plans" && (
+          <div className="flex items-center justify-center gap-3 mb-10">
+            <div className="inline-flex items-center rounded-full border bg-muted p-1 gap-1">
+              <button
+                onClick={() => setBilling("monthly")}
+                className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
+                  billing === "monthly"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBilling("annual")}
+                className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
+                  billing === "annual"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Annual
+              </button>
+            </div>
+            {billing === "annual" && (
+              <Badge variant="secondary" className="text-xs">
+                Save 20%
+              </Badge>
+            )}
+          </div>
+        )}
+
         {/* Subscription Plans */}
         {activeTab === "plans" && (
-          <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
-            {TIERS.map(({ tier, price, priceNote, highlighted }, idx) => {
+          <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-5 max-w-7xl mx-auto">
+            {TIERS.map(({ tier, highlighted }, idx) => {
               const info = getTierDisplayInfo(tier);
               const isMcp = tier === "mcp";
+              const isFree = tier === "free";
+              const price = tierPrice(tier);
               return (
                 <AnimateOnScroll key={tier} delay={idx * 100}>
                   <Card
@@ -116,8 +170,11 @@ export function PricingPreview() {
                       <div className="mt-2">
                         <span className="text-3xl font-bold">{price}</span>
                       </div>
-                      {priceNote && (
-                        <p className="text-sm text-muted-foreground">{priceNote}</p>
+                      {isMcp && (
+                        <p className="text-sm text-muted-foreground">Buy sync credit packs</p>
+                      )}
+                      {billing === "annual" && !isMcp && !isFree && (
+                        <p className="text-sm text-muted-foreground">billed annually</p>
                       )}
                     </CardHeader>
                     <CardContent className="flex-1">
@@ -140,10 +197,6 @@ export function PricingPreview() {
                               <Check className="size-4 text-primary shrink-0" />
                               {TIER_ACCOUNT_LIMITS[tier]} connected accounts
                             </li>
-                            <li className="flex items-center gap-2">
-                              <Check className="size-4 text-primary shrink-0" />
-                              {TIER_DATA_RETENTION[tier]}-day data retention
-                            </li>
                           </>
                         ) : (
                           <>
@@ -153,7 +206,7 @@ export function PricingPreview() {
                             </li>
                             <li className="flex items-center gap-2">
                               <RefreshCw className="size-4 text-primary shrink-0" />
-                              {TIER_SYNC_CREDITS[tier]} sync credits/month
+                              {TIER_SYNC_CREDITS[tier].toLocaleString()} sync credits/month
                             </li>
                             <li className="flex items-center gap-2">
                               <Check className="size-4 text-primary shrink-0" />
@@ -164,19 +217,11 @@ export function PricingPreview() {
                             </li>
                             <li className="flex items-center gap-2">
                               <Check className="size-4 text-primary shrink-0" />
-                              {TIER_DATA_RETENTION[tier]}-day data retention
-                            </li>
-                            <li className="flex items-center gap-2">
-                              <Check className="size-4 text-primary shrink-0" />
                               Canvas Workspace
                             </li>
                             <li className="flex items-center gap-2">
                               <Check className="size-4 text-primary shrink-0" />
                               AI Analytics
-                            </li>
-                            <li className="flex items-center gap-2">
-                              <Check className="size-4 text-primary shrink-0" />
-                              Export Reports
                             </li>
                             <li className="flex items-center gap-2">
                               <Plug className="size-4 text-primary shrink-0" />
@@ -192,7 +237,7 @@ export function PricingPreview() {
                         variant={highlighted ? "default" : "outline"}
                         className="w-full"
                       >
-                        <Link href="/pricing">{isMcp ? "Get Started" : "See Full Details"}</Link>
+                        <Link href="/pricing">{isFree ? "Get Started" : isMcp ? "Get Started" : "See Full Details"}</Link>
                       </Button>
                     </CardFooter>
                   </Card>
@@ -271,10 +316,14 @@ export function PricingPreview() {
           </>
         )}
 
+        <p className="text-center text-sm text-muted-foreground mt-6">
+          Data retained while subscribed. {DATA_PURGE_DAYS} days after cancellation, data is permanently deleted.
+        </p>
+
         <div className="text-center mt-8 space-y-4">
           <SignedOut>
             <SignUpButton mode="modal">
-              <Button size="lg">Get Started</Button>
+              <Button size="lg">Get Started Free</Button>
             </SignUpButton>
           </SignedOut>
           <div>

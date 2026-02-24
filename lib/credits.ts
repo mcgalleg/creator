@@ -39,18 +39,9 @@ export const CREDIT_PRICING_DISPLAY = {
     rate: CREDIT_RATES.PER_COMMENT,
     description: "Per comment synced",
   },
-  profile: {
-    rate: CREDIT_RATES.PROFILE_SYNC,
-    description: "Profile sync (free)",
-  },
   ai_chat: {
     rate: "~1 per message",
     description: "AI chat (per ~5K tokens)",
   },
 } as const;
 
-export const SIGNUP_BONUS_CREDITS = 250;
-
-// Starter bonus credits (Creator-level allocation for 30-day starter period)
-export const STARTER_BONUS_SYNC_CREDITS = 250;
-export const STARTER_BONUS_AI_TOKENS = 1_000_000;

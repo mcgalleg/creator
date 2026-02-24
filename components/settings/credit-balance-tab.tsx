@@ -13,70 +13,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Coins, ArrowRight, TrendingUp, TrendingDown, Gift, Calendar, Sparkles } from "lucide-react";
+import { Coins, ArrowRight, Calendar, Sparkles } from "lucide-react";
 import { useCredits } from "@/hooks/use-credits";
 import { TIER_SYNC_CREDITS, TIER_AI_TOKENS } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/lib/subscriptions";
+import { formatRelativeDate } from "@/lib/transaction-utils";
 
 interface SubscriptionInfo {
   subscriptionTier: SubscriptionTier;
   creditsResetAt: string | null;
 }
 
-interface CreditTransaction {
-  id: number;
-  type: string;
-  amount: number;
-  description: string | null;
-  createdAt: string;
-}
-
-function formatTransactionType(type: string): string {
-  const typeMap: Record<string, string> = {
-    sync_posts: "Posts Sync",
-    sync_comments: "Comments Sync",
-    purchase: "Purchase",
-    refund: "Refund",
-    signup_bonus: "Signup Bonus",
-    ai_chat: "AI Chat",
-  };
-  return typeMap[type] || type;
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) {
-    return "Today";
-  } else if (diffDays === 1) {
-    return "Yesterday";
-  } else if (diffDays < 7) {
-    return `${diffDays} days ago`;
-  } else {
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  }
-}
-
-function TransactionIcon({ type, amount }: { type: string; amount: number }) {
-  if (type === "signup_bonus" || type === "refund") {
-    return <Gift className="h-4 w-4 text-green-500" />;
-  }
-  if (amount > 0) {
-    return <TrendingUp className="h-4 w-4 text-green-500" />;
-  }
-  return <TrendingDown className="h-4 w-4 text-red-500" />;
-}
-
-export function CreditDisplay() {
+export function CreditBalanceTab() {
   const { balance, aiTokens, loading: creditsLoading, error: creditsError } = useCredits();
   const [pricing, setPricing] = useState<Record<string, { rate: number; description: string }> | null>(null);
-  const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [subInfo, setSubInfo] = useState<SubscriptionInfo | null>(null);
   const [extraLoading, setExtraLoading] = useState(true);
 
@@ -86,20 +36,14 @@ export function CreditDisplay() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [creditsRes, historyRes, subRes] = await Promise.all([
+        const [creditsRes, subRes] = await Promise.all([
           fetch("/api/credits"),
-          fetch("/api/credits/history?limit=3"),
           fetch("/api/user/subscription"),
         ]);
 
         if (creditsRes.ok) {
           const credits = await creditsRes.json();
           setPricing(credits.pricing);
-        }
-
-        if (historyRes.ok) {
-          const history = await historyRes.json();
-          setTransactions(history.transactions || []);
         }
 
         if (subRes.ok) {
@@ -213,7 +157,7 @@ export function CreditDisplay() {
               <p className="text-muted-foreground">
                 {subInfo.subscriptionTier.charAt(0).toUpperCase() + subInfo.subscriptionTier.slice(1)} plan
                 {subInfo.creditsResetAt && (
-                  <> &middot; Resets {formatDate(subInfo.creditsResetAt)}</>
+                  <> &middot; Resets {formatRelativeDate(subInfo.creditsResetAt)}</>
                 )}
               </p>
             </div>
@@ -237,49 +181,22 @@ export function CreditDisplay() {
             </div>
           </div>
         )}
-
-        {/* Recent Transactions */}
-        {transactions.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Recent Transactions</p>
-            <div className="space-y-2">
-              {transactions.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
-                >
-                  <div className="flex items-center gap-2">
-                    <TransactionIcon type={tx.type} amount={tx.amount} />
-                    <div>
-                      <p className="text-sm font-medium">
-                        {formatTransactionType(tx.type)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(tx.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={`font-medium ${
-                      tx.amount > 0 ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {tx.amount > 0 ? "+" : ""}
-                    {tx.amount}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </CardContent>
-      <CardFooter>
-        <Button asChild className="w-full">
+      <CardFooter className="flex gap-2">
+        <Button asChild variant="outline" className="flex-1">
           <Link href="/pricing#credits">
-            Purchase Credits
+            Purchase Sync Credits
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
+        {!isMcp && (
+          <Button asChild className="flex-1">
+            <Link href="/pricing#ai-tokens">
+              Purchase AI Tokens
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );

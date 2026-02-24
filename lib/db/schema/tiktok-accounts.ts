@@ -16,6 +16,7 @@ export const tiktokAccounts = pgTable("tiktok_accounts", {
   bioUrl: text("bio_url"),
   coverImageUrl: text("cover_image_url"),
   profileCategory: text("profile_category"),
+  status: text("status").notNull().default("active"),
   lastSyncedAt: timestamp("last_synced_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

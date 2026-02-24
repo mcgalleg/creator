@@ -3,15 +3,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
   MessageCircle,
@@ -191,16 +185,13 @@ export function AccountCommentsTab({
             {mode === "top_performers" && (
               <div className="mt-3 flex items-center gap-2">
                 <Label className="text-xs">Top</Label>
-                <Select value={topCount.toString()} onValueChange={(v) => setTopCount(parseInt(v))}>
-                  <SelectTrigger className="w-20 h-8 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {[5, 10, 15, 20, 25, 50]
-                      .filter((n) => syncedPostCount == null || n <= syncedPostCount)
-                      .map((n) => (
-                        <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                <NumberInput
+                  value={topCount}
+                  onChange={setTopCount}
+                  min={1}
+                  max={syncedPostCount ?? 50}
+                  className="w-20"
+                />
                 <span className="text-xs text-muted-foreground">posts</span>
               </div>
             )}
@@ -265,14 +256,13 @@ export function AccountCommentsTab({
       {/* Max Comments Per Post */}
       <div className="space-y-2">
         <Label className="text-sm font-medium">Max comments per post</Label>
-        <Select value={maxPerPost.toString()} onValueChange={(v) => setMaxPerPost(parseInt(v))}>
-          <SelectTrigger className="w-full h-8 text-sm"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {[50, 100, 200, 500].map((n) => (
-              <SelectItem key={n} value={n.toString()}>{n} comments</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <NumberInput
+          value={maxPerPost}
+          onChange={setMaxPerPost}
+          min={1}
+          max={1000}
+          className="w-full"
+        />
       </div>
 
       {/* Already synced warning */}
@@ -332,7 +322,16 @@ export function AccountCommentsTab({
           {insufficientCredits && mode !== "date_range" && (
             <p className="text-xs text-destructive flex items-start gap-1">
               <AlertCircle className="size-3 mt-0.5 shrink-0" />
-              Insufficient credits. Reduce scope or add credits.
+              Insufficient credits. Reduce scope or{" "}
+              <a
+                href="/pricing#credits"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-destructive/80 font-medium"
+              >
+                add credits
+              </a>
+              .
             </p>
           )}
           <p className="text-xs text-muted-foreground flex items-start gap-1">

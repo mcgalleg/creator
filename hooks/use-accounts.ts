@@ -50,6 +50,7 @@ export interface SyncOptions {
 
 export interface ConnectResult {
   account: TikTokAccount;
+  reactivated?: boolean;
   syncJob?: {
     jobId: number;
     runId: string;

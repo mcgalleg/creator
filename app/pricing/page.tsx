@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useUser, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
@@ -26,13 +27,18 @@ import {
 } from "lucide-react";
 import {
   CREDIT_PACKS,
+  AI_TOKEN_PACKS,
   POLAR_PRODUCTS,
+  POLAR_ANNUAL_PRODUCTS,
   POLAR_CREDIT_PRODUCTS,
+  POLAR_AI_TOKEN_PRODUCTS,
   getTierDisplayInfo,
   TIER_AI_TOKENS,
   TIER_SYNC_CREDITS,
   TIER_ACCOUNT_LIMITS,
-  TIER_DATA_RETENTION,
+  TIER_MONTHLY_PRICE_CENTS,
+  TIER_ANNUAL_PRICE_CENTS,
+  DATA_PURGE_DAYS,
 } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/lib/subscriptions";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -59,24 +65,49 @@ function bestValuePackId(): string {
   return bestId;
 }
 
+function bestValueAiPackId(): string {
+  let bestId = AI_TOKEN_PACKS[0].id as string;
+  let bestRate = AI_TOKEN_PACKS[0].priceInCents / AI_TOKEN_PACKS[0].tokens;
+  for (const pack of AI_TOKEN_PACKS) {
+    const rate = pack.priceInCents / pack.tokens;
+    if (rate < bestRate) {
+      bestId = pack.id;
+      bestRate = rate;
+    }
+  }
+  return bestId;
+}
+
+function perTokenRate(tokens: number, cents: number): string {
+  return `$${((cents / 100) / (tokens / 1000)).toFixed(3)}`;
+}
+
 function formatTokens(tokens: number): string {
   if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(tokens % 1_000_000 === 0 ? 0 : 1)}M`;
   if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(0)}K`;
   return tokens.toString();
 }
 
-const TIERS: { tier: SubscriptionTier; price: string; priceNote?: string; highlighted: boolean }[] = [
-  { tier: "mcp" as SubscriptionTier, price: "Pay as you go", priceNote: "Buy sync credit packs", highlighted: false },
-  { tier: "basic", price: "$14.99/mo", highlighted: true },
-  { tier: "pro", price: "$29.99/mo", highlighted: false },
+function formatPriceCents(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+const TIERS: { tier: SubscriptionTier; highlighted: boolean }[] = [
+  { tier: "free", highlighted: false },
+  { tier: "basic", highlighted: false },
+  { tier: "pro", highlighted: true },
+  { tier: "agency", highlighted: false },
+  { tier: "mcp", highlighted: false },
 ];
 
 export default function PricingPage() {
   const { user } = useUser();
   const bestValue = bestValuePackId();
+  const bestValueAi = bestValueAiPackId();
+  const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
 
   function getCheckoutUrl(productId: string): string {
-    if (!user) return "/pricing";
+    if (!user || !productId) return "/pricing";
     const params = new URLSearchParams({
       products: productId,
       customerExternalId: user.id,
@@ -86,6 +117,24 @@ export default function PricingPage() {
       params.set("customerEmail", email);
     }
     return `/api/checkout?${params.toString()}`;
+  }
+
+  function getTierProductId(tier: SubscriptionTier): string {
+    const isAnnual = billing === "annual";
+    if (isAnnual && tier in POLAR_ANNUAL_PRODUCTS) {
+      return POLAR_ANNUAL_PRODUCTS[tier as keyof typeof POLAR_ANNUAL_PRODUCTS];
+    }
+    return POLAR_PRODUCTS[tier];
+  }
+
+  function tierPrice(tier: SubscriptionTier): string {
+    if (tier === "mcp") return "Pay as you go";
+    if (tier === "free") return "$0";
+    const cents =
+      billing === "annual"
+        ? TIER_ANNUAL_PRICE_CENTS[tier]
+        : TIER_MONTHLY_PRICE_CENTS[tier];
+    return `${formatPriceCents(cents)}/mo`;
   }
 
   return (
@@ -117,7 +166,7 @@ export default function PricingPage() {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="container mx-auto max-w-6xl px-4 py-16 text-center md:py-20">
+        <section className="container mx-auto max-w-7xl px-4 py-16 text-center md:py-20">
           <Badge variant="secondary" className="mb-4">
             <Sparkles className="mr-1 size-3" />
             Pricing
@@ -128,19 +177,50 @@ export default function PricingPage() {
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
             Choose the plan that fits your needs. Bring your own AI client or use our full dashboard.
           </p>
+
+          {/* Billing toggle */}
+          <div className="mt-8 flex items-center justify-center gap-3">
+            <div className="inline-flex items-center rounded-full border bg-muted p-1 gap-1">
+              <button
+                onClick={() => setBilling("monthly")}
+                className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
+                  billing === "monthly"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBilling("annual")}
+                className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
+                  billing === "annual"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Annual
+              </button>
+            </div>
+            {billing === "annual" && (
+              <Badge variant="secondary" className="text-xs">
+                Save 20%
+              </Badge>
+            )}
+          </div>
         </section>
 
         {/* Subscription Plans */}
-        <section className="container mx-auto max-w-6xl px-4 pb-16">
-          <div className="grid gap-6 md:grid-cols-3">
-            {TIERS.map(({ tier, price, priceNote, highlighted }) => {
+        <section className="container mx-auto max-w-7xl px-4 pb-16">
+          <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-5">
+            {TIERS.map(({ tier, highlighted }) => {
               const info = getTierDisplayInfo(tier);
               const aiTokens = TIER_AI_TOKENS[tier];
               const syncCredits = TIER_SYNC_CREDITS[tier];
               const accountLimit = TIER_ACCOUNT_LIMITS[tier];
-              const dataRetention = TIER_DATA_RETENTION[tier];
-              const productId = POLAR_PRODUCTS[tier];
               const isMcp = tier === "mcp";
+              const isFree = tier === "free";
+              const price = tierPrice(tier);
 
               return (
                 <Card
@@ -157,8 +237,13 @@ export default function PricingPage() {
                     <CardTitle className="text-xl">{info.name}</CardTitle>
                     <CardDescription>{info.description}</CardDescription>
                     <p className="text-3xl font-bold pt-2">{price}</p>
-                    {priceNote && (
-                      <p className="text-sm text-muted-foreground">{priceNote}</p>
+                    {isMcp && (
+                      <p className="text-sm text-muted-foreground">Buy sync credit packs</p>
+                    )}
+                    {billing === "annual" && !isMcp && !isFree && (
+                      <p className="text-sm text-muted-foreground">
+                        billed annually
+                      </p>
                     )}
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -181,10 +266,6 @@ export default function PricingPage() {
                             <Check className="h-4 w-4 text-primary flex-shrink-0" />
                             <span>{accountLimit} connected accounts</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                            <span>{dataRetention}-day data retention</span>
-                          </div>
                         </>
                       ) : (
                         <>
@@ -201,7 +282,7 @@ export default function PricingPage() {
                             <span>
                               {syncCredits > 0
                                 ? `${syncCredits.toLocaleString()} sync credits/month`
-                                : "250 one-time signup credits"}
+                                : "No sync credits"}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -210,10 +291,6 @@ export default function PricingPage() {
                               {accountLimit} connected{" "}
                               {(accountLimit as number) === 1 ? "account" : "accounts"}
                             </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                            <span>{dataRetention}-day data retention</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Check className="h-4 w-4 text-primary flex-shrink-0" />
@@ -236,34 +313,60 @@ export default function PricingPage() {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <SignedIn>
-                      <Button
-                        asChild
-                        className="w-full"
-                        variant={highlighted ? "default" : "outline"}
-                      >
-                        <a href={productId ? getCheckoutUrl(productId) : "#"}>
-                          {isMcp ? "Get Started" : "Subscribe"}
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </a>
-                      </Button>
-                    </SignedIn>
-                    <SignedOut>
-                      <SignInButton mode="modal">
-                        <Button
-                          className="w-full"
-                          variant={highlighted ? "default" : "outline"}
-                        >
-                          {isMcp ? "Sign in to Get Started" : "Sign in to Subscribe"}
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </SignInButton>
-                    </SignedOut>
+                    {isFree ? (
+                      <>
+                        <SignedIn>
+                          <Button asChild className="w-full" variant="outline">
+                            <Link href="/dashboard">
+                              Go to Dashboard
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </Link>
+                          </Button>
+                        </SignedIn>
+                        <SignedOut>
+                          <SignInButton mode="modal">
+                            <Button className="w-full" variant="outline">
+                              Sign Up Free
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </Button>
+                          </SignInButton>
+                        </SignedOut>
+                      </>
+                    ) : (
+                      <>
+                        <SignedIn>
+                          <Button
+                            asChild
+                            className="w-full"
+                            variant={highlighted ? "default" : "outline"}
+                          >
+                            <a href={getCheckoutUrl(getTierProductId(tier))}>
+                              {isMcp ? "Get Started" : "Subscribe"}
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </a>
+                          </Button>
+                        </SignedIn>
+                        <SignedOut>
+                          <SignInButton mode="modal">
+                            <Button
+                              className="w-full"
+                              variant={highlighted ? "default" : "outline"}
+                            >
+                              {isMcp ? "Sign in to Get Started" : "Sign in to Subscribe"}
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </Button>
+                          </SignInButton>
+                        </SignedOut>
+                      </>
+                    )}
                   </CardFooter>
                 </Card>
               );
             })}
           </div>
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Data retained while subscribed. {DATA_PURGE_DAYS} days after cancellation, data is permanently deleted.
+          </p>
         </section>
 
         <div className="container mx-auto max-w-6xl px-4">
@@ -332,8 +435,94 @@ export default function PricingPage() {
                         className="w-full"
                         variant={isBestValue ? "default" : "outline"}
                       >
-                        <a href={productId ? getCheckoutUrl(productId) : "#"}>
+                        <a href={getCheckoutUrl(productId)}>
                           Buy Credits
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </a>
+                      </Button>
+                    </SignedIn>
+                    <SignedOut>
+                      <SignInButton mode="modal">
+                        <Button
+                          className="w-full"
+                          variant={isBestValue ? "default" : "outline"}
+                        >
+                          Sign in to Buy
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </SignInButton>
+                    </SignedOut>
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
+        <div className="container mx-auto max-w-6xl px-4">
+          <Separator />
+        </div>
+
+        {/* AI Token Packs Section */}
+        <section id="ai-tokens" className="container mx-auto max-w-6xl px-4 py-16 scroll-mt-20">
+          <div className="text-center mb-12">
+            <Badge variant="outline" className="mb-4">
+              <Sparkles className="mr-1 size-3" />
+              AI Token Packs
+            </Badge>
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              AI Token Packs
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+              Need more AI tokens? Purchase additional tokens anytime. One-time
+              purchases that never expire.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {AI_TOKEN_PACKS.map((pack) => {
+              const isBestValue = pack.id === bestValueAi;
+              const productId = POLAR_AI_TOKEN_PRODUCTS[pack.id];
+
+              return (
+                <Card
+                  key={pack.id}
+                  className={
+                    isBestValue
+                      ? "relative border-primary shadow-md"
+                      : "relative"
+                  }
+                >
+                  {isBestValue && (
+                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <Zap className="mr-1 size-3" />
+                      Best Value
+                    </Badge>
+                  )}
+                  <CardHeader className="text-center pb-2">
+                    <CardTitle className="text-lg">{pack.name}</CardTitle>
+                    <CardDescription>
+                      {formatTokens(pack.tokens)} AI tokens
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="text-center space-y-2">
+                    <p className="text-3xl font-bold">
+                      {formatPrice(pack.priceInCents)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {perTokenRate(pack.tokens, pack.priceInCents)} per 1K
+                      tokens
+                    </p>
+                  </CardContent>
+                  <CardFooter>
+                    <SignedIn>
+                      <Button
+                        asChild
+                        className="w-full"
+                        variant={isBestValue ? "default" : "outline"}
+                      >
+                        <a href={getCheckoutUrl(productId)}>
+                          Buy Tokens
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </a>
                       </Button>

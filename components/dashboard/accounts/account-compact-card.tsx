@@ -1,100 +1,323 @@
 "use client";
 
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { BadgeCheck, ChevronRight, Loader2, AlertTriangle } from "lucide-react";
-import { formatNumber } from "./shared-utils";
+import {
+  BadgeCheck,
+  Users,
+  Heart,
+  Video,
+  MoreVertical,
+  RefreshCw,
+  Unplug,
+  Loader2,
+  AlertTriangle,
+  X,
+} from "lucide-react";
+import { formatNumber, formatRelativeTime } from "./shared-utils";
+import { AccountDeleteDialog } from "./account-delete-dialog";
 import type { TikTokAccount, AccountSyncData } from "@/hooks/use-accounts";
 
 interface AccountCompactCardProps {
   account: TikTokAccount;
   syncData?: AccountSyncData;
   isSelected?: boolean;
+  isSyncing?: boolean;
+  isDisconnecting?: boolean;
   onClick: () => void;
+  onProfileRefresh?: (accountId: number) => void;
+  onDelete?: (accountId: number) => Promise<void>;
 }
 
 export function AccountCompactCard({
   account,
   syncData,
   isSelected,
+  isSyncing = false,
+  isDisconnecting = false,
   onClick,
+  onProfileRefresh,
+  onDelete,
 }: AccountCompactCardProps) {
+  const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [dismissedErrors, setDismissedErrors] = useState<Set<number>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const stored = localStorage.getItem("dismissedSyncErrors");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const dismissError = (jobId: number) => {
+    setDismissedErrors((prev) => {
+      const next = new Set(prev);
+      next.add(jobId);
+      try {
+        localStorage.setItem("dismissedSyncErrors", JSON.stringify([...next]));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
+
   const activeJobs = syncData?.activeJobs ?? [];
   const hasActiveJobs = activeJobs.length > 0;
   const stats = syncData?.stats;
 
-  // Only show error if the most recent job failed AND no successful sync happened after it
-  const mostRecentJob = syncData?.recentJobs?.[0];
-  const lastCompletedAt = stats?.lastCompletedJobAt;
-  const hasError =
-    mostRecentJob?.status === "failed" &&
-    (!lastCompletedAt ||
-      new Date(mostRecentJob.completedAt ?? mostRecentJob.createdAt) >
-        new Date(lastCompletedAt));
   const syncedPosts = stats?.syncedPosts ?? 0;
+  const totalPosts = stats?.totalPosts ?? account.videoCount ?? 0;
+  const postsPercent = totalPosts > 0 ? (syncedPosts / totalPosts) * 100 : 0;
+
   const syncedComments = stats?.syncedComments ?? 0;
 
+  const lastSyncedAt = stats?.lastSyncedAt ?? account.lastSyncedAt;
+
+  // Only show a failed job if no successful sync completed after it
+  const lastCompletedAt = stats?.lastCompletedJobAt;
+  const recentJobs = syncData?.recentJobs ?? [];
+  const lastFailedJob = recentJobs.find(
+    (j) =>
+      j.status === "failed" &&
+      !dismissedErrors.has(j.id) &&
+      (!lastCompletedAt ||
+        new Date(j.completedAt ?? j.createdAt) > new Date(lastCompletedAt))
+  );
+
+  const handleProfileRefresh = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isRefreshingProfile || !onProfileRefresh) return;
+    setIsRefreshingProfile(true);
+    try {
+      onProfileRefresh(account.id);
+    } finally {
+      setTimeout(() => setIsRefreshingProfile(false), 2000);
+    }
+  };
+
+  const handleDisconnectClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!onDelete) return;
+    try {
+      await onDelete(account.id);
+    } finally {
+      setDeleteDialogOpen(false);
+    }
+  };
+
+  const getActiveJobDescription = (job: (typeof activeJobs)[0]): string => {
+    if (job.type === "posts" || job.type === "full") {
+      const count = job.postsCount;
+      if (count) return `Importing posts... (${count} so far)`;
+      return "Importing posts...";
+    }
+    if (job.type === "comments") {
+      const count = job.commentsCount;
+      const estimated = job.commentsEstimated;
+      if (count && estimated)
+        return `Syncing comments... (${count} of ~${estimated})`;
+      return "Syncing comments...";
+    }
+    return "Syncing...";
+  };
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/50 ${
-        isSelected ? "border-primary bg-primary/5" : "border-border"
-      }`}
-    >
-      <Avatar className="size-10 border shrink-0">
-        <AvatarImage
-          src={account.avatarUrl || undefined}
-          alt={account.displayName || account.username}
-        />
-        <AvatarFallback>
-          {(account.displayName || account.username).charAt(0).toUpperCase()}
-        </AvatarFallback>
-      </Avatar>
+    <>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+        className={`w-full rounded-lg border p-4 text-left transition-colors hover:bg-muted/50 cursor-pointer ${
+          isSelected ? "border-primary bg-primary/5" : "border-border"
+        }`}
+      >
+        {/* Header row */}
+        <div className="flex items-center gap-3">
+          <Avatar className="size-12 border shrink-0">
+            <AvatarImage
+              src={account.avatarUrl || undefined}
+              alt={account.displayName || account.username}
+            />
+            <AvatarFallback>
+              {(account.displayName || account.username)
+                .charAt(0)
+                .toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="font-semibold truncate text-sm">
-            {account.displayName || account.username}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold truncate text-sm">
+                {account.displayName || account.username}
+              </span>
+              {account.isVerified && (
+                <BadgeCheck className="size-4 text-blue-500 shrink-0" />
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground truncate">
+              @{account.username}
+            </div>
+          </div>
+
+          <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">
+            {formatRelativeTime(lastSyncedAt)}
           </span>
-          {account.isVerified && (
-            <BadgeCheck className="size-4 text-blue-500 shrink-0" />
-          )}
-        </div>
-        <div className="text-xs text-muted-foreground truncate">
-          @{account.username}
-        </div>
-      </div>
 
-      <div className="flex items-center gap-1.5 shrink-0">
-        {hasActiveJobs ? (
-          <Badge variant="secondary" className="gap-1 text-xs bg-blue-500/10 text-blue-600 border-blue-500/20">
-            <Loader2 className="size-3 animate-spin" />
-            Syncing...
-          </Badge>
-        ) : (
-          <>
-            {hasError && (
-              <AlertTriangle className="size-3.5 text-destructive shrink-0" />
-            )}
-            {syncedPosts > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {formatNumber(syncedPosts)} posts
-              </Badge>
-            )}
-            {syncedComments > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {formatNumber(syncedComments)} comments
-              </Badge>
-            )}
-            {hasError && syncedPosts === 0 && syncedComments === 0 && (
-              <Badge variant="destructive" className="text-xs">Error</Badge>
-            )}
-          </>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="size-4" />
+                <span className="sr-only">Account actions</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={handleProfileRefresh}
+                disabled={
+                  isSyncing || isDisconnecting || isRefreshingProfile
+                }
+              >
+                <RefreshCw
+                  className={`size-4 ${isRefreshingProfile ? "animate-spin" : ""}`}
+                />
+                {isRefreshingProfile ? "Refreshing..." : "Refresh Profile"}
+                <Badge
+                  variant="secondary"
+                  className="ml-auto text-[10px] px-1.5 py-0"
+                >
+                  FREE
+                </Badge>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleDisconnectClick}
+                disabled={isSyncing || isDisconnecting}
+                className="text-destructive focus:text-destructive"
+              >
+                <Unplug className="size-4" />
+                Disconnect Account
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-3 gap-3 mt-3">
+          <div className="rounded-md bg-muted/30 px-3 py-2 text-center">
+            <Users className="size-3.5 text-muted-foreground mx-auto mb-0.5" />
+            <div className="font-semibold text-sm">
+              {formatNumber(account.followerCount)}
+            </div>
+            <div className="text-[11px] text-muted-foreground">Followers</div>
+          </div>
+          <div className="rounded-md bg-muted/30 px-3 py-2 text-center">
+            <Heart className="size-3.5 text-muted-foreground mx-auto mb-0.5" />
+            <div className="font-semibold text-sm">
+              {formatNumber(account.likesCount)}
+            </div>
+            <div className="text-[11px] text-muted-foreground">Likes</div>
+          </div>
+          <div className="rounded-md bg-muted/30 px-3 py-2 text-center">
+            <Video className="size-3.5 text-muted-foreground mx-auto mb-0.5" />
+            <div className="font-semibold text-sm">
+              {formatNumber(account.videoCount)}
+            </div>
+            <div className="text-[11px] text-muted-foreground">Videos</div>
+          </div>
+        </div>
+
+        {/* Sync progress rows */}
+        <div className="mt-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium w-20 shrink-0">Posts</span>
+            <Progress
+              value={Math.min(postsPercent, 100)}
+              className="h-1.5 flex-1"
+            />
+            <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+              {formatNumber(syncedPosts)}/{formatNumber(totalPosts)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium w-20 shrink-0">Comments</span>
+            <Progress
+              value={syncedComments > 0 ? 100 : 0}
+              className="h-1.5 flex-1"
+            />
+            <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+              {formatNumber(syncedComments)}
+            </span>
+          </div>
+        </div>
+
+        {/* Active sync banners */}
+        {hasActiveJobs &&
+          activeJobs.map((job) => (
+            <div
+              key={job.id}
+              className="flex items-center gap-2 rounded-md bg-primary/5 border border-primary/10 px-3 py-1.5 mt-3"
+            >
+              <Loader2 className="size-3 animate-spin text-primary shrink-0" />
+              <span className="text-xs text-primary">
+                {getActiveJobDescription(job)}
+              </span>
+            </div>
+          ))}
+
+        {/* Error banner */}
+        {lastFailedJob && (
+          <div className="flex items-start gap-2 rounded-md bg-destructive/5 border border-destructive/10 px-3 py-1.5 mt-3">
+            <AlertTriangle className="size-3 text-destructive shrink-0 mt-0.5" />
+            <span className="text-xs text-destructive flex-1 truncate">
+              Sync failed: {lastFailedJob.error || "Unknown error"}
+            </span>
+            <button
+              type="button"
+              className="shrink-0 text-destructive hover:text-destructive/80"
+              onClick={(e) => {
+                e.stopPropagation();
+                dismissError(lastFailedJob.id);
+              }}
+            >
+              <X className="size-3" />
+            </button>
+          </div>
         )}
       </div>
 
-      <ChevronRight className="size-4 text-muted-foreground shrink-0" />
-    </button>
+      <AccountDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        username={account.username}
+        isDeleting={isDisconnecting}
+        onConfirm={handleConfirmDelete}
+      />
+    </>
   );
 }

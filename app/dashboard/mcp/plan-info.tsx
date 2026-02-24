@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Users, Database, Plug } from "lucide-react";
-import { TIER_ACCOUNT_LIMITS, TIER_DATA_RETENTION } from "@/lib/subscriptions";
+import { ArrowRight, Users, Plug } from "lucide-react";
+import { TIER_ACCOUNT_LIMITS } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/lib/subscriptions";
 
 interface McpPlanInfoProps {
@@ -21,7 +21,6 @@ interface McpPlanInfoProps {
 
 export function McpPlanInfo({ tier, accountCount }: McpPlanInfoProps) {
   const accountLimit = TIER_ACCOUNT_LIMITS[tier];
-  const dataRetention = TIER_DATA_RETENTION[tier];
 
   return (
     <Card>
@@ -41,15 +40,11 @@ export function McpPlanInfo({ tier, accountCount }: McpPlanInfoProps) {
             {accountCount} of {accountLimit} accounts connected
           </span>
         </div>
-        <div className="flex items-center gap-3 text-sm">
-          <Database className="h-4 w-4 text-muted-foreground shrink-0" />
-          <span>{dataRetention}-day data retention</span>
-        </div>
       </CardContent>
       <CardFooter>
         <Button asChild variant="outline" className="w-full">
           <Link href="/pricing">
-            Want the full dashboard? Upgrade to Creator or Pro
+            Want the full dashboard? Upgrade to Creator, Pro, or Agency
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>

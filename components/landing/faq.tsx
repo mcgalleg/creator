@@ -33,7 +33,7 @@ const FAQ_ITEMS = [
   {
     question: "Can I manage multiple TikTok accounts?",
     answer:
-      "Yes! Creator and Pro plans support multiple accounts. The Creator plan supports up to 5 connected accounts, while the Pro plan supports up to 25, making it ideal for agencies and multi-brand creators.",
+      "Yes! Creator supports 5, Pro supports 15, and Agency supports 50 connected accounts, making it ideal for agencies and multi-brand creators.",
   },
   {
     question: "What is the Canvas workspace?",
@@ -43,7 +43,7 @@ const FAQ_ITEMS = [
   {
     question: "Do I need a credit card to start?",
     answer:
-      "No! Start with a free 7-day trial with Creator-level access, no credit card required. Experience all premium features before deciding on a plan.",
+      "No! The Free tier gives you 50 sync credits and 100K AI tokens per month at no cost, no credit card required. Upgrade anytime to unlock more capacity.",
   },
   {
     question: "Can I upgrade or downgrade anytime?",

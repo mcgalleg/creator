@@ -85,6 +85,7 @@ export default function AccountsPage() {
     };
 
     await triggerSync(accountId, syncOptions);
+    handlePanelOpenChange(false);
   };
 
   const handleDelete = async (accountId: number) => {
@@ -93,7 +94,7 @@ export default function AccountsPage() {
     try {
       await disconnectAccount(accountId);
       toast.success("Account disconnected", {
-        description: `@${username} has been removed from your accounts.`,
+        description: `@${username} has been disconnected. Reconnect anytime to restore your data.`,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to disconnect account";
@@ -206,7 +207,11 @@ export default function AccountsPage() {
                 account={account}
                 syncData={syncData[account.id]}
                 isSelected={selectedAccountId === account.id && panelMode === "detail"}
+                isSyncing={syncing[account.id] || (syncData[account.id]?.activeJobs?.length ?? 0) > 0}
+                isDisconnecting={disconnecting[account.id]}
                 onClick={() => handleAccountClick(account.id)}
+                onProfileRefresh={handleProfileRefresh}
+                onDelete={handleDelete}
               />
             ))}
           </div>

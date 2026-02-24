@@ -29,14 +29,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Invalid account ID" }, { status: 400 });
     }
 
-    // Get the account
+    // Get the account (active only)
     const [account] = await db
       .select()
       .from(tiktokAccounts)
       .where(
         and(
           eq(tiktokAccounts.id, accountIdNum),
-          eq(tiktokAccounts.userId, userId)
+          eq(tiktokAccounts.userId, userId),
+          eq(tiktokAccounts.status, "active")
         )
       )
       .limit(1);
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 /**
  * DELETE /api/accounts/[accountId]
- * Disconnect account (delete from DB, cascade deletes posts/comments)
+ * Disconnect account (soft-delete — preserves posts/comments for reactivation)
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
@@ -97,14 +98,15 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Invalid account ID" }, { status: 400 });
     }
 
-    // Verify ownership before deleting
+    // Verify ownership (only active accounts can be disconnected)
     const [account] = await db
       .select({ id: tiktokAccounts.id })
       .from(tiktokAccounts)
       .where(
         and(
           eq(tiktokAccounts.id, accountIdNum),
-          eq(tiktokAccounts.userId, userId)
+          eq(tiktokAccounts.userId, userId),
+          eq(tiktokAccounts.status, "active")
         )
       )
       .limit(1);
@@ -132,9 +134,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Delete the account (cascade will handle posts and comments)
+    // Soft-delete: mark as disconnected (preserves posts and comments)
     await db
-      .delete(tiktokAccounts)
+      .update(tiktokAccounts)
+      .set({ status: "disconnected", updatedAt: new Date() })
       .where(eq(tiktokAccounts.id, accountIdNum));
 
     return NextResponse.json({ success: true });

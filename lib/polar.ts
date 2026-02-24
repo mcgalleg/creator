@@ -15,12 +15,17 @@ export function getPolar(): Polar {
   return _polar;
 }
 
-// Product ID -> tier mapping
-export const POLAR_PRODUCT_TO_TIER: Record<string, "free" | "basic" | "pro" | "mcp"> = {
+// Product ID -> tier mapping (monthly + annual variants)
+export const POLAR_PRODUCT_TO_TIER: Record<string, "free" | "basic" | "pro" | "agency" | "mcp"> = {
   [process.env.NEXT_PUBLIC_POLAR_PRODUCT_FREE!]: "free",
   [process.env.NEXT_PUBLIC_POLAR_PRODUCT_BASIC!]: "basic",
   [process.env.NEXT_PUBLIC_POLAR_PRODUCT_PRO!]: "pro",
+  [process.env.NEXT_PUBLIC_POLAR_PRODUCT_AGENCY!]: "agency",
   [process.env.NEXT_PUBLIC_POLAR_PRODUCT_MCP!]: "mcp",
+  // Annual variants map to the same tier
+  [process.env.NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_BASIC!]: "basic",
+  [process.env.NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_PRO!]: "pro",
+  [process.env.NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_AGENCY!]: "agency",
 };
 
 // Fetch BOTH meter balances from Polar for a customer
@@ -42,14 +47,16 @@ export async function getPolarMeterBalances(externalCustomerId: string): Promise
 export async function ingestAiTokenEvent(
   externalCustomerId: string,
   tokens: number,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown> & { externalId?: string }
 ) {
+  const { externalId, ...rest } = metadata ?? {};
   const polar = getPolar();
   await polar.events.ingest({
     events: [{
       name: "ai-tokens",
       externalCustomerId,
-      metadata: { tokens, ...metadata },
+      ...(externalId ? { externalId } : {}),
+      metadata: { tokens, ...rest },
     }],
   });
 }
@@ -58,14 +65,16 @@ export async function ingestAiTokenEvent(
 export async function ingestSyncCreditEvent(
   externalCustomerId: string,
   units: number,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown> & { externalId?: string }
 ) {
+  const { externalId, ...rest } = metadata ?? {};
   const polar = getPolar();
   await polar.events.ingest({
     events: [{
       name: "sync-credits",
       externalCustomerId,
-      metadata: { units, ...metadata },
+      ...(externalId ? { externalId } : {}),
+      metadata: { units, ...rest },
     }],
   });
 }

@@ -2,7 +2,7 @@ import { pgTable, pgEnum, text, integer, timestamp, uniqueIndex, check } from "d
 import { sql } from "drizzle-orm";
 
 // Subscription tier enum (also exported from feature-flags.ts for convenience)
-export const subscriptionTierEnum = pgEnum("subscription_tier", ["free", "basic", "pro", "mcp"]);
+export const subscriptionTierEnum = pgEnum("subscription_tier", ["free", "basic", "pro", "agency", "mcp"]);
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(), // Clerk user ID
@@ -16,6 +16,7 @@ export const users = pgTable("users", {
   creditsResetAt: timestamp("credits_reset_at"),
   onboardingCompletedAt: timestamp("onboarding_completed_at"),
   starterExpiresAt: timestamp("starter_expires_at"),
+  dataPurgeAt: timestamp("data_purge_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [

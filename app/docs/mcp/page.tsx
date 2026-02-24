@@ -258,8 +258,7 @@ export default function McpDocsPage() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Sign up and activate the MCP Apps plan for free. This gives
-                you MCP server access, 10 connected accounts, and 90-day
-                data retention.
+                you MCP server access and 10 connected accounts.
               </p>
             </CardContent>
           </Card>
@@ -572,8 +571,8 @@ export default function McpDocsPage() {
             <p className="text-sm text-muted-foreground">
               MCP Apps gives you MCP server access only. For the full web
               dashboard with AI Analytics Assistant, Canvas workspace, and
-              drag-and-drop widgets, upgrade to the Creator ($14.99/mo) or
-              Pro ($29.99/mo) plan. Both include MCP access.
+              drag-and-drop widgets, upgrade to Creator ($14.99/mo), Pro
+              ($29.99/mo), or Agency ($59.99/mo). All include MCP access.
             </p>
           </div>
           <div className="space-y-2">

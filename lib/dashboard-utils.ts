@@ -90,14 +90,15 @@ export async function withAccountAuth(
   }
   const period = isValidPeriod(periodParam) ? periodParam : "30d" as Period;
 
-  // Verify account ownership
+  // Verify account ownership (active only)
   const [account] = await db
     .select({ id: tiktokAccounts.id })
     .from(tiktokAccounts)
     .where(
       and(
         eq(tiktokAccounts.id, accountId),
-        eq(tiktokAccounts.userId, userId)
+        eq(tiktokAccounts.userId, userId),
+        eq(tiktokAccounts.status, "active")
       )
     )
     .limit(1);

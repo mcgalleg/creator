@@ -34,9 +34,9 @@ export function AccountDeleteDialog({
           <AlertDialogTitle>Disconnect Account</AlertDialogTitle>
           <AlertDialogDescription>
             Are you sure you want to disconnect{" "}
-            <span className="font-medium">@{username}</span>? This will delete
-            all synced posts and comments for this account. This action cannot
-            be undone.
+            <span className="font-medium">@{username}</span>? Your synced data
+            will be preserved. You can reconnect this account later to restore
+            access.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -44,7 +44,7 @@ export function AccountDeleteDialog({
           <AlertDialogAction
             onClick={onConfirm}
             disabled={isDeleting}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className=""
           >
             {isDeleting ? (
               <>

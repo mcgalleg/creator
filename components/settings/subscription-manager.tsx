@@ -26,7 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Crown, ArrowRight, Calendar, Coins, Bot, XCircle, Plug } from "lucide-react";
-import { getTierDisplayInfo, TIER_AI_TOKENS, TIER_SYNC_CREDITS } from "@/lib/subscriptions";
+import { getTierDisplayInfo, TIER_AI_TOKENS, TIER_SYNC_CREDITS, DATA_PURGE_DAYS } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/lib/subscriptions";
 
 interface UserSubscriptionData {
@@ -40,6 +40,7 @@ const TIER_BADGE_VARIANT: Record<SubscriptionTier, "secondary" | "default" | "ou
   free: "outline",
   basic: "secondary",
   pro: "default",
+  agency: "default",
   mcp: "secondary",
 };
 
@@ -138,115 +139,63 @@ export function SubscriptionManager() {
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* MCP tier: simplified info */}
-        {isMcp ? (
-          <>
-            <div className="flex items-center gap-3 rounded-lg border p-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-                <Coins className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Buy credit packs as needed</p>
-                <p className="text-xs text-muted-foreground">
-                  No monthly allocation — purchase sync credits a la carte
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border p-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-                <Bot className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Bring your own AI</p>
-                <p className="text-xs text-muted-foreground">
-                  Use Claude Desktop, ChatGPT, or any MCP-compatible client
-                </p>
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Monthly allocations */}
-            <div className="flex items-center gap-3 rounded-lg border p-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-                <Coins className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">
+      <CardContent>
+        <ul className="space-y-2.5 text-sm">
+          {isMcp ? (
+            <>
+              <li className="flex items-center gap-2">
+                <Coins className="h-4 w-4 text-primary shrink-0" />
+                <span>Buy credit packs as needed</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Bot className="h-4 w-4 text-primary shrink-0" />
+                <span>Bring your own AI client</span>
+              </li>
+            </>
+          ) : (
+            <>
+              <li className="flex items-center gap-2">
+                <Coins className="h-4 w-4 text-primary shrink-0" />
+                <span>
                   {monthlySyncCredits > 0
                     ? `${monthlySyncCredits.toLocaleString()} sync credits/month`
                     : "No monthly sync credits"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {monthlySyncCredits > 0
-                    ? "Included with your plan"
-                    : "Upgrade for monthly credits"}
-                </p>
-              </div>
-            </div>
-
-            {monthlyAiTokens > 0 && (
-              <div className="flex items-center gap-3 rounded-lg border p-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-                  <Bot className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">
-                    {(monthlyAiTokens / 1000).toLocaleString()}K AI tokens/month
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Included with your plan
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Billing dates */}
-            {isPaid && data?.subscriptionExpiresAt && (
-              <div className="flex items-center gap-3 rounded-lg border p-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-                  <Calendar className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">
-                    Next billing date
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDate(data.subscriptionExpiresAt)}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Credit reset date */}
-            {isPaid && data?.creditsResetAt && (
-              <div className="flex items-center gap-3 rounded-lg border p-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-                  <Coins className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Credits reset</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDate(data.creditsResetAt)}
-                  </p>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Account limits */}
-        <div className="text-sm text-muted-foreground">
-          Up to {tierInfo.accountLimit} connected{" "}
-          {(tierInfo.accountLimit as number) === 1 ? "account" : "accounts"}
-        </div>
+                </span>
+              </li>
+              {monthlyAiTokens > 0 && (
+                <li className="flex items-center gap-2">
+                  <Bot className="h-4 w-4 text-primary shrink-0" />
+                  <span>{(monthlyAiTokens / 1000).toLocaleString()}K AI tokens/month</span>
+                </li>
+              )}
+              {isPaid && data?.subscriptionExpiresAt && (
+                <li className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-primary shrink-0" />
+                  <span>Next billing: {formatDate(data.subscriptionExpiresAt)}</span>
+                </li>
+              )}
+              {isPaid && data?.creditsResetAt && (
+                <li className="flex items-center gap-2">
+                  <Coins className="h-4 w-4 text-primary shrink-0" />
+                  <span>Credits reset: {formatDate(data.creditsResetAt)}</span>
+                </li>
+              )}
+            </>
+          )}
+          <li className="flex items-center gap-2">
+            <Plug className="h-4 w-4 text-primary shrink-0" />
+            <span>
+              Up to {tierInfo.accountLimit} connected{" "}
+              {(tierInfo.accountLimit as number) === 1 ? "account" : "accounts"}
+            </span>
+          </li>
+        </ul>
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
         {isMcp ? (
           <Button asChild variant="outline" className="w-full">
             <Link href="/pricing">
-              Switch to Creator or Pro
+              Switch to Creator, Pro, or Agency
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
@@ -274,7 +223,7 @@ export function SubscriptionManager() {
                       {data?.subscriptionExpiresAt && (
                         <> ({formatDate(data.subscriptionExpiresAt)})</>
                       )}
-                      . After that, you&apos;ll lose access to paid features.
+                      . After that, you&apos;ll lose access to paid features. Your data will be permanently deleted {DATA_PURGE_DAYS} days after cancellation.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

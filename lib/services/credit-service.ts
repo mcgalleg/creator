@@ -13,7 +13,8 @@ export type CreditTransactionType =
   | "signup_bonus"
   | "ai_chat"
   | "subscription_renewal"
-  | "credit_pack_purchase";
+  | "credit_pack_purchase"
+  | "ai_token_pack_purchase";
 
 /**
  * Get current credit balance for user (sync credits from local cache)
@@ -118,7 +119,7 @@ export async function checkAiTokens(
 export async function addCredits(
   userId: string,
   amount: number,
-  type: "purchase" | "refund" | "signup_bonus" | "subscription_renewal" | "credit_pack_purchase",
+  type: "purchase" | "refund" | "signup_bonus" | "subscription_renewal" | "credit_pack_purchase" | "ai_token_pack_purchase",
   description: string
 ): Promise<number> {
   if (!amount || amount <= 0) {

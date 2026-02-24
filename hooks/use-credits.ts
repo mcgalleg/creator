@@ -42,16 +42,14 @@ export function useCredits(): CreditsState {
   return useCreditsInternal();
 }
 
-function useCreditsInternal(overrideOptions?: { refreshInterval?: number }): CreditsState {
+function useCreditsInternal(): CreditsState {
   const { data, error, isLoading, mutate: boundMutate } = useSWR<CreditsData>(
     CREDITS_KEY,
     creditsFetcher,
     {
-      refreshInterval: overrideOptions?.refreshInterval ?? 10_000,
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
       dedupingInterval: 2_000,
-      refreshWhenHidden: false,
       keepPreviousData: true,
     }
   );

@@ -255,7 +255,7 @@ const MORE_FEATURES = [
   {
     icon: Users,
     title: "Multi-Account",
-    desc: "Manage up to 25 TikTok accounts in one place",
+    desc: "Manage up to 50 TikTok accounts in one place",
   },
   {
     icon: RefreshCw,

@@ -1,4 +1,5 @@
 export { AccountInfo } from "./account-info";
-export { CreditDisplay } from "./credit-display";
-export { ConnectedAccountsPreview } from "./connected-accounts-preview";
+export { CreditBalanceTab } from "./credit-balance-tab";
+export { TransactionHistoryTab } from "./transaction-history-tab";
+export { SettingsTabs } from "./settings-tabs";
 export { DangerZone } from "./danger-zone";

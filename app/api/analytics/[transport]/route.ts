@@ -22,7 +22,7 @@ async function getUserAccounts(userId: string, accountIds?: string[]) {
   const accounts = await db
     .select()
     .from(tiktokAccounts)
-    .where(eq(tiktokAccounts.userId, userId));
+    .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")));
 
   if (accountIds && accountIds.length > 0) {
     const requestedIds = accountIds.map((id) => parseInt(id, 10));
@@ -83,7 +83,7 @@ function registerAnalyticsTools(server: McpServer) {
           lastSyncedAt: tiktokAccounts.lastSyncedAt,
         })
         .from(tiktokAccounts)
-        .where(eq(tiktokAccounts.userId, userId));
+        .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")));
 
       return {
         content: [

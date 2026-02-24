@@ -28,7 +28,16 @@ export default function AccountsPage() {
       </div>
 
       {/* Account Limits */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Free</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">1</p>
+            <p className="text-sm text-muted-foreground">TikTok account</p>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Creator</CardTitle>
@@ -43,7 +52,25 @@ export default function AccountsPage() {
             <CardTitle className="text-base">Pro</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">25</p>
+            <p className="text-2xl font-bold">15</p>
+            <p className="text-sm text-muted-foreground">TikTok accounts</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Agency</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">50</p>
+            <p className="text-sm text-muted-foreground">TikTok accounts</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">MCP Apps</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">10</p>
             <p className="text-sm text-muted-foreground">TikTok accounts</p>
           </CardContent>
         </Card>

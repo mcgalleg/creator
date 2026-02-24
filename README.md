@@ -1,19 +1,18 @@
-# Creator Analytics
+# Astriq — AI-Powered TikTok Analytics
 
-AI-powered TikTok analytics dashboard that lets content creators understand their performance through natural language queries.
+Astriq is an AI-powered TikTok analytics platform that lets content creators understand their performance through natural language queries, customizable dashboards, and a freeform canvas workspace.
 
 ## Features
 
-- **Natural Language Analytics** - Ask questions about your TikTok data in plain English
-- **AI-Generated Visualizations** - Claude AI generates interactive charts and metrics
-- **Canvas Workspace** - Pin visualizations to a persistent canvas with drag-and-drop layout
-- **Dynamic Dashboard** - Customizable widget-based dashboard with 20+ widget types
-- **Multi-Account Support** - Connect and analyze multiple TikTok accounts
-- **Smart Comment Sync** - Flexible sync options (by selection, top performers, date range, or budget)
-- **Persistent Async State** - Long-running operations (syncs, connections) survive page refreshes
-- **Subscription Tiers** - Feature gating with Free, Pro, and Enterprise tiers
-- **Credit System** - Pay-as-you-go pricing for data syncs
-- **Keyboard Shortcuts** - Command palette (Cmd+K) and customizable shortcuts
+- **AI Chat Copilot** — Ask questions about your TikTok data in plain English; Claude generates interactive charts, metrics, and insights
+- **Canvas Workspace** — Freeform Excalidraw workspace for sketching notes, shapes, and visual strategy planning
+- **Dynamic Dashboard** — 20+ customizable widgets with drag-and-drop responsive grid layout
+- **Multi-Account Support** — Connect and analyze multiple TikTok accounts (1–50 depending on tier)
+- **Smart Comment Sync** — Sync by selection, top performers, date range, or budget
+- **MCP Server** — Connect Claude Desktop, ChatGPT, or Claude Code as external AI clients
+- **17 Color Themes** — Full theming with light/dark mode support
+- **Data Export** — Download canvas and dashboards as PDF or CSV
+- **Keyboard Shortcuts** — Command palette (`Cmd+K`) and customizable shortcuts
 
 ## Tech Stack
 
@@ -21,10 +20,12 @@ AI-powered TikTok analytics dashboard that lets content creators understand thei
 - **AI**: Anthropic Claude (claude-sonnet-4-20250514) with tool calling
 - **Database**: PostgreSQL (Neon serverless) with Drizzle ORM
 - **Authentication**: Clerk
+- **Payments**: Polar (subscriptions, credit packs, AI token packs)
 - **Data Source**: Apify TikTok Scraper
-- **Styling**: Tailwind CSS v4, Shadcn/ui, Radix UI
+- **Styling**: Tailwind CSS v4, Shadcn/ui, Radix UI, Lucide React icons
 - **Charts**: Recharts
-- **Canvas**: React Flow for node-based visualization workspace
+- **Canvas**: Excalidraw
+- **Video**: Remotion
 - **UI Generation**: @json-render for validated component trees
 
 ## Getting Started
@@ -32,11 +33,12 @@ AI-powered TikTok analytics dashboard that lets content creators understand thei
 ### Prerequisites
 
 - Node.js 20+
-- npm or pnpm
+- npm
 - PostgreSQL database (Neon recommended)
 - Clerk account
 - Anthropic API key
 - Apify API token
+- Polar account (for subscriptions and payments)
 
 ### Installation
 
@@ -54,6 +56,12 @@ cp .env.example .env.local
 
 # Run database migrations
 npx drizzle-kit push
+
+# Set up Polar products (subscriptions, credit packs, webhook)
+npx tsx scripts/setup-polar.ts
+
+# Set up AI token packs in Polar
+npx tsx scripts/setup-ai-token-packs.ts
 
 # Start development server
 npm run dev
@@ -78,177 +86,190 @@ ANTHROPIC_MODEL=claude-sonnet-4-20250514
 
 # Data Scraping (Apify)
 APIFY_API_TOKEN=apify_...
+
+# Payments (Polar) — populated by setup scripts
+POLAR_ACCESS_TOKEN=pat_...
+POLAR_WEBHOOK_SECRET=...
+POLAR_WEBHOOK_URL=https://<your-url>
+POLAR_SERVER=sandbox           # or "production"
+POLAR_AI_METER_ID=...
+POLAR_SYNC_METER_ID=...
+NEXT_PUBLIC_POLAR_PRODUCT_BASIC=...
+NEXT_PUBLIC_POLAR_PRODUCT_PRO=...
+NEXT_PUBLIC_POLAR_PRODUCT_AGENCY=...
+NEXT_PUBLIC_POLAR_PRODUCT_MCP=...
+NEXT_PUBLIC_POLAR_PRODUCT_FREE=...
+NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_BASIC=...
+NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_PRO=...
+NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_AGENCY=...
+NEXT_PUBLIC_POLAR_PRODUCT_CREDIT_STARTER=...
+NEXT_PUBLIC_POLAR_PRODUCT_CREDIT_VALUE=...
+NEXT_PUBLIC_POLAR_PRODUCT_CREDIT_POWER=...
+NEXT_PUBLIC_POLAR_PRODUCT_CREDIT_BULK=...
+NEXT_PUBLIC_POLAR_PRODUCT_AI_TOKEN_STARTER=...
+NEXT_PUBLIC_POLAR_PRODUCT_AI_TOKEN_VALUE=...
+NEXT_PUBLIC_POLAR_PRODUCT_AI_TOKEN_POWER=...
+NEXT_PUBLIC_POLAR_PRODUCT_AI_TOKEN_BULK=...
 ```
+
+## Pricing
+
+### Subscription Tiers
+
+| Tier | Monthly | Annual | AI Tokens/mo | Sync Credits/mo | Accounts |
+|------|---------|--------|-------------|----------------|----------|
+| **Free** | $0 | $0 | 100K | 50 | 1 |
+| **Creator** | $14.99 | $11.99/mo | 1M | 500 | 5 |
+| **Pro** | $29.99 | $23.99/mo | 3M | 1,500 | 15 |
+| **Agency** | $59.99 | $47.99/mo | 10M | 4,000 | 50 |
+| **MCP Apps** | Pay as you go | — | — | — | 10 |
+
+Data is retained while subscribed. 60 days after cancellation, data is permanently deleted.
+
+### Sync Credit Packs
+
+One-time purchases that never expire. Used for syncing posts and comments.
+
+| Pack | Credits | Price | Per Credit |
+|------|---------|-------|------------|
+| Starter | 250 | $4.99 | $0.020 |
+| Value | 600 | $9.99 | $0.017 |
+| Power | 1,500 | $19.99 | $0.013 |
+| Bulk | 3,000 | $34.99 | $0.012 |
+
+### AI Token Packs
+
+One-time purchases that never expire. Used for AI chat queries.
+
+| Pack | Tokens | Price | Per 1K Tokens |
+|------|--------|-------|---------------|
+| Starter | 250K | $2.99 | $0.012 |
+| Value | 1M | $8.99 | $0.009 |
+| Power | 3M | $19.99 | $0.007 |
+| Bulk | 10M | $49.99 | $0.005 |
+
+### Credit Costs
+
+| Operation | Cost |
+|-----------|------|
+| Post sync | 1 credit per post |
+| Comment sync | 0.15 credits per comment |
+| AI chat | ~1 credit per 5K tokens |
 
 ## Project Structure
 
 ```
 creator/
-├── app/                    # Next.js App Router
-│   ├── api/               # API routes
-│   │   ├── accounts/      # TikTok account management & sync
-│   │   ├── chat/          # AI analytics chat
-│   │   ├── credits/       # Credit system & history
-│   │   ├── canvases/      # Canvas persistence
-│   │   ├── dashboard/     # Dashboard data APIs
-│   │   ├── features/      # Feature flags API
-│   │   ├── mcp/           # MCP server endpoint
-│   │   └── auth/webhook/  # Clerk webhook
-│   ├── dashboard/         # Protected dashboard pages
-│   │   ├── accounts/      # Account management page
-│   │   └── settings/      # User settings page
-│   └── page.tsx           # Public landing page
+├── app/
+│   ├── api/
+│   │   ├── accounts/          # Account CRUD & sync
+│   │   ├── analytics/         # Analytics transport
+│   │   ├── auth/webhook/      # Clerk webhook
+│   │   ├── chat/              # AI chat (streaming)
+│   │   ├── checkout/          # Polar checkout
+│   │   ├── credits/           # Credit balance & history
+│   │   ├── cron/              # Scheduled jobs (data purge)
+│   │   ├── dashboard/         # Dashboard data APIs
+│   │   ├── drawings/          # Canvas persistence
+│   │   ├── features/          # Feature flags
+│   │   ├── image/             # Image proxy
+│   │   ├── mcp-app/           # MCP server endpoint
+│   │   ├── portal/            # Billing portal
+│   │   ├── test/              # Testing APIs (dev only)
+│   │   ├── user/              # User settings & subscription
+│   │   └── webhooks/          # Polar & Apify webhooks
+│   ├── dashboard/             # Protected dashboard pages
+│   │   ├── accounts/          # Account management
+│   │   ├── mcp/               # MCP tier dashboard
+│   │   └── settings/          # User settings
+│   ├── docs/                  # Help & documentation pages
+│   ├── onboarding/            # Account connection flow
+│   ├── pricing/               # Pricing page
+│   ├── privacy/               # Privacy policy
+│   ├── terms/                 # Terms of service
+│   └── page.tsx               # Landing page
 ├── components/
-│   ├── analytics/         # Chart and visualization components
-│   ├── backgrounds/       # Animated background effects
-│   ├── canvas/            # Canvas workspace (React Flow)
-│   ├── chat/              # Chat interface
-│   ├── dashboard/         # Dashboard shell, widgets, and navigation
-│   ├── settings/          # Settings page components
-│   ├── layout/            # Layout primitives (Row, Column, Grid)
-│   └── ui/                # Shadcn/ui components
-├── contexts/              # React contexts (features, canvas)
-├── hooks/                 # Custom React hooks
-│   ├── use-accounts.ts    # Account management with persistent sync state
-│   ├── use-analytics-chat.ts
-│   ├── use-breakpoint.ts
-│   ├── use-canvas-state.ts
-│   ├── use-canvases.ts
-│   ├── use-dashboard-data.ts
-│   ├── use-dashboard-layout.ts
-│   ├── use-features.ts
-│   ├── use-keyboard-shortcuts.ts
+│   ├── analytics/             # Chart & visualization components
+│   ├── backgrounds/           # Animated backgrounds (PixelBlast)
+│   ├── chat/                  # Chat interface
+│   ├── dashboard/             # Dashboard shell, widgets, navigation
+│   │   └── accounts/          # Account management UI
+│   ├── excalidraw/            # Canvas drawing components
+│   ├── landing/               # Landing page sections
+│   ├── onboarding/            # Onboarding flow
+│   ├── remotion/              # Video player (Remotion)
+│   ├── settings/              # Settings page components
+│   └── ui/                    # Shadcn/ui components
+├── contexts/                  # React contexts (features, sync, theme)
+├── drizzle/                   # Database migrations
+├── e2e/                       # Playwright tests
+├── hooks/                     # Custom React hooks
 ├── lib/
-│   ├── db/                # Drizzle ORM setup and schemas
-│   ├── services/          # Business logic (sync, credits, features, users)
-│   ├── widgets/           # Widget registry and implementations
-│   ├── persistent-async-state.ts  # localStorage persistence utilities
-│   ├── catalog.ts         # AI component catalog
-│   ├── auth.ts            # Authentication utilities
-│   └── utils.ts           # General utilities
-└── public/                # Static assets
+│   ├── db/schema/             # Drizzle ORM schemas
+│   ├── mcp-app/               # MCP server (tools, auth, data)
+│   ├── services/              # Business logic
+│   │   ├── credit-service.ts  # Credit holds, deductions, transactions
+│   │   ├── feature-service.ts # Tier-based feature gating
+│   │   ├── subscription-service.ts
+│   │   ├── sync-service.ts    # Apify integration & sync logic
+│   │   └── user-service.ts    # User provisioning
+│   ├── auth.ts                # Clerk auth + bypass mode
+│   ├── credits.ts             # Credit rate constants
+│   ├── polar.ts               # Polar API (meters, billing)
+│   ├── subscriptions.ts       # Tier config, credit packs, AI token packs
+│   └── transaction-utils.ts   # Transaction display helpers
+├── scripts/
+│   ├── setup-polar.ts         # Create Polar subscriptions & credit packs
+│   ├── setup-ai-token-packs.ts # Create Polar AI token packs
+│   ├── seed-test-user.ts      # Seed single test user
+│   └── seed-test-users.ts     # Seed multiple test users
+└── public/                    # Static assets
 ```
 
 ## Architecture
 
 ### Data Flow
 
-1. **Authentication**: Clerk handles user sign-in; webhook creates user record with signup credits
-2. **Account Connection**: User enters TikTok username; Apify validates and scrapes profile
-3. **Data Sync**: Background jobs fetch posts/comments; credits deducted on completion
-4. **Analytics Chat**: User asks questions; Claude AI queries data and generates visualizations
-5. **Dashboard**: Pinned charts persist across sessions; real-time updates via hooks
+1. **Authentication** — Clerk handles sign-in; webhook creates user record with signup credits
+2. **Account Connection** — User enters TikTok username; Apify validates and scrapes profile
+3. **Data Sync** — Background jobs fetch posts/comments; sync credits deducted on completion
+4. **Analytics Chat** — User asks questions; Claude queries data and generates visualizations
+5. **Dashboard** — Customizable widgets with persistent responsive layouts
 
-### Persistent Async State
+### Subscription & Billing
 
-Long-running operations persist to localStorage and survive page refreshes:
+Polar handles all subscription and payment processing:
 
-- **Account Connection**: Shows "Connecting @username..." after refresh until complete
-- **Account Sync**: Resumes polling for sync status after refresh
-- **Comment Sync**: Shows sync-in-progress banner in dialog
-
-State expires after configurable timeouts (2 minutes for connections, 15 minutes for syncs).
+- **Meters** — Two Polar meters track usage: `ai-tokens` and `sync-credits`
+- **Subscriptions** — Monthly/annual plans grant meter credits via Polar benefits
+- **Credit Packs** — One-time purchases with `rollover: true` benefits (never expire)
+- **AI Token Packs** — Same architecture as credit packs, attached to the AI meter
+- **Webhooks** — `onOrderPaid` handles both subscription renewals and one-time pack purchases
+- **Balance Sync** — Local DB caches meter balances; Polar is the source of truth
 
 ### Database Schema
 
-- **users** - User profiles with subscription tier (free/basic/pro)
-- **tiktok_accounts** - Connected TikTok accounts
-- **posts** - Synced TikTok videos with engagement metrics
-- **comments** - Video comments (optional sync)
-- **account_metrics_history** - Time-series engagement snapshots
-- **credit_transactions** - Audit log for credit changes
-- **sync_jobs** - Background sync job tracking with comment sync config
-- **canvases** - Persistent canvas workspaces with React Flow state
-- **canvas_annotations** - Canvas sticky notes and text annotations
-- **dashboard_layouts** - Custom dashboard widget layouts
-- **feature_flags** - System-wide feature configuration
-- **user_feature_overrides** - Per-user feature access overrides
+| Table | Description |
+|-------|-------------|
+| `users` | User profiles with subscription tier, credit balance, onboarding status |
+| `tiktok_accounts` | Connected TikTok accounts with profile data |
+| `posts` | Synced TikTok videos with engagement metrics |
+| `comments` | Video comments with sentiment analysis |
+| `sync_jobs` | Background sync job tracking |
+| `credit_transactions` | Audit log for all credit changes |
+| `drawings` | Excalidraw canvas state |
+| `dashboard_layouts` | Custom widget layouts per breakpoint |
+| `feature_flags` | System-wide feature configuration |
+| `user_feature_overrides` | Per-user feature access overrides |
 
-### Subscription Tiers
+### MCP Server
 
-| Tier | Features |
-|------|----------|
-| **Free** | Dashboard with default widgets |
-| **Pro** | Dashboard + Canvas + Analytics Assistant |
-| **Enterprise** | All features + priority support |
+The MCP (Model Context Protocol) server at `/api/mcp-app` exposes two tools:
 
-### Credit System
+- `describe_tables` — Returns database schema for the user's connected accounts
+- `query_data` — Executes read-only SQL queries scoped to the user's data
 
-Pay-per-sync model (1 credit = $0.01):
-
-| Operation | Cost |
-|-----------|------|
-| Profile sync | 25 credits |
-| Posts (per 50) | 25 credits |
-| Comments (per 100) | 15 credits |
-| Signup bonus | 100 credits free |
-
-### Widget Library
-
-The dashboard includes 23 customizable widgets organized by category:
-
-**KPI Widgets**
-- Followers, Total Plays, Engagement Rate
-- Total Likes, Total Saves, Total Shares
-- Average Views, Content Velocity, Overview Metrics
-
-**Chart Widgets**
-- Engagement Trend, Engagement Breakdown
-- Posting Frequency, Best Posting Times
-- Growth Chart, Duration vs Performance
-
-**Content Widgets**
-- Top Performing Videos, Recent Posts
-- Viral Posts, Underperforming Content
-
-**Comment Widgets**
-- Recent Comments, Top Commenters
-- Comment Sentiment, Comment Activity
-
-### Comment Sync Options
-
-Flexible comment syncing strategies:
-
-- **By Selection** - Manually pick specific posts to sync comments
-- **Top Performers** - Auto-sync comments from top N posts by engagement
-- **Date Range** - Sync posts within a date range with max comments limit
-- **Budget Mode** - Set credit budget, system optimizes which posts to sync
-
-## Development
-
-```bash
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm run start
-
-# Run linting
-npm run lint
-
-# Database operations
-npx drizzle-kit push     # Push schema to database
-npx drizzle-kit studio   # Open Drizzle Studio
-```
-
-### Testing with Auth Bypass
-
-For automated testing without Clerk authentication (development only):
-
-```bash
-# Add to .env.local (NEVER use in production)
-BYPASS_AUTH=true
-
-# Seed test user
-npx tsx scripts/seed-test-user.ts
-```
-
-This creates a test user (`test_user_123`) with 1000 credits and pro tier access.
-
-**Security Note**: The auth bypass includes a production safeguard that throws an error if `BYPASS_AUTH=true` is detected in production environment.
+This allows external AI clients (Claude Desktop, ChatGPT, Claude Code) to query TikTok analytics directly.
 
 ## API Routes
 
@@ -262,6 +283,8 @@ This creates a test user (`test_user_123`) with 1000 credits and pro tier access
 | POST | `/api/accounts/[id]/sync` | Trigger data sync |
 | GET | `/api/accounts/[id]/sync` | Get sync job status |
 | POST | `/api/accounts/[id]/sync/comments` | Trigger comment sync |
+| GET | `/api/accounts/[id]/refresh-profile` | Refresh profile metadata |
+| GET | `/api/accounts/[id]/stats` | Get account stats |
 
 ### Dashboard Data
 
@@ -276,57 +299,49 @@ This creates a test user (`test_user_123`) with 1000 credits and pro tier access
 | GET | `/api/dashboard/growth` | Follower growth data |
 | GET | `/api/dashboard/comments` | Recent comments |
 | GET | `/api/dashboard/comments/top-commenters` | Most active commenters |
-| GET | `/api/dashboard/comments/sentiment` | Comment sentiment analysis |
-| GET | `/api/dashboard/comments/activity` | Comment activity over time |
+| GET | `/api/dashboard/duration-performance` | Duration vs engagement |
 | GET/PUT | `/api/dashboard/layouts` | Dashboard layout management |
 
 ### Other APIs
 
 | Method | Route | Description |
 |--------|-------|-------------|
-| POST | `/api/chat` | AI analytics chat |
-| GET | `/api/credits` | Get credit balance |
+| POST | `/api/chat` | AI analytics chat (streaming) |
+| GET | `/api/credits` | Credit balance & pricing |
 | GET | `/api/credits/history` | Credit transaction history |
-| GET | `/api/features` | Get feature flags |
-| GET/POST | `/api/canvases` | Canvas CRUD operations |
-| GET/PUT/DELETE | `/api/canvases/[id]` | Single canvas operations |
-| * | `/api/mcp/[transport]` | MCP server endpoint |
+| GET | `/api/checkout` | Polar checkout redirect |
+| GET | `/api/portal` | Polar billing portal |
+| GET | `/api/features` | Feature flags per tier |
+| GET/POST | `/api/drawings` | Canvas CRUD |
+| GET/PUT | `/api/user/subscription` | Subscription management |
+| POST | `/api/user/subscription/cancel` | Cancel subscription |
 
-## Key Components
+### Webhooks
 
-### Analytics Visualizations
-- `MetricCard` - Single KPI display with trend indicator
-- `MetricGroup` - Grouped metrics display
-- `BarChart`, `LineChart`, `AreaChart`, `PieChart` - Recharts wrappers
-- `DataTable` - Structured data display with sorting
-- `VideoCard`, `TopVideosGrid` - TikTok video previews
-- `EngagementTimeline` - Engagement trends over time
+| Method | Route | Description |
+|--------|-------|-------------|
+| POST | `/api/auth/webhook` | Clerk user creation |
+| POST | `/api/webhooks/polar` | Polar subscription & order events |
+| POST | `/api/webhooks/apify` | Apify sync completion |
 
-### Dashboard Components
-- `DynamicDashboard` - Widget-based customizable dashboard
-- `DashboardGrid` - Responsive grid layout with react-grid-layout
-- `DashboardWidget` - Individual widget container
-- `WidgetPicker` - Widget selection dialog
-- `ViewTabs` - Dashboard/Canvas/Chat view switcher
+## Widget Library
 
-### Chat Interface
-- `ChatContainer` - Main AI chat UI
-- `ChatPanel` - Resizable chat sidebar
-- `MessageList` - Chat message display
-- `AnalyticsRenderer` - Renders AI-generated component trees
-- `VisualizationReference` - Referenced chart in chat
+The dashboard includes 20+ customizable widgets:
 
-### Canvas Components
-- `AnalyticsCanvas` - React Flow canvas workspace
-- `CanvasToolbar` - Canvas editing tools
-- `StickyNoteNode`, `TextNoteNode` - Annotation nodes
-- `AnalyticsCardNode` - Pinned visualization node
+**KPI Widgets** — Followers, Total Plays, Engagement Rate, Total Likes, Total Saves, Total Shares, Average Views, Content Velocity, Overview Metrics
 
-### Account Management
-- `AccountConnectionForm` - TikTok username input with persistent state
-- `AccountList` - Connected accounts display
-- `CommentSyncDialog` - Comment sync configuration
-- `SyncStatus` - Sync progress indicator
+**Chart Widgets** — Engagement Trend, Engagement Breakdown, Posting Frequency, Best Posting Times, Growth Chart, Duration vs Performance
+
+**Content Widgets** — Top Performing Videos, Recent Posts, Viral Posts, Underperforming Content
+
+**Comment Widgets** — Recent Comments, Top Commenters, Comment Sentiment, Comment Activity
+
+## Comment Sync Options
+
+- **By Selection** — Manually pick specific posts to sync comments
+- **Top Performers** — Auto-sync comments from top N posts by engagement
+- **Date Range** — Sync posts within a date range with max comments limit
+- **Budget Mode** — Set credit budget, system optimizes which posts to sync
 
 ## Keyboard Shortcuts
 
@@ -339,6 +354,47 @@ This creates a test user (`test_user_123`) with 1000 credits and pro tier access
 | `Cmd+3` | Switch to Chat view |
 | `?` | Show keyboard shortcuts help |
 
+## Development
+
+```bash
+npm run dev       # Start development server (port 3000)
+npm run build     # Production build
+npm run start     # Start production server
+npm run lint      # Run ESLint
+
+# Database
+npx drizzle-kit push     # Push schema to database
+npx drizzle-kit studio   # Open Drizzle Studio
+
+# Polar setup
+npx tsx scripts/setup-polar.ts           # Subscriptions & sync credit packs
+npx tsx scripts/setup-ai-token-packs.ts  # AI token packs
+```
+
+### Testing with Auth Bypass
+
+For automated testing without Clerk authentication (development only):
+
+```bash
+# Add to .env.local (NEVER use in production)
+BYPASS_AUTH=true
+
+# Seed test users
+npx tsx scripts/seed-test-user.ts    # Single test user (1000 credits, pro tier)
+npx tsx scripts/seed-test-users.ts   # Multiple test users (api, ui, edge, default)
+```
+
+**How it works:**
+- `auth()` returns `{ userId: "test_user_123" }` instead of calling Clerk
+- Middleware skips Clerk protection
+- Custom test user ID via `X-Test-User-Id` header for multi-user isolation
+- Production safeguard throws if `BYPASS_AUTH=true` in production
+
+**Test-only API routes** (guarded by `BYPASS_AUTH`):
+- `GET /api/test/state` — Inspect DB state
+- `POST /api/test/reset-credits` — Reset credit balance
+- `GET/POST /api/test/subscription` — Manage test subscription
+
 ## Deployment
 
 Deploy on [Vercel](https://vercel.com) for optimal Next.js performance:
@@ -347,8 +403,14 @@ Deploy on [Vercel](https://vercel.com) for optimal Next.js performance:
 2. Configure environment variables
 3. Deploy
 
-Ensure the Clerk webhook endpoint (`/api/auth/webhook`) is configured to receive user creation events.
+**Required webhook endpoints:**
+- Clerk: `/api/auth/webhook` (user creation events)
+- Polar: `/api/webhooks/polar` (subscription and order events)
+- Apify: `/api/webhooks/apify` (sync completion)
+
+**Cron jobs** (configured in `vercel.json`):
+- `GET /api/cron/purge-data` — Daily at 6 AM UTC, purges data for cancelled users after 60 days
 
 ## License
 
-Private - All rights reserved
+Private — All rights reserved

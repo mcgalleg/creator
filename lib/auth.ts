@@ -21,9 +21,10 @@ export type FeatureKey = (typeof FEATURES)[keyof typeof FEATURES];
  * and as reference when syncing features to Clerk metadata.
  */
 const DEFAULT_TIER_FEATURES: Record<SubscriptionTier, FeatureKey[]> = {
-  free: [],
+  free: [FEATURES.CANVAS, FEATURES.ANALYTICS_ASSISTANT, FEATURES.EXPORT_REPORTS],
   basic: [FEATURES.CANVAS, FEATURES.ANALYTICS_ASSISTANT, FEATURES.EXPORT_REPORTS],
   pro: [FEATURES.CANVAS, FEATURES.ANALYTICS_ASSISTANT, FEATURES.EXPORT_REPORTS],
+  agency: [FEATURES.CANVAS, FEATURES.ANALYTICS_ASSISTANT, FEATURES.EXPORT_REPORTS],
   mcp: [],
 };
 

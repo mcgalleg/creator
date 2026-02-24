@@ -44,6 +44,7 @@ export function AccountConnectPreview({
   }, []);
 
   const insufficientCredits = estimatedCost > userCreditBalance;
+  const isEstimate = importConfig?.mode === "date_range";
 
   const handleConnect = async () => {
     try {
@@ -142,12 +143,12 @@ export function AccountConnectPreview({
         {isConnecting ? (
           <>
             <Loader2 className="size-4 animate-spin" />
-            Connecting...
+            Importing...
           </>
         ) : insufficientCredits ? (
           "Insufficient credits"
         ) : (
-          `Connect & Import for ${estimatedCost} credits`
+          `Import for ${isEstimate ? "~" : ""}${estimatedCost} credits`
         )}
       </Button>
     </div>

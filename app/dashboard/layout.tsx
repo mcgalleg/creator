@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { auth, isAuthBypassed, hasFeature, FEATURES } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { tiktokAccounts, users } from "@/lib/db/schema";
 import { CompactHeader } from "@/components/dashboard/compact-header";
@@ -40,7 +40,7 @@ export default async function DashboardLayout({
           avatarUrl: tiktokAccounts.avatarUrl,
         })
         .from(tiktokAccounts)
-        .where(eq(tiktokAccounts.userId, userId))
+        .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")))
     : [];
   const accounts = rawAccounts.map((a) => ({
     ...a,

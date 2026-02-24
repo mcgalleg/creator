@@ -4,6 +4,11 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -300,20 +305,27 @@ export function AccountOverviewTab({
 
       {/* Action Buttons */}
       <div className="flex flex-col gap-2 pt-2">
-        <Button
-          variant="outline"
-          onClick={handleProfileRefresh}
-          disabled={isSyncing || isDisconnecting || isRefreshingProfile}
-          className="w-full"
-        >
-          <RefreshCw
-            className={`size-4 ${isRefreshingProfile ? "animate-spin" : ""}`}
-          />
-          {isRefreshingProfile ? "Refreshing..." : "Refresh Profile"}
-          <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0">
-            FREE
-          </Badge>
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              onClick={handleProfileRefresh}
+              disabled={isSyncing || isDisconnecting || isRefreshingProfile}
+              className="w-full"
+            >
+              <RefreshCw
+                className={`size-4 ${isRefreshingProfile ? "animate-spin" : ""}`}
+              />
+              {isRefreshingProfile ? "Refreshing..." : "Refresh Profile"}
+              <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0">
+                FREE
+              </Badge>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            Updates your follower count, total likes, and video count
+          </TooltipContent>
+        </Tooltip>
         <Button
           variant="outline"
           onClick={() => setDeleteDialogOpen(true)}

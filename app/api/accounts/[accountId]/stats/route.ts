@@ -37,7 +37,7 @@ export async function GET(
       );
     }
 
-    // Verify the account belongs to the user
+    // Verify the account belongs to the user (active only)
     const [account] = await db
       .select({
         id: tiktokAccounts.id,
@@ -48,7 +48,8 @@ export async function GET(
       .where(
         and(
           eq(tiktokAccounts.id, accountIdNum),
-          eq(tiktokAccounts.userId, userId)
+          eq(tiktokAccounts.userId, userId),
+          eq(tiktokAccounts.status, "active")
         )
       )
       .limit(1);

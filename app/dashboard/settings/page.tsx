@@ -5,10 +5,7 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { Settings } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { SubscriptionManager } from "@/components/settings/subscription-manager";
-import { CreditDisplay } from "@/components/settings/credit-display";
-import { ConnectedAccountsPreview } from "@/components/settings/connected-accounts-preview";
-import { McpConnectionSetup } from "@/components/settings/mcp-configuration";
+import { SettingsTabs } from "@/components/settings/settings-tabs";
 
 export const metadata = {
   title: "Settings | Creator Analytics",
@@ -32,8 +29,6 @@ export default async function SettingsPage() {
     : [];
 
   const tier = userRecord[0]?.subscriptionTier ?? "free";
-  const isMcp = tier === "mcp";
-  const showMcpConfig = isMcp || tier === "basic" || tier === "pro";
 
   return (
     <div className="container max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
@@ -53,42 +48,7 @@ export default async function SettingsPage() {
 
         <Separator />
 
-        {/* MCP tier: MCP config first, then simplified subscription + credits */}
-        {isMcp ? (
-          <>
-            <section>
-              <McpConnectionSetup />
-            </section>
-
-            <section>
-              <SubscriptionManager />
-            </section>
-
-            <section className="grid gap-6 md:grid-cols-2">
-              <CreditDisplay />
-              <ConnectedAccountsPreview />
-            </section>
-          </>
-        ) : (
-          <>
-            {/* Creator/Pro: standard layout */}
-            <section>
-              <SubscriptionManager />
-            </section>
-
-            <section className="grid gap-6 md:grid-cols-2">
-              <CreditDisplay />
-              <ConnectedAccountsPreview />
-            </section>
-
-            {/* MCP config for Creator/Pro as bonus feature */}
-            {showMcpConfig && (
-              <section>
-                <McpConnectionSetup compact />
-              </section>
-            )}
-          </>
-        )}
+        <SettingsTabs tier={tier} />
       </div>
     </div>
   );

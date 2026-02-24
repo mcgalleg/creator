@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     // Upsert user: if email exists, update the Clerk ID (user re-registered)
     // This handles both duplicate webhooks and re-registered users
     // Credits now come from Polar, so creditBalance starts at 0
-    const [upsertResult] = await db.insert(users)
+    await db.insert(users)
       .values({
         id,
         email,
@@ -93,8 +93,7 @@ export async function POST(req: Request) {
           imageUrl: image_url ?? null,
           updatedAt: new Date(),
         },
-      })
-      .returning({ starterExpiresAt: users.starterExpiresAt });
+      });
 
     // Create Polar customer with Clerk ID as externalId
     try {
@@ -115,17 +114,6 @@ export async function POST(req: Request) {
     } catch (polarErr) {
       // Log but don't fail the webhook — user is created in DB regardless
       console.error(`Failed to create Polar customer for ${id}:`, polarErr);
-    }
-
-    // Start 30-day Starter period (skip for re-registered users who already have one)
-    // Wrapped in separate try/catch so starter failure doesn't break user creation
-    try {
-      if (!upsertResult?.starterExpiresAt) {
-        const { startStarter } = await import("@/lib/services/trial-service");
-        await startStarter(id);
-      }
-    } catch (starterErr) {
-      console.error(`Failed to start starter for ${id}:`, starterErr);
     }
 
     console.log(`Upserted user ${id} (email: ${email})`);
