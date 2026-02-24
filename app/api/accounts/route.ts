@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
         id: account.id,
         username: account.username,
         displayName: account.displayName,
-        avatarUrl: account.avatarUrl,
+        avatarUrl: proxyImageUrl(account.avatarUrl),
         followerCount: account.followerCount,
         followingCount: account.followingCount,
         likesCount: account.likesCount,

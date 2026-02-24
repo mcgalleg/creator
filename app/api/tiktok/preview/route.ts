@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { validateUsername, estimateSyncCost, estimateCommentSyncCost } from "@/lib/services/sync-service";
+import { proxyImageUrl } from "@/lib/image-proxy";
 
 // Simple in-memory cache for preview results
 // In production, consider using Redis or a proper caching solution
@@ -112,7 +113,7 @@ export async function GET(request: NextRequest) {
       profile: {
         username: profile.username,
         displayName: profile.displayName,
-        avatarUrl: profile.avatarUrl,
+        avatarUrl: proxyImageUrl(profile.avatarUrl) || "",
         followerCount: profile.followerCount,
         followingCount: profile.followingCount,
         likesCount: profile.likesCount,
