@@ -571,27 +571,6 @@
    Hero gradient, scroll reveal, and decorative effects
    ═══════════════════════════════════════════════════════════════════════════ */
 
-@keyframes gradient-shift {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-.hero-gradient {
-  background: linear-gradient(
-    135deg,
-    oklch(from var(--primary) l c h / 0.05) 0%,
-    oklch(from var(--background) l c h) 25%,
-    oklch(from var(--primary) l c h / 0.08) 50%,
-    oklch(from var(--background) l c h) 75%,
-    oklch(from var(--primary) l c h / 0.03) 100%
-  );
-  background-size: 200% 200%;
-  animation: gradient-shift 8s ease-in-out infinite;
-}
 
 @keyframes float {
   0%, 100% {

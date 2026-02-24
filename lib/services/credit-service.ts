@@ -87,6 +87,31 @@ export async function syncCreditBalance(userId: string): Promise<number> {
 }
 
 /**
+ * Verify user has sufficient AI token balance.
+ * Reads from Polar AI token meter (source of truth), falls back to 0.
+ */
+export async function checkAiTokens(
+  userId: string,
+  amount: number
+): Promise<{ sufficient: boolean; balance: number; required: number }> {
+  let balance: number;
+
+  try {
+    const meterBalances = await getPolarMeterBalances(userId);
+    balance = meterBalances.aiTokens;
+  } catch {
+    // Polar unreachable — deny by default (no local cache for AI tokens)
+    balance = 0;
+  }
+
+  return {
+    sufficient: balance >= amount,
+    balance,
+    required: amount,
+  };
+}
+
+/**
  * Add credits to user balance. Syncs from Polar meters (source of truth).
  * Called from webhooks when Polar grants credits.
  */

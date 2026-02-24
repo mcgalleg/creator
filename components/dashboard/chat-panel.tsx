@@ -42,11 +42,14 @@ export function ChatPanel({ onClose }: { onClose?: () => void }) {
     uiTrees,
     videoSpecs,
     error,
+    insufficientCredits,
     getMessageText,
   } = useAnalyticsChat({
     selectedAccountId: syncContext?.selectedAccountId,
     onDiagramGenerated: handleDiagramGenerated,
   });
+
+  const tokensExhausted = insufficientCredits || (aiTokens !== null && aiTokens <= 0);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -128,7 +131,7 @@ export function ChatPanel({ onClose }: { onClose?: () => void }) {
       </div>
 
       {/* AI tokens depleted prompt */}
-      {aiTokens !== null && aiTokens <= 0 && (
+      {tokensExhausted && (
         <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm">
           <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
           <span className="flex-1 text-muted-foreground">
@@ -148,6 +151,7 @@ export function ChatPanel({ onClose }: { onClose?: () => void }) {
           onChange={setInput}
           onSubmit={handleSubmit}
           isLoading={isLoading || isGenerating}
+          disabled={tokensExhausted}
         />
       </div>
     </div>

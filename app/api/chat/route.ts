@@ -8,7 +8,7 @@ import {
 } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { auth, hasFeature } from "@/lib/auth";
-import { checkCredits } from "@/lib/services/credit-service";
+import { checkAiTokens } from "@/lib/services/credit-service";
 import { ingestAiTokenEvent } from "@/lib/polar";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -141,11 +141,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if user has at least 1 credit before proceeding
-    const creditCheck = await checkCredits(userId, 1);
-    if (!creditCheck.sufficient) {
+    // Check if user has AI tokens before proceeding
+    const tokenCheck = await checkAiTokens(userId, 1);
+    if (!tokenCheck.sufficient) {
       return Response.json(
-        { error: "Insufficient credits", balance: creditCheck.balance, required: 1 },
+        { error: "Insufficient AI tokens", balance: tokenCheck.balance, required: 1 },
         { status: 402 }
       );
     }

@@ -1,86 +1,56 @@
-import Link from "next/link";
-import { SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Sparkles, ArrowRight } from "lucide-react";
-import { TutorialPlayer } from "@/components/remotion/Player";
-import { AnimateOnScroll } from "@/components/landing/animate-on-scroll";
+"use client";
+
+import { PixelBlast } from "@/components/ui/pixel-blast";
+import { HeroPrompt } from "@/components/landing/hero-prompt";
+import { useAccentColor, type AccentColor } from "@/contexts/accent-color-context";
+
+const ACCENT_HEX: Record<AccentColor, string> = {
+  amber: "#f59e0b",
+  blue: "#3b82f6",
+  cyan: "#06b6d4",
+  emerald: "#10b981",
+  fuchsia: "#d946ef",
+  green: "#22c55e",
+  indigo: "#6366f1",
+  lime: "#84cc16",
+  orange: "#f97316",
+  pink: "#ec4899",
+  purple: "#a855f7",
+  red: "#ef4444",
+  rose: "#f43f5e",
+  sky: "#0ea5e9",
+  teal: "#14b8a6",
+  violet: "#8b5cf6",
+  yellow: "#eab308",
+};
 
 export function Hero() {
+  const { accentColor } = useAccentColor();
+  const pixelColor = ACCENT_HEX[accentColor];
+
   return (
-    <section className="relative overflow-hidden hero-gradient py-16 md:py-24">
-      {/* Floating blurred orbs for depth */}
-      <div className="pointer-events-none absolute -top-24 left-1/4 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 right-1/4 h-[28rem] w-[28rem] rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute top-1/2 left-[10%] h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
-
-      <div className="container relative mx-auto max-w-6xl px-4">
-        <AnimateOnScroll>
-          <div className="flex flex-col items-center text-center">
-            <Badge variant="secondary" className="mb-4">
-              <Sparkles className="mr-1 size-3" />
-              AI-Powered Analytics
-            </Badge>
-            <h1 className="mx-auto max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-              Your TikTok Data,{" "}
-              <span className="bg-gradient-to-r from-primary/80 via-primary to-primary/60 bg-clip-text text-transparent">
-                Decoded by AI
-              </span>
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
-              Turn your TikTok data into interactive charts, dashboards, and
-              insights — just by asking a question. Real-time visualizations
-              generated on-the-fly, powered by AI.
-            </p>
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <SignedOut>
-                <SignUpButton mode="modal">
-                  <Button size="lg" className="gap-2">
-                    Start Free Trial
-                    <ArrowRight className="size-4" />
-                  </Button>
-                </SignUpButton>
-              </SignedOut>
-              <SignedIn>
-                <Link href="/dashboard">
-                  <Button variant="outline" size="lg" className="gap-2">
-                    Go to Dashboard
-                    <ArrowRight className="size-4" />
-                  </Button>
-                </Link>
-              </SignedIn>
-            </div>
-            <SignedOut>
-              <p className="mt-4 text-sm text-muted-foreground">
-                No credit card required. 250 free credits to get started.
-              </p>
-            </SignedOut>
-          </div>
-        </AnimateOnScroll>
-
-        {/* Video showcase with browser chrome mockup */}
-        <AnimateOnScroll delay={200}>
-          <div className="relative mx-auto mt-12 max-w-5xl">
-            {/* Glowing shadow under video */}
-            <div className="absolute -bottom-6 left-1/2 h-16 w-3/4 -translate-x-1/2 rounded-full bg-primary/20 blur-[60px]" />
-
-            <div className="relative overflow-hidden rounded-xl border shadow-2xl">
-              {/* Browser chrome bar */}
-              <div className="flex items-center gap-2 rounded-t-lg border-b bg-muted/80 px-4 py-3">
-                <div className="flex gap-1.5">
-                  <div className="size-3 rounded-full bg-red-400" />
-                  <div className="size-3 rounded-full bg-yellow-400" />
-                  <div className="size-3 rounded-full bg-green-400" />
-                </div>
-                <div className="ml-2 flex-1 rounded-md bg-background/60 px-3 py-1 text-xs text-muted-foreground">
-                  astriq.ai/dashboard
-                </div>
-              </div>
-
-              <TutorialPlayer />
-            </div>
-          </div>
-        </AnimateOnScroll>
+    <section className="relative overflow-hidden py-24 md:py-32">
+      <div className="absolute inset-0">
+        <PixelBlast
+          variant="square"
+          speed={0.3}
+          color={pixelColor}
+          pixelSize={3}
+          patternScale={2}
+          patternDensity={1}
+          edgeFade={0.5}
+          enableRipples
+        />
+      </div>
+      <div className="container relative mx-auto max-w-4xl px-4 text-center">
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+          Ask a question, decode your TikTok
+        </h1>
+        <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
+          Astriq turns your TikTok data into charts, insights, and content
+          ideas — just by asking. No dashboards to learn.
+        </p>
+        <HeroPrompt />
       </div>
     </section>
   );

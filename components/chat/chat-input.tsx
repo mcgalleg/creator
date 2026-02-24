@@ -10,6 +10,7 @@ interface ChatInputProps {
   onChange: (value: string) => void;
   onSubmit: (e: FormEvent<HTMLFormElement>) => void;
   isLoading: boolean;
+  disabled?: boolean;
   placeholder?: string;
 }
 
@@ -22,18 +23,20 @@ export function ChatInput({
   onChange,
   onSubmit,
   isLoading,
+  disabled,
   placeholder = "Ask about your TikTok analytics..."
 }: ChatInputProps) {
+  const isDisabled = isLoading || disabled;
   return (
     <form onSubmit={onSubmit} className="flex gap-2">
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        disabled={isLoading}
+        disabled={isDisabled}
         className="flex-1"
       />
-      <Button type="submit" disabled={isLoading || !value.trim()}>
+      <Button type="submit" disabled={isDisabled || !value.trim()}>
         {isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
