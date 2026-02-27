@@ -1,15 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-// @ts-expect-error - heic-convert has no type declarations
-import convert from "heic-convert";
-
-const ALLOWED_HOSTNAMES = [
-  "tiktokcdn.com",
-  "tiktokcdn-eu.com",
-  "tiktokcdn-us.com",
-];
-
-// Content types that browsers can't display natively
-const HEIC_TYPES = new Set(["image/heic", "image/heif"]);
+import { isAllowedHost, fetchImage } from "@/lib/image-cache";
 
 /** Return a plain-text error so <img onError> fires (NOT a valid image). */
 function errorResponse(status: number, message: string, noStore = false) {
@@ -22,12 +12,6 @@ function errorResponse(status: number, message: string, noStore = false) {
         : {}),
     },
   });
-}
-
-function isAllowedHost(hostname: string): boolean {
-  return ALLOWED_HOSTNAMES.some(
-    (allowed) => hostname === allowed || hostname.endsWith(`.${allowed}`)
-  );
 }
 
 export async function GET(request: NextRequest) {
@@ -49,34 +33,18 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0" },
-    });
+    const result = await fetchImage(url);
 
-    if (!response.ok) {
+    if (!result) {
       return errorResponse(404, "Upstream image not found", true);
     }
 
-    const contentType = response.headers.get("content-type") || "image/jpeg";
-    const body = Buffer.from(await response.arrayBuffer());
-
-    // Convert HEIC/HEIF to JPEG since browsers can't display them
-    if (HEIC_TYPES.has(contentType) || parsed.pathname.endsWith(".heic") || parsed.pathname.endsWith(".heif")) {
-      const jpeg = await convert({ buffer: body, format: "JPEG", quality: 0.8 });
-      return new NextResponse(new Uint8Array(jpeg), {
-        status: 200,
-        headers: {
-          "Content-Type": "image/jpeg",
-          "Cache-Control": "public, max-age=2678400, immutable",
-        },
-      });
-    }
-
-    return new NextResponse(body, {
+    return new NextResponse(new Uint8Array(result.data), {
       status: 200,
       headers: {
-        "Content-Type": contentType,
+        "Content-Type": result.contentType,
         "Cache-Control": "public, max-age=2678400, immutable",
+        "X-Cache": result.cacheStatus,
       },
     });
   } catch (err) {

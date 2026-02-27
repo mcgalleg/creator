@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import {
   MessageSquareText,
   Layout,
-  LayoutDashboard,
   MessageCircle,
   Users,
   RefreshCw,
@@ -16,7 +15,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CanvasInteractiveMockup } from "./canvas-interactive-mockup";
-import { DashboardInteractiveMockup } from "./dashboard-interactive-mockup";
 
 function useScrollAnimation() {
   const [inView, setInView] = useState(false);
@@ -265,7 +263,7 @@ const MORE_FEATURES = [
   {
     icon: Download,
     title: "Export Reports",
-    desc: "Download canvas and dashboards as PDF or CSV",
+    desc: "Download canvas and reports as PDF or CSV",
   },
   {
     icon: Sparkles,
@@ -376,34 +374,11 @@ export function FeatureBento() {
             </div>
           </div>
 
-          {/* Card 3: Dynamic Dashboard */}
-          <div
-            id="dashboard"
-            className="grid grid-cols-1 md:grid-cols-2 items-center gap-6 md:gap-10 p-8 md:p-12 rounded-3xl mb-10 sticky z-[3] scroll-mt-20 min-h-[500px]"
-            style={{ top: STICKY_TOP, backgroundColor: "var(--card-3)" }}
-          >
-            <div className="flex flex-col justify-center">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 mb-4">
-                <LayoutDashboard className="size-5 text-primary" />
-              </div>
-              <h3 className="text-2xl md:text-3xl font-bold mb-3">
-                Dynamic Dashboard
-              </h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Drag-and-drop widgets to build your perfect analytics view.
-                Customize layouts and visualizations to match your workflow.
-              </p>
-            </div>
-            <div>
-              <DashboardInteractiveMockup />
-            </div>
-          </div>
-
-          {/* Card 4: MCP Apps */}
+          {/* Card 3: MCP Apps */}
           <div
             id="mcp"
-            className="grid grid-cols-1 md:grid-cols-2 items-center gap-6 md:gap-10 p-8 md:p-12 rounded-3xl mb-10 sticky z-[4] scroll-mt-20 min-h-[500px]"
-            style={{ top: STICKY_TOP, backgroundColor: "var(--card-4)" }}
+            className="grid grid-cols-1 md:grid-cols-2 items-center gap-6 md:gap-10 p-8 md:p-12 rounded-3xl mb-10 sticky z-[3] scroll-mt-20 min-h-[500px]"
+            style={{ top: STICKY_TOP, backgroundColor: "var(--card-3)" }}
           >
             <div className="flex flex-col justify-center">
               <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 mb-4">
@@ -456,10 +431,10 @@ export function FeatureBento() {
             </div>
           </div>
 
-          {/* Card 5: More Features */}
+          {/* Card 4: More Features */}
           <div
-            className="grid grid-cols-1 md:grid-cols-2 items-start gap-6 md:gap-10 p-8 md:p-12 rounded-3xl mb-10 sticky z-[5] min-h-[500px]"
-            style={{ top: STICKY_TOP, backgroundColor: "var(--card-5)" }}
+            className="grid grid-cols-1 md:grid-cols-2 items-start gap-6 md:gap-10 p-8 md:p-12 rounded-3xl mb-10 sticky z-[4] min-h-[500px]"
+            style={{ top: STICKY_TOP, backgroundColor: "var(--card-4)" }}
           >
             <div className="flex flex-col justify-center">
               <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 mb-4">

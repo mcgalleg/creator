@@ -39,11 +39,11 @@ export function FinalCta() {
                 </SignedOut>
                 <SignedIn>
                   <Button asChild size="lg">
-                    <Link href="/dashboard">Go to Dashboard</Link>
+                    <Link href="/workspace">Go to Workspace</Link>
                   </Button>
                 </SignedIn>
                 <Button asChild variant="outline" size="lg">
-                  <Link href="/dashboard">Explore Dashboard</Link>
+                  <Link href="/workspace">Explore Workspace</Link>
                 </Button>
               </div>
 

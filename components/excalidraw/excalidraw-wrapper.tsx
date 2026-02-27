@@ -57,9 +57,11 @@ export function ExcalidrawWrapper({
 
   // Load the Excalidraw skeleton converter once on mount
   useEffect(() => {
-    import("@excalidraw/excalidraw").then((mod) => {
-      converterRef.current = mod.convertToExcalidrawElements;
-    });
+    import("@/lib/excalidraw-loader").then(({ loadExcalidraw }) =>
+      loadExcalidraw().then((mod) => {
+        converterRef.current = mod.convertToExcalidrawElements;
+      })
+    );
   }, []);
 
   // Scroll to content helper — only works when the container has real dimensions.

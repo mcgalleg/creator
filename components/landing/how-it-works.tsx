@@ -22,7 +22,7 @@ const steps = [
     number: "3",
     title: "Ask & Discover",
     description:
-      "Chat with your data, build dashboards, and uncover insights you never knew existed.",
+      "Chat with your data and uncover insights you never knew existed.",
   },
 ];
 

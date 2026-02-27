@@ -44,6 +44,10 @@ yarn-error.log*
 .agents/
 .claude/
 
+# image cache
+.cache/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.devtools

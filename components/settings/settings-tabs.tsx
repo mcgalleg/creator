@@ -76,7 +76,7 @@ function SettingsTabsInner({ tier }: { tier: SubscriptionTier }) {
                 <Users className="h-6 w-6 text-muted-foreground" />
               </div>
               <Button asChild variant="outline" className="w-full">
-                <Link href="/dashboard/accounts">
+                <Link href="/workspace/accounts">
                   Manage Accounts
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>

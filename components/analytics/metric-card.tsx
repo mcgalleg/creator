@@ -13,8 +13,9 @@ import {
 export interface MetricCardProps {
   label: string
   value: string | number
-  change?: number
+  change?: number | string
   trend?: "up" | "down" | "neutral"
+  description?: string
   className?: string
 }
 
@@ -23,6 +24,7 @@ function MetricCard({
   value,
   change,
   trend,
+  description,
   className,
 }: MetricCardProps) {
   const trendIcon = React.useMemo(() => {
@@ -69,10 +71,16 @@ function MetricCard({
             <div className={cn("flex items-center gap-1 shrink-0", trendColor)}>
               {trendIcon}
               <span className="text-xs @xs:text-sm font-medium">
-                {change > 0 ? "+" : ""}
-                {change.toFixed(1)}%
+                {typeof change === "number"
+                  ? `${change > 0 ? "+" : ""}${change.toFixed(1)}%`
+                  : String(change)}
               </span>
             </div>
+          )}
+          {description && (
+            <span className="text-xs text-muted-foreground line-clamp-2">
+              {description}
+            </span>
           )}
         </div>
       </CardContent>

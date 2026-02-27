@@ -1,12 +1,31 @@
-import { Checkout } from "@polar-sh/nextjs";
-import { NextRequest } from "next/server";
+import { Polar } from "@polar-sh/sdk";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
-const checkoutHandler = Checkout({
+const polar = new Polar({
   accessToken: process.env.POLAR_ACCESS_TOKEN!,
-  successUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/settings?checkout=success`,
   server: (process.env.POLAR_SERVER as "sandbox" | "production") ?? "sandbox",
 });
+
+/**
+ * Look up the customer's active free subscription so we can pass it as
+ * `subscriptionId` on the checkout — Polar treats this as an upgrade
+ * instead of rejecting with "You already have an active subscription."
+ */
+async function findFreeSubscriptionId(
+  externalCustomerId: string
+): Promise<string | undefined> {
+  try {
+    const subs = await polar.subscriptions.list({
+      externalCustomerId: [externalCustomerId],
+      active: true,
+    });
+    const freeSub = subs.result.items.find((s) => s.amount === 0);
+    return freeSub?.id;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,7 +34,40 @@ export async function GET(req: NextRequest) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    return await checkoutHandler(req);
+    const url = new URL(req.url);
+    const products = url.searchParams.getAll("products");
+    if (products.length === 0) {
+      return Response.json(
+        { error: "Missing products in query params" },
+        { status: 400 }
+      );
+    }
+
+    const externalCustomerId =
+      url.searchParams.get("customerExternalId") ?? undefined;
+    const customerEmail =
+      url.searchParams.get("customerEmail") ?? undefined;
+
+    // If the customer already has a free subscription, attach its ID so
+    // Polar upgrades it rather than blocking with a duplicate-subscription error.
+    const subscriptionId = externalCustomerId
+      ? await findFreeSubscriptionId(externalCustomerId)
+      : undefined;
+
+    const successUrl = new URL(
+      `${process.env.NEXT_PUBLIC_APP_URL}/workspace/settings?checkout=success`
+    );
+    successUrl.searchParams.set("checkoutId", "{CHECKOUT_ID}");
+
+    const result = await polar.checkouts.create({
+      products,
+      successUrl: decodeURI(successUrl.toString()),
+      externalCustomerId,
+      customerEmail,
+      ...(subscriptionId ? { subscriptionId } : {}),
+    });
+
+    return NextResponse.redirect(result.url);
   } catch (error) {
     console.error("Checkout error:", error);
     return Response.json(

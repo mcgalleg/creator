@@ -17,12 +17,12 @@ export function OnboardingFlow() {
 
   const handleSkip = async () => {
     await completeOnboarding();
-    router.push("/dashboard");
+    router.push("/workspace");
   };
 
   const handleConnected = async () => {
     await completeOnboarding();
-    router.push("/dashboard");
+    router.push("/workspace");
   };
 
   if (step === "connect") {

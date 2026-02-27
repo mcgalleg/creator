@@ -168,7 +168,7 @@ export function ConnectedAccountsPreview() {
       </CardContent>
       <CardFooter>
         <Button asChild variant="outline" className="w-full">
-          <Link href="/dashboard/accounts">
+          <Link href="/workspace/accounts">
             Manage Accounts
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>

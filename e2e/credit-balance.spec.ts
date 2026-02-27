@@ -70,7 +70,7 @@ async function resetSubscription(userId: string = TEST_USER_ID) {
  * Navigate to dashboard, handling onboarding if it appears.
  */
 async function goToDashboard(page: import("@playwright/test").Page) {
-  await page.goto("/dashboard");
+  await page.goto("/workspace");
   await page.waitForLoadState("networkidle");
 
   const skipButton = page.locator('text="Skip for now"');
@@ -186,7 +186,7 @@ test.describe("Real-time credit balance", () => {
     });
 
     // Navigate to settings (shows credit balance prominently)
-    await page.goto("/dashboard/settings");
+    await page.goto("/workspace/settings");
     await page.waitForLoadState("networkidle");
 
     // Handle onboarding if needed
@@ -217,7 +217,7 @@ test.describe("Real-time credit balance", () => {
 
   test("credit balance auto-refreshes via SWR polling", async ({ page }) => {
     await goToDashboard(page);
-    await page.goto("/dashboard/settings");
+    await page.goto("/workspace/settings");
     await page.waitForLoadState("networkidle");
 
     // Wait for initial credit load
@@ -253,7 +253,7 @@ test.describe("Real-time credit balance", () => {
 
   test("credits revalidate on visibility change", async ({ page }) => {
     await goToDashboard(page);
-    await page.goto("/dashboard/settings");
+    await page.goto("/workspace/settings");
     await page.waitForLoadState("networkidle");
 
     // Wait for initial load
@@ -319,7 +319,7 @@ test.describe("Real-time credit balance", () => {
     });
 
     // Navigate to settings with checkout=success (simulates Polar redirect)
-    await page.goto("/dashboard/settings?checkout=success");
+    await page.goto("/workspace/settings?checkout=success");
     await page.waitForLoadState("networkidle");
 
     // Handle onboarding if needed
@@ -354,7 +354,7 @@ test.describe("Real-time credit balance", () => {
       "X-Test-User-Id": POLAR_USER_ID,
     });
 
-    await page.goto("/dashboard/settings");
+    await page.goto("/workspace/settings");
     await page.waitForLoadState("networkidle");
 
     // Handle onboarding

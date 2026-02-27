@@ -20,7 +20,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export interface DataTableColumn {
   key: string
-  header: string
+  header?: string
+  label?: string
   width?: string
 }
 
@@ -44,7 +45,7 @@ function DataTable<T extends Record<string, unknown>>({
         .map((col, index) => ({
           id: col.key || `col-${index}`,
           accessorKey: col.key,
-          header: col.header || col.key,
+          header: col.header || col.label || col.key,
           size: col.width ? parseInt(col.width, 10) : undefined,
           cell: ({ getValue }) => {
             const value = getValue()
@@ -65,6 +66,7 @@ function DataTable<T extends Record<string, unknown>>({
   })
 
   const content = (
+    <div className="overflow-x-auto">
     <Table className={cn(className)}>
       <TableHeader>
         {table.getHeaderGroups().map((headerGroup) => (
@@ -109,6 +111,7 @@ function DataTable<T extends Record<string, unknown>>({
         )}
       </TableBody>
     </Table>
+    </div>
   )
 
   if (!title) {
@@ -120,7 +123,7 @@ function DataTable<T extends Record<string, unknown>>({
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent>{content}</CardContent>
+      <CardContent className="min-w-0">{content}</CardContent>
     </Card>
   )
 }

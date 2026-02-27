@@ -56,18 +56,18 @@ const ANALYTICS_SCHEMA = [
   },
   {
     table: "comments",
-    description: "Comments on posts",
+    description: "Individual comments on posts, with full author details. GROUP BY author_username to find top commenters, super fans, repeat engagers, and audience demographics.",
     columns: {
       id: "integer PK",
       post_id: "integer FK → posts.id",
       tiktok_id: "text",
-      text: "text",
-      author_username: "text",
+      text: "text — the comment body",
+      author_username: "text — commenter's unique handle (group by this for top fans / repeat commenters)",
       author_display_name: "text",
-      author_region: "text — 2-letter country code of commenter (nullable)",
+      author_region: "text — 2-letter country code of commenter (nullable, useful for audience geography)",
       comment_language: "text — 2-letter language code (nullable)",
-      likes: "integer",
-      reply_count: "integer",
+      likes: "integer — likes received on this comment",
+      reply_count: "integer — replies to this comment",
       is_author_liked: "boolean — whether the creator liked/hearted this comment",
       author_follower_count: "integer — commenter's follower count at time of sync",
       posted_at: "timestamp",
@@ -107,23 +107,29 @@ const ANALYTICS_SCHEMA = [
 // Schema description (returned to Claude so it knows what to query)
 // ---------------------------------------------------------------------------
 
-export async function getAnalyticsSchema(userId: string) {
-  const accountIds = await getUserAccountIds(userId);
+export async function getAnalyticsSchema(userId: string, selectedAccountIds?: number[]) {
+  const accountIds = await getUserAccountIds(
+    userId,
+    selectedAccountIds?.map(String)
+  );
   return {
     userAccountIds: accountIds,
     instructions:
       "Write standard PostgreSQL SELECT queries. " +
       "Data is automatically scoped to the current user's accounts — do not add account_id filters. " +
-      "The hashtags column is text[] — use unnest(hashtags) to expand for per-hashtag analysis. " +
-      "Engagement rate is conventionally calculated as (likes + comments + shares) / NULLIF(plays, 0) * 100. " +
+      "IMPORTANT: Always qualify column references with the table name (e.g., posts.likes, posts.comments) to avoid ambiguity with the data scoping layer. " +
+      "Engagement rate: (posts.likes + posts.comments + posts.shares)::numeric / NULLIF(posts.plays, 0) * 100 — use ::numeric to prevent integer division truncation. " +
+      "The hashtags column is text[] — use unnest(posts.hashtags) to expand for per-hashtag analysis. " +
       "posted_at, duration, song_title, and song_artist may be NULL — use appropriate NULL handling. " +
       "Join comments to posts via comments.post_id = posts.id. " +
       "Join post_collaborators via post_collaborators.post_id = posts.id. " +
-      "Use account_metrics_history for historical follower/following snapshots over time.",
+      "Use account_metrics_history for follower/following count snapshots over time. " +
+      "Use comments grouped by author_username for fan/audience analysis (top fans, super fans, repeat commenters).",
     tables: ANALYTICS_SCHEMA,
     notes: [
-      "hashtags is a PostgreSQL text[] column — use unnest(hashtags) to expand into rows for per-hashtag queries",
-      "Engagement rate convention: (likes + comments + shares) / NULLIF(plays, 0) * 100",
+      "Always qualify column references with the table name (e.g., posts.likes, posts.comments) to avoid ambiguity",
+      "hashtags is a PostgreSQL text[] column — use unnest(posts.hashtags) to expand into rows for per-hashtag queries",
+      "Engagement rate: (posts.likes + posts.comments + posts.shares)::numeric / NULLIF(posts.plays, 0) * 100",
       "posted_at, duration, song_title, song_artist can be NULL",
       "account_metrics_history contains periodic snapshots — use recorded_at for time-series analysis of follower growth",
     ],
@@ -135,8 +141,34 @@ export async function getAnalyticsSchema(userId: string) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Extracts CTE names defined in a user's WITH clause so they can be
+ * allowed as valid table references alongside the base ALLOWED_TABLES.
+ *
+ * Scans the full query for `identifier AS [NOT MATERIALIZED] (` patterns,
+ * which only appear in CTE definitions. We can't isolate just the WITH
+ * preamble because CTE bodies themselves contain SELECT statements.
+ */
+function extractUserCteNames(query: string): Set<string> {
+  const names = new Set<string>();
+  if (!/^\s*WITH\b/i.test(query)) return names;
+
+  const ctePattern = /\b(\w+)\s+AS\s*(?:NOT\s+MATERIALIZED\s*)?\(/gi;
+  let m;
+  while ((m = ctePattern.exec(query)) !== null) {
+    const name = m[1].toLowerCase();
+    // Skip base table names — those are real table references inside CTE bodies,
+    // not user-defined CTE names (e.g., `posts AS NOT MATERIALIZED (SELECT ...`)
+    if (!ALLOWED_TABLES.has(name)) {
+      names.add(name);
+    }
+  }
+  return names;
+}
+
+/**
  * Validates that a SQL query only references allowed tables.
  * Strips string literals and comments, then checks FROM/JOIN targets.
+ * User-defined CTEs (from WITH clauses) are permitted.
  */
 function validateTableReferences(query: string): void {
   const cleaned = query
@@ -151,6 +183,9 @@ function validateTableReferences(query: string): void {
     throw new Error("Schema-qualified table references are not allowed");
   }
 
+  // Allow user-defined CTE names in addition to the base tables
+  const userCtes = extractUserCteNames(cleaned);
+
   // Extract table names after FROM / JOIN keywords
   const tablePattern = /\b(?:FROM|JOIN)\s+(?:LATERAL\s+)?(\w+)/gi;
   let match;
@@ -160,7 +195,7 @@ function validateTableReferences(query: string): void {
     if (name === "select" || name === "lateral" || name === "unnest" || name === "generate_series") {
       continue;
     }
-    if (!ALLOWED_TABLES.has(name)) {
+    if (!ALLOWED_TABLES.has(name) && !userCtes.has(name)) {
       throw new Error(
         `Access to table '${name}' is not allowed. Available tables: ${Array.from(ALLOWED_TABLES).join(", ")}`
       );
@@ -244,6 +279,42 @@ function coerceRow(row: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
+/**
+ * Extracts a clean PostgreSQL error message from a database error.
+ * node-postgres errors include the full query text which is unhelpful
+ * (and confusing) when returned to the AI agent.
+ */
+function cleanDbError(err: unknown, userQuery: string): string {
+  if (!(err instanceof Error)) return "Query execution failed";
+
+  // node-postgres DatabaseError has severity, detail, hint, position, etc.
+  const dbErr = err as Error & {
+    severity?: string;
+    detail?: string;
+    hint?: string;
+    position?: string;
+    code?: string;
+  };
+
+  const parts: string[] = [];
+
+  // Primary error message — strip the query text if embedded
+  let msg = dbErr.message;
+  // Some drivers prepend the query; strip everything before the PG error keywords
+  const pgErrorIdx = msg.search(
+    /\b(ERROR|error|column|relation|syntax error|operator|function|type|permission|violates)\b/
+  );
+  if (pgErrorIdx > 0) msg = msg.substring(pgErrorIdx);
+  parts.push(msg);
+
+  if (dbErr.detail) parts.push(`Detail: ${dbErr.detail}`);
+  if (dbErr.hint) parts.push(`Hint: ${dbErr.hint}`);
+
+  parts.push(`Query: ${userQuery}`);
+
+  return parts.join("\n");
+}
+
 async function runScopedQuery(
   trimmed: string,
   accountIds: number[]
@@ -251,15 +322,20 @@ async function runScopedQuery(
   const scoped = buildScopedQuery(trimmed, accountIds);
   const limited = `SELECT * FROM (${scoped}) AS _q LIMIT ${MAX_ROWS}`;
 
-  const result = await Promise.race([
-    db.execute(sql.raw(limited)),
-    new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new Error("Query timed out (10s limit)")),
-        QUERY_TIMEOUT_MS
-      )
-    ),
-  ]);
+  let result;
+  try {
+    result = await Promise.race([
+      db.execute(sql.raw(limited)),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Query timed out (10s limit)")),
+          QUERY_TIMEOUT_MS
+        )
+      ),
+    ]);
+  } catch (err) {
+    throw new Error(cleanDbError(err, trimmed));
+  }
 
   const rawRows: Record<string, unknown>[] = Array.isArray(result)
     ? result
@@ -279,11 +355,15 @@ async function runScopedQuery(
 
 export async function executeReadQuery(
   userId: string,
-  queryStr: string
+  queryStr: string,
+  selectedAccountIds?: number[]
 ): Promise<QueryResult> {
   const trimmed = validateQuery(queryStr);
 
-  const accountIds = await getUserAccountIds(userId);
+  const accountIds = await getUserAccountIds(
+    userId,
+    selectedAccountIds?.map(String)
+  );
   if (accountIds.length === 0) {
     return { columns: [], rows: [], rowCount: 0, truncated: false };
   }

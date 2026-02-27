@@ -107,7 +107,7 @@ export function HeroPrompt() {
   function handleSubmit() {
     if (isSignedIn) {
       const q = userText.trim();
-      router.push(q ? `/dashboard?q=${encodeURIComponent(q)}` : "/dashboard");
+      router.push(q ? `/workspace?q=${encodeURIComponent(q)}` : "/workspace");
     }
   }
 

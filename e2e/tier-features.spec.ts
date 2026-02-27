@@ -50,7 +50,7 @@ async function resetCredits(balance: number, userId: string) {
  * Navigate to dashboard, handling onboarding if it appears.
  */
 async function goToDashboard(page: import("@playwright/test").Page) {
-  await page.goto("/dashboard");
+  await page.goto("/workspace");
   await page.waitForLoadState("networkidle");
 
   const skipButton = page.locator('text="Skip for now"');
@@ -68,7 +68,7 @@ test.describe("Per-tier dashboard UI behavior", () => {
   }) => {
     await page.setExtraHTTPHeaders({ "X-Test-User-Id": "test_user_free" });
 
-    await page.goto("/dashboard/settings");
+    await page.goto("/workspace/settings");
     await page.waitForLoadState("networkidle");
 
     // Free badge visible
@@ -87,7 +87,7 @@ test.describe("Per-tier dashboard UI behavior", () => {
   }) => {
     await page.setExtraHTTPHeaders({ "X-Test-User-Id": "test_user_basic" });
 
-    await page.goto("/dashboard/settings");
+    await page.goto("/workspace/settings");
     await page.waitForLoadState("networkidle");
 
     // Creator badge visible
@@ -126,7 +126,7 @@ test.describe("Per-tier dashboard UI behavior", () => {
     }
 
     // Check settings page
-    await page.goto("/dashboard/settings");
+    await page.goto("/workspace/settings");
     await page.waitForLoadState("networkidle");
 
     const proBadge = page.locator('text="Pro"').first();
@@ -140,7 +140,7 @@ test.describe("Per-tier dashboard UI behavior", () => {
   }) => {
     await page.setExtraHTTPHeaders({ "X-Test-User-Id": "test_user_agency" });
 
-    await page.goto("/dashboard/settings");
+    await page.goto("/workspace/settings");
     await page.waitForLoadState("networkidle");
 
     const agencyBadge = page.locator('text="Agency"').first();

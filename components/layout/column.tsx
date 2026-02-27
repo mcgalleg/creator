@@ -8,11 +8,11 @@ export interface ColumnProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const gapClasses = {
   none: "",
-  xs: "[&>*+*]:mt-2",
-  sm: "[&>*+*]:mt-4",
-  md: "[&>*+*]:mt-6",
-  lg: "[&>*+*]:mt-8",
-  xl: "[&>*+*]:mt-10",
+  xs: "gap-2",
+  sm: "gap-4",
+  md: "gap-6",
+  lg: "gap-8",
+  xl: "gap-10",
 }
 
 const alignClasses = {

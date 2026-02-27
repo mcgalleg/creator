@@ -28,7 +28,7 @@ export default async function OnboardingPage() {
   const onboardingCompletedAt = userRecord[0]?.onboardingCompletedAt ?? null;
 
   if (accounts.length > 0 || onboardingCompletedAt) {
-    redirect("/dashboard");
+    redirect("/workspace");
   }
 
   return <OnboardingFlow />;

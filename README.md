@@ -80,9 +80,9 @@ CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
 # Database (Neon PostgreSQL)
 DATABASE_URL=postgresql://user:pass@host/dbname
 
-# AI (Anthropic)
-ANTHROPIC_API_KEY=sk-ant-...
-ANTHROPIC_MODEL=claude-sonnet-4-20250514
+# AI (Vercel AI Gateway format: "provider/model")
+AI_MODEL=openai/gpt-5.3-codex
+OPENAI_API_KEY=sk-...              # or ANTHROPIC_API_KEY for Anthropic models
 
 # Data Scraping (Apify)
 APIFY_API_TOKEN=apify_...

@@ -1,219 +1,145 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useJsonRenderMessage, Renderer, JSONUIProvider, type DataPart } from '@json-render/react';
+import { isToolUIPart } from 'ai';
+import { registry } from '@/lib/registry';
 import type { UIMessage } from 'ai';
 import { cn } from '@/lib/utils';
-import { AnalyticsRenderer } from './analytics-renderer';
-import type { UITree, VideoSpec } from '@/hooks/use-analytics-chat';
-import { SpecPlayer } from '@/components/remotion/SpecPlayer';
-import { useDrawingBridgeOptional } from '@/contexts/drawing-bridge-context';
-import { Button } from '@/components/ui/button';
-import { Pencil, Film, Loader2 } from 'lucide-react';
 import { MarkdownRenderer } from './markdown-renderer';
-import { useHasFeatureOptional } from '@/contexts/feature-context';
 
 interface MessageListProps {
   messages: UIMessage[];
-  uiTrees: UITree[];
-  videoSpecs: VideoSpec[];
-  getMessageText: (message: UIMessage) => string;
+  isStreaming: boolean;
 }
 
 /**
- * Loading skeleton shown while the generateVideo tool is executing.
+ * Displays the list of chat messages with progressive spec rendering.
  */
-function VideoGeneratingCard() {
-  return (
-    <div className="flex items-center gap-3 rounded-lg border bg-background/50 p-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-        <Loader2 className="h-4 w-4 text-primary animate-spin" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium">Generating video...</p>
-        <p className="text-xs text-muted-foreground">Building animated report from your data</p>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Compact card shown alongside the video player after creation.
- */
-function VideoCreatedCard() {
-  return (
-    <div className="flex items-center gap-3 rounded-lg border bg-background/50 p-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-        <Film className="h-4 w-4 text-primary" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium">Video report ready</p>
-        <p className="text-xs text-muted-foreground">Click to play</p>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Compact card shown in chat when a diagram is created via createDiagram tool.
- */
-function DiagramCreatedCard({ title }: { title: string }) {
-  const drawingBridge = useDrawingBridgeOptional();
-  const hasCanvasAccess = useHasFeatureOptional("canvas");
-
-  return (
-    <div className="flex items-center gap-3 rounded-lg border bg-background/50 p-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-        <Pencil className="h-4 w-4 text-primary" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{title}</p>
-        <p className="text-xs text-muted-foreground">Diagram added to Draw tab</p>
-      </div>
-      {hasCanvasAccess && drawingBridge && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs shrink-0"
-          onClick={() => drawingBridge.switchToDrawTab()}
-        >
-          View in Draw
-        </Button>
-      )}
-    </div>
-  );
-}
-
-/**
- * Displays the list of chat messages with rendered UI trees for analytics.
- * User messages are aligned to the right, assistant messages to the left.
- */
-export function MessageList({ messages, uiTrees, videoSpecs, getMessageText }: MessageListProps) {
-  // Track which UI tree we're on (matching them to assistant messages with generateUI)
-  let treeIndex = 0;
-  let videoIndex = 0;
-
+export function MessageList({ messages, isStreaming }: MessageListProps) {
   return (
     <div className="space-y-4">
-      {messages.map((message) => {
-        const isUser = message.role === 'user';
-        const text = getMessageText(message);
-
-        // Check if this assistant message has a generateUI tool call with output
-        let hasUITree = false;
-        let currentTreeIndex = -1;
-        let hasVideo = false;
-        let currentVideoIndex = -1;
-        let isVideoGenerating = false;
-        let hasDiagram = false;
-        let diagramTitle = '';
-
-        if (message.role === 'assistant') {
-          for (const part of message.parts) {
-            if (typeof part.type === 'string') {
-              if (part.type === 'tool-generateUI') {
-                const toolPart = part as {
-                  type: string;
-                  state: string;
-                  output?: unknown;
-                };
-                if (toolPart.state === 'output-available' && toolPart.output) {
-                  hasUITree = true;
-                  currentTreeIndex = treeIndex;
-                  treeIndex++;
-                }
-              }
-              if (part.type === 'tool-generateVideo') {
-                const toolPart = part as {
-                  type: string;
-                  state: string;
-                  output?: unknown;
-                };
-                if (toolPart.state === 'output-available' && toolPart.output) {
-                  hasVideo = true;
-                  currentVideoIndex = videoIndex;
-                  videoIndex++;
-                } else if (toolPart.state === 'input-streaming' || toolPart.state === 'input-available') {
-                  isVideoGenerating = true;
-                }
-              }
-              if (part.type === 'tool-createDiagram') {
-                const toolPart = part as {
-                  type: string;
-                  state: string;
-                  output?: { title?: string; elements?: unknown[] };
-                };
-                if (toolPart.state === 'output-available' && toolPart.output?.elements) {
-                  hasDiagram = true;
-                  diagramTitle = toolPart.output.title || 'Diagram';
-                }
-              }
-            }
-          }
-        }
-
-        const currentTree = hasUITree && currentTreeIndex >= 0 ? uiTrees[currentTreeIndex] : null;
-        const currentVideo = hasVideo && currentVideoIndex >= 0 ? videoSpecs[currentVideoIndex] : null;
-
-        return (
-          <div
-            key={message.id}
-            className={cn(
-              'flex message-appear',
-              isUser ? 'justify-end' : 'justify-start'
-            )}
-          >
-            <div
-              className={cn(
-                'rounded-lg px-4 py-3',
-                isUser
-                  ? 'max-w-[85%] bg-primary text-primary-foreground'
-                  : (hasUITree || hasVideo || hasDiagram || isVideoGenerating)
-                    ? 'w-full bg-muted'
-                    : 'max-w-[85%] bg-muted'
-              )}
-            >
-              {/* Video & diagram cards render ABOVE text so streaming text doesn't push them down */}
-
-              {/* Video generating indicator */}
-              {isVideoGenerating && !hasVideo && (
-                <div className="w-full mb-3">
-                  <VideoGeneratingCard />
-                </div>
-              )}
-
-              {/* Rendered video */}
-              {currentVideo && (
-                <div className="w-full mb-3 space-y-3">
-                  <VideoCreatedCard />
-                  <SpecPlayer spec={currentVideo as unknown as Record<string, unknown>} />
-                </div>
-              )}
-
-              {/* Diagram created card */}
-              {hasDiagram && (
-                <div className="w-full mb-3">
-                  <DiagramCreatedCard title={diagramTitle} />
-                </div>
-              )}
-
-              {/* Rendered UI tree */}
-              {currentTree && (
-                <div className="w-full mb-3">
-                  <AnalyticsRenderer tree={currentTree} />
-                </div>
-              )}
-
-              {/* Text content — renders below media so streaming doesn't cause layout shift */}
-              {text && (
-                isUser ? (
-                  <p className="text-sm whitespace-pre-wrap">{text}</p>
-                ) : (
-                  <MarkdownRenderer content={text} />
-                )
-              )}
-            </div>
-          </div>
-        );
-      })}
+      {messages.map((message, i) => (
+        <MessageBubble
+          key={message.id}
+          message={message}
+          isStreaming={isStreaming && i === messages.length - 1}
+        />
+      ))}
     </div>
+  );
+}
+
+function MessageBubble({ message, isStreaming }: { message: UIMessage; isStreaming: boolean }) {
+  const { spec, text, hasSpec } = useJsonRenderMessage(message.parts as DataPart[]);
+
+  // Extract diagram from tool parts (createDiagram stays tool-based)
+  let diagramElements: unknown[] | null = null;
+  if (message.role === 'assistant') {
+    for (const part of message.parts) {
+      if (!isToolUIPart(part)) continue;
+      if (
+        part.type === 'tool-createDiagram' &&
+        part.state === 'output-available' &&
+        part.output
+      ) {
+        const output = part.output as { elements?: unknown[] };
+        if (output.elements) {
+          diagramElements = output.elements;
+        }
+      }
+    }
+  }
+
+  const isUser = message.role === 'user';
+
+  return (
+    <div className={cn('flex message-appear', isUser ? 'justify-end' : 'justify-start')}>
+      <div
+        className={cn(
+          'rounded-lg px-4 py-3',
+          isUser
+            ? 'max-w-[85%] bg-primary text-primary-foreground'
+            : (hasSpec || diagramElements) ? 'w-full min-w-0 bg-muted' : 'max-w-[85%] bg-muted'
+        )}
+      >
+        {text && (
+          isUser ? (
+            <p className="text-sm whitespace-pre-wrap">{text}</p>
+          ) : (
+            <MarkdownRenderer content={text} />
+          )
+        )}
+
+        {diagramElements && (
+          <div className="w-full mt-3">
+            <DiagramPreview elements={diagramElements} />
+          </div>
+        )}
+
+        {hasSpec && (
+          <div className="w-full min-w-0 overflow-x-auto mt-3">
+            <JSONUIProvider registry={registry} initialState={spec!.state}>
+              <Renderer spec={spec!} registry={registry} loading={isStreaming} />
+            </JSONUIProvider>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Lightweight static SVG preview of Excalidraw diagram elements.
+ */
+function DiagramPreview({ elements }: { elements: unknown[] }) {
+  const [svgHtml, setSvgHtml] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function generateSvg() {
+      try {
+        const { loadExcalidraw } = await import('@/lib/excalidraw-loader');
+        const { exportToSvg, convertToExcalidrawElements } = await loadExcalidraw();
+
+        // Filter out non-drawable entries like cameraUpdate before converting
+        const drawableElements = elements.filter(
+          (el): el is Record<string, unknown> =>
+            typeof el === "object" && el !== null && (el as Record<string, unknown>).type !== "cameraUpdate"
+        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const converted = convertToExcalidrawElements(drawableElements as any);
+
+        const svg = await exportToSvg({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          elements: converted as any,
+          appState: { exportWithDarkMode: false, exportBackground: false },
+          files: null,
+        });
+
+        if (!cancelled) setSvgHtml(svg.outerHTML);
+      } catch (err) {
+        console.error('Failed to generate Excalidraw SVG preview:', err);
+      }
+    }
+
+    if (elements.length > 0) generateSvg();
+    return () => { cancelled = true; };
+  }, [elements]);
+
+  if (!svgHtml) {
+    return (
+      <div className="flex items-center justify-center min-h-[120px] text-sm text-muted-foreground">
+        Loading diagram...
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="pointer-events-none [&_svg]:max-w-full [&_svg]:h-auto"
+      dangerouslySetInnerHTML={{ __html: svgHtml }}
+    />
   );
 }

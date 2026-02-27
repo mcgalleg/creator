@@ -890,6 +890,15 @@
   container-type: inline-size;
 }
 
+/* Ensure spacing between cards/sections in analytics responses */
+.analytics-visualization [data-slot="column"] > * + * {
+  margin-top: 0.75rem;
+}
+
+.analytics-visualization [data-slot="row"] > * + * {
+  margin-left: 0.75rem;
+}
+
 /* Ensure canvas cards also use container queries */
 .analytics-native-render {
   container-type: inline-size;

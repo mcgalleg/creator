@@ -6,9 +6,12 @@ import {
   cancelSubscription,
   endSubscription,
 } from "@/lib/services/subscription-service";
+import { compensateUpgradeCredits } from "@/lib/services/upgrade-credit-service";
 import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
 import { creditTransactions } from "@/lib/db/schema/credits";
 import { getCreditPack, getAiTokenPack } from "@/lib/subscriptions";
+import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +30,24 @@ export const POST = Webhooks({
       return;
     }
 
+    // Check if this is an upgrade from a lower tier (user still has old tier in DB)
+    const [user] = await db
+      .select({ subscriptionTier: users.subscriptionTier })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const oldTier = user?.subscriptionTier ?? "free";
+
     // Paid tier: provision subscription
     await provisionSubscription(userId, tier);
+
+    // Compensate meter consumption from the old tier so it doesn't penalize
+    // the new allocation. Leftover old-tier credits carry over as a bonus.
+    if (oldTier !== tier) {
+      await compensateUpgradeCredits(userId, oldTier);
+    }
+
     await syncCreditBalance(userId);
   },
 

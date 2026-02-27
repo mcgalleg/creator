@@ -43,7 +43,7 @@ export function CompactHeader({ subscriptionTier = "free" }: CompactHeaderProps)
   const syncCreditsLow = credits !== undefined && credits < tierSyncCredits * 0.1;
   const aiTokensLow = aiTokens !== null && aiTokens < tierAiTokens * 0.1;
 
-  const dashboardHref = isMcp ? "/dashboard/mcp" : "/dashboard";
+  const workspaceHref = isMcp ? "/workspace/mcp" : "/workspace";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -102,18 +102,18 @@ export function CompactHeader({ subscriptionTier = "free" }: CompactHeaderProps)
           </Button>
 
           <Button variant="ghost" size="icon-sm" asChild className="min-h-[32px] min-w-[32px]">
-            <Link href={dashboardHref}>
+            <Link href={workspaceHref}>
               {isMcp ? (
                 <Plug className="h-4 w-4" />
               ) : (
                 <LayoutDashboard className="h-4 w-4" />
               )}
-              <span className="sr-only">{isMcp ? "MCP Hub" : "Dashboard"}</span>
+              <span className="sr-only">{isMcp ? "MCP Hub" : "Workspace"}</span>
             </Link>
           </Button>
 
           <Button variant="ghost" size="icon-sm" asChild className="min-h-[32px] min-w-[32px]">
-            <Link href="/dashboard/settings">
+            <Link href="/workspace/settings">
               <Settings className="h-4 w-4" />
               <span className="sr-only">Settings</span>
             </Link>
@@ -132,12 +132,12 @@ export function CompactHeader({ subscriptionTier = "free" }: CompactHeaderProps)
             <SheetTitle className="sr-only">Navigation</SheetTitle>
             <nav className="flex flex-col gap-1 mt-4">
               <Link
-                href={dashboardHref}
+                href={workspaceHref}
                 onClick={() => setSheetOpen(false)}
                 className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
               >
                 {isMcp ? <Plug className="h-4 w-4" /> : <LayoutDashboard className="h-4 w-4" />}
-                {isMcp ? "MCP Hub" : "Dashboard"}
+                {isMcp ? "MCP Hub" : "Workspace"}
               </Link>
               <Link
                 href="/docs"
@@ -148,7 +148,7 @@ export function CompactHeader({ subscriptionTier = "free" }: CompactHeaderProps)
                 Documentation
               </Link>
               <Link
-                href="/dashboard/settings"
+                href="/workspace/settings"
                 onClick={() => setSheetOpen(false)}
                 className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
               >

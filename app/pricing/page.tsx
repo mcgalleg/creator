@@ -148,10 +148,10 @@ export default function PricingPage() {
           <nav className="flex items-center gap-4">
             <ThemeToggle />
             <SignedIn>
-              <Link href="/dashboard">
+              <Link href="/workspace">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Dashboard
+                  Back to Workspace
                 </Button>
               </Link>
             </SignedIn>
@@ -317,8 +317,8 @@ export default function PricingPage() {
                       <>
                         <SignedIn>
                           <Button asChild className="w-full" variant="outline">
-                            <Link href="/dashboard">
-                              Go to Dashboard
+                            <Link href="/workspace">
+                              Go to Workspace
                               <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
                           </Button>

@@ -25,10 +25,10 @@ export function Footer() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
                   <Link
-                    href="/#dashboard"
+                    href="/#ai-copilot"
                     className="hover:text-foreground transition-colors"
                   >
-                    Dashboard
+                    AI Copilot
                   </Link>
                 </li>
                 <li>

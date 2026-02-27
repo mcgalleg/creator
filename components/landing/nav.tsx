@@ -64,8 +64,8 @@ export function Nav() {
             </SignUpButton>
           </SignedOut>
           <SignedIn>
-            <Link href="/dashboard">
-              <Button size="sm">Go to Dashboard</Button>
+            <Link href="/workspace">
+              <Button size="sm">Go to Workspace</Button>
             </Link>
           </SignedIn>
         </nav>

@@ -24,9 +24,11 @@ export default function ExcalidrawInner({
   const apiRef = useRef<any>(null);
 
   useEffect(() => {
-    import("@excalidraw/excalidraw").then((mod) => {
-      setExcalidrawModule(mod);
-    });
+    // Use the shared loader that suppresses the Worker constructor to avoid
+    // SecurityError with Turbopack's file:// import.meta.url resolution.
+    import("@/lib/excalidraw-loader").then(({ loadExcalidraw }) =>
+      loadExcalidraw().then((mod) => setExcalidrawModule(mod))
+    );
   }, []);
 
   const handleAPIReady = useCallback(

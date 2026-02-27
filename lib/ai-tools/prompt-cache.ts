@@ -5,15 +5,9 @@ import type { LanguageModel, ModelMessage } from "ai";
  * prompt caching via the `cache_control` API parameter.
  */
 function isAnthropicModel(model: LanguageModel): boolean {
-  if (typeof model === "string") {
-    return model.includes("anthropic") || model.includes("claude");
-  }
-  return (
-    model.provider === "anthropic" ||
-    model.provider.includes("anthropic") ||
-    model.modelId.includes("anthropic") ||
-    model.modelId.includes("claude")
-  );
+  // Gateway models have modelId like "anthropic/claude-haiku-4-5"
+  const id = typeof model === "string" ? model : model.modelId;
+  return id.includes("anthropic") || id.includes("claude");
 }
 
 /**

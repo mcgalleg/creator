@@ -27,12 +27,9 @@ export function ChatContainer() {
     submitMessage,
     isLoading,
     isGenerating,
-    uiTrees,
-    videoSpecs,
     error,
-    getMessageText,
   } = useAnalyticsChat({
-    selectedAccountId: syncContext?.selectedAccountId,
+    selectedAccountIds: syncContext?.selectedAccountId ? [syncContext.selectedAccountId] : [],
   });
 
   // Track whether user is near the bottom of the scroll container
@@ -101,9 +98,7 @@ export function ChatContainer() {
         ) : (
           <MessageList
             messages={messages}
-            uiTrees={uiTrees}
-            videoSpecs={videoSpecs}
-            getMessageText={getMessageText}
+            isStreaming={isGenerating}
           />
         )}
 

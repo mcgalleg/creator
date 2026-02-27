@@ -57,7 +57,7 @@ test.describe("Subscription lifecycle", () => {
     await setSubscription("set-tier", "agency");
 
     // Navigate to dashboard first to handle onboarding gate
-    await page.goto("/dashboard");
+    await page.goto("/workspace");
     await page.waitForLoadState("networkidle");
 
     const skipButton = page.locator('text="Skip for now"');
@@ -67,7 +67,7 @@ test.describe("Subscription lifecycle", () => {
     }
 
     // Now navigate to settings
-    await page.goto("/dashboard/settings");
+    await page.goto("/workspace/settings");
     await page.waitForLoadState("networkidle");
 
     const agencyBadge = page.locator('text="Agency"').first();
@@ -95,7 +95,7 @@ test.describe("Subscription lifecycle", () => {
     await setSubscription("set-tier", "pro");
 
     // Navigate to dashboard first to handle onboarding gate
-    await page.goto("/dashboard");
+    await page.goto("/workspace");
     await page.waitForLoadState("networkidle");
 
     const skipButton = page.locator('text="Skip for now"');
@@ -105,7 +105,7 @@ test.describe("Subscription lifecycle", () => {
     }
 
     // Now navigate to settings
-    await page.goto("/dashboard/settings");
+    await page.goto("/workspace/settings");
     await page.waitForLoadState("networkidle");
 
     // Click Cancel Subscription button to open dialog

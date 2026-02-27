@@ -55,8 +55,8 @@ function useCreditsInternal(): CreditsState {
   );
 
   return {
-    balance: data?.balance ?? 0,
-    aiTokens: data?.aiTokens ?? null,
+    balance: Math.max(0, data?.balance ?? 0),
+    aiTokens: data?.aiTokens != null ? Math.max(0, data.aiTokens) : null,
     loading: isLoading,
     error: error ? (error instanceof Error ? error.message : "Failed to fetch credits") : null,
     refresh: async () => { await boundMutate(); },

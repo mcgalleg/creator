@@ -2,7 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 // Protected routes require authentication
-const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/onboarding"]);
+const isProtectedRoute = createRouteMatcher(["/workspace(.*)", "/onboarding"]);
 
 // Public routes: /, /api/auth/webhook (handled implicitly by not calling auth.protect())
 

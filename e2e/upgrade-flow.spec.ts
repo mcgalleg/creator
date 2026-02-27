@@ -155,7 +155,7 @@ async function signInAsTestUser(page: import("@playwright/test").Page) {
   });
 
   // Handle onboarding gate — new users see onboarding before any dashboard content
-  await page.goto("/dashboard");
+  await page.goto("/workspace");
   await page.waitForLoadState("networkidle");
 
   const skipButton = page.locator('text="Skip for now"');
@@ -182,7 +182,7 @@ test.describe("Free to Pro upgrade flow", () => {
   }) => {
     await signInAsTestUser(page);
 
-    await page.goto("/dashboard/settings");
+    await page.goto("/workspace/settings");
     await page.waitForLoadState("networkidle");
 
     // Subscription manager should show Free tier
@@ -265,13 +265,13 @@ test.describe("Free to Pro upgrade flow", () => {
     // Wait for redirect back to our app after successful payment
     // Polar redirects via the ngrok URL — free ngrok shows an interstitial
     // that we need to click through
-    await page.waitForURL(/ngrok|localhost|dashboard/, { timeout: 60_000 });
+    await page.waitForURL(/ngrok|localhost|workspace/, { timeout: 60_000 });
 
     // Handle ngrok interstitial page if it appears
     const visitSiteButton = page.locator('button:has-text("Visit Site"), a:has-text("Visit Site")');
     if (await visitSiteButton.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await visitSiteButton.click();
-      await page.waitForURL("**/dashboard/settings**", { timeout: 30_000 });
+      await page.waitForURL("**/workspace/settings**", { timeout: 30_000 });
     }
     const returnUrl = page.url();
     expect(returnUrl).toContain("checkout=success");
@@ -283,7 +283,7 @@ test.describe("Free to Pro upgrade flow", () => {
     // poll with reloads until the tier updates (or timeout).
     for (let attempt = 0; attempt < 6; attempt++) {
       await page.waitForTimeout(5_000);
-      await page.goto("/dashboard/settings");
+      await page.goto("/workspace/settings");
       await page.waitForLoadState("domcontentloaded");
 
       const proBadgeEarly = page.locator('text="Pro"').first();

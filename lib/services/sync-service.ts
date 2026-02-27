@@ -865,6 +865,20 @@ async function processPostResults(
       });
   }
 
+  // Pre-warm image cache while CDN URLs are fresh
+  const urlsToWarm = [
+    ...postValues.map(p => p.thumbnailUrl),
+    ...collabValues.map(c => c.avatarUrl),
+    channel?.avatar,
+  ].filter((url): url is string => !!url && url.startsWith("http"));
+
+  if (urlsToWarm.length > 0) {
+    const { prewarmImage } = await import("@/lib/image-cache");
+    for (let i = 0; i < urlsToWarm.length; i += 5) {
+      await Promise.allSettled(urlsToWarm.slice(i, i + 5).map(prewarmImage));
+    }
+  }
+
   const postsCount = upsertedPosts.length;
   const newPostsCount = upsertedPosts.filter(p => !existingPostMap.has(p.tiktokId)).length;
   const updatedPostsCount = postsCount - newPostsCount;
@@ -997,6 +1011,19 @@ async function processCommentResults(
           authorFollowerCount: sql`excluded.author_follower_count`,
         },
       });
+  }
+
+  // Pre-warm comment author avatars while CDN URLs are fresh
+  const avatarUrls = allCommentValues
+    .map(c => c.authorAvatarUrl)
+    .filter((url): url is string => !!url && url.startsWith("http"));
+  const uniqueAvatars = [...new Set(avatarUrls)];
+
+  if (uniqueAvatars.length > 0) {
+    const { prewarmImage } = await import("@/lib/image-cache");
+    for (let i = 0; i < uniqueAvatars.length; i += 5) {
+      await Promise.allSettled(uniqueAvatars.slice(i, i + 5).map(prewarmImage));
+    }
   }
 
   const commentsCount = allCommentValues.length;

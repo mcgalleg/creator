@@ -60,16 +60,13 @@ interface McpConnectionSetupProps {
 export function McpConnectionSetup({ compact = false }: McpConnectionSetupProps) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
-  // MCP App endpoint: interactive UI with charts (for hosts that support MCP Apps)
-  const appUrl = `${origin}/api/mcp-app/mcp`;
-  // Plain endpoint: text-only tools (for CLI and non-UI hosts)
-  const analyticsUrl = `${origin}/api/analytics/mcp`;
+  const mcpUrl = `${origin}/api/mcp-app/mcp`;
 
   const claudeDesktopConfig = JSON.stringify(
     {
       mcpServers: {
         "creator-analytics": {
-          url: appUrl,
+          url: mcpUrl,
         },
       },
     },
@@ -77,7 +74,7 @@ export function McpConnectionSetup({ compact = false }: McpConnectionSetupProps)
     2
   );
 
-  const claudeCodeCommand = `claude mcp add creator-analytics ${analyticsUrl}`;
+  const claudeCodeCommand = `claude mcp add creator-analytics ${mcpUrl}`;
 
   return (
     <Card>
@@ -93,37 +90,17 @@ export function McpConnectionSetup({ compact = false }: McpConnectionSetupProps)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Interactive UI endpoint */}
         <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-medium">Interactive Dashboard</p>
-            <Badge variant="secondary" className="text-[10px]">Charts &amp; Visualizations</Badge>
-          </div>
+          <p className="text-sm font-medium">Server URL</p>
           <div className="flex items-center gap-2 rounded-md bg-muted p-3">
-            <code className="text-sm flex-1 break-all">{appUrl}</code>
-            <CopyButton text={appUrl} />
+            <code className="text-sm flex-1 break-all">{mcpUrl}</code>
+            <CopyButton text={mcpUrl} />
           </div>
           <p className="text-xs text-muted-foreground">
-            For Claude Desktop and other MCP Apps-compatible hosts
+            Works with all MCP clients — Claude Desktop, Claude Code, ChatGPT, and more
           </p>
         </div>
 
-        {/* Text-only endpoint */}
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-medium">Text-Only API</p>
-            <Badge variant="outline" className="text-[10px]">CLI &amp; Agents</Badge>
-          </div>
-          <div className="flex items-center gap-2 rounded-md bg-muted p-3">
-            <code className="text-sm flex-1 break-all">{analyticsUrl}</code>
-            <CopyButton text={analyticsUrl} />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            For Claude Code, ChatGPT, and other text-based clients
-          </p>
-        </div>
-
-        {/* Config snippets */}
         <ConfigSnippet
           label="Claude Desktop"
           code={claudeDesktopConfig}
@@ -136,7 +113,7 @@ export function McpConnectionSetup({ compact = false }: McpConnectionSetupProps)
 
         <ConfigSnippet
           label="ChatGPT / Other"
-          code={`Server URL: ${analyticsUrl}\nTransport: Streamable HTTP`}
+          code={`Server URL: ${mcpUrl}\nTransport: Streamable HTTP`}
         />
 
         {/* Docs link */}
