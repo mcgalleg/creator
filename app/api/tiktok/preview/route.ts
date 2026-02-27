@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { validateUsername, estimateSyncCost, estimateCommentSyncCost } from "@/lib/services/sync-service";
 import { proxyImageUrl } from "@/lib/image-proxy";
+import { previewLimiter } from "@/lib/rate-limit";
 
 // Simple in-memory cache for preview results
 // In production, consider using Redis or a proper caching solution
@@ -41,6 +42,10 @@ export async function GET(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Rate limit
+    const { limited } = previewLimiter.check(userId);
+    if (limited) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
 
     const searchParams = request.nextUrl.searchParams;
     const username = searchParams.get("username");

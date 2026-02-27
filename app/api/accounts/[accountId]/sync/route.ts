@@ -8,6 +8,7 @@ import {
   getSyncJobStatus,
   getAccountSyncData,
 } from "@/lib/services/sync-service";
+import { syncLimiter } from "@/lib/rate-limit";
 
 interface RouteParams {
   params: Promise<{ accountId: string }>;
@@ -24,6 +25,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Rate limit
+    const { limited } = syncLimiter.check(userId);
+    if (limited) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
 
     const { accountId } = await params;
     const accountIdNum = parseInt(accountId, 10);

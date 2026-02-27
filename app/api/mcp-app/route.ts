@@ -29,6 +29,13 @@ async function extractAuthInfo(req: Request): Promise<AuthInfo | undefined> {
 async function handleMcpRequest(req: Request): Promise<Response> {
   const authInfo = await extractAuthInfo(req);
 
+  if (!authInfo && process.env.BYPASS_AUTH !== "true") {
+    return Response.json(
+      { jsonrpc: "2.0", error: { code: -32000, message: "Unauthorized" }, id: null },
+      { status: 401 }
+    );
+  }
+
   const server = new McpServer({
     name: "creator-mcp-app",
     version: "1.0.0",

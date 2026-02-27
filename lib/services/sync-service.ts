@@ -359,28 +359,31 @@ export async function startSync(input: StartSyncInput): Promise<StartSyncResult>
   const estimate = await calculateEstimate(type, config, accountId);
   const creditsToHold = estimate.credits;
 
-  await holdCredits(
-    userId,
-    creditsToHold,
-    `Hold for ${type} sync of @${account.username}`
-  );
-
-  // 2. Create sync job
-  const [syncJob] = await db
-    .insert(syncJobs)
-    .values({
-      accountId,
-      userId,
-      type,
-      status: "pending",
-      creditsEstimated: creditsToHold,
-      creditsHeld: creditsToHold,
-      commentsEstimated: estimate.estimatedComments || null,
-      syncConfig: config,
-    })
-    .returning();
-
+  // Wrap everything from hold through actor start in try/catch
+  // so credits are refunded if job insert or actor start fails
+  let syncJob: typeof syncJobs.$inferSelect | undefined;
   try {
+    await holdCredits(
+      userId,
+      creditsToHold,
+      `Hold for ${type} sync of @${account.username}`
+    );
+
+    // 2. Create sync job
+    [syncJob] = await db
+      .insert(syncJobs)
+      .values({
+        accountId,
+        userId,
+        type,
+        status: "pending",
+        creditsEstimated: creditsToHold,
+        creditsHeld: creditsToHold,
+        commentsEstimated: estimate.estimatedComments || null,
+        syncConfig: config,
+      })
+      .returning();
+
     const client = getApifyClient();
 
     // 3. Build actor input and start run
@@ -410,22 +413,24 @@ export async function startSync(input: StartSyncInput): Promise<StartSyncResult>
       estimatedBreakdown: estimate.breakdown,
     };
   } catch (error) {
-    // On failure to start: refund held credits and mark job failed
+    // On failure: refund held credits and mark job failed (if it was created)
     await refundHold(
       userId,
       creditsToHold,
       `Refund: failed to start ${type} sync of @${account.username}`
     );
 
-    const errorMessage = error instanceof Error ? error.message : "Unknown error starting sync";
-    await db
-      .update(syncJobs)
-      .set({
-        status: "failed",
-        error: errorMessage,
-        completedAt: new Date(),
-      })
-      .where(eq(syncJobs.id, syncJob.id));
+    if (syncJob) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error starting sync";
+      await db
+        .update(syncJobs)
+        .set({
+          status: "failed",
+          error: errorMessage,
+          completedAt: new Date(),
+        })
+        .where(eq(syncJobs.id, syncJob.id));
+    }
 
     throw error;
   }
@@ -1332,58 +1337,50 @@ export async function getAccountSyncData(accountId: number, userId: string) {
       .orderBy(desc(syncJobs.createdAt));
   }
 
-  // Recent completed/failed jobs (last 5)
-  const recentJobs = await db
-    .select()
-    .from(syncJobs)
-    .where(
-      and(
-        eq(syncJobs.accountId, accountId),
-        eq(syncJobs.userId, userId),
-        inArray(syncJobs.status, ["completed", "failed"])
+  // Parallelize independent read queries
+  const [recentJobs, [postStats], [commentStats], [accountData], [lastCompletedJob]] = await Promise.all([
+    db
+      .select()
+      .from(syncJobs)
+      .where(
+        and(
+          eq(syncJobs.accountId, accountId),
+          eq(syncJobs.userId, userId),
+          inArray(syncJobs.status, ["completed", "failed"])
+        )
       )
-    )
-    .orderBy(desc(syncJobs.createdAt))
-    .limit(5);
-
-  // Account stats
-  const [postStats] = await db
-    .select({
-      syncedPosts: sql<number>`count(*)`,
-    })
-    .from(posts)
-    .where(eq(posts.accountId, accountId));
-
-  const [commentStats] = await db
-    .select({
-      syncedComments: sql<number>`count(*)`,
-    })
-    .from(comments)
-    .innerJoin(posts, eq(comments.postId, posts.id))
-    .where(eq(posts.accountId, accountId));
-
-  const [accountData] = await db
-    .select({
-      videoCount: tiktokAccounts.videoCount,
-      lastSyncedAt: tiktokAccounts.lastSyncedAt,
-    })
-    .from(tiktokAccounts)
-    .where(eq(tiktokAccounts.id, accountId))
-    .limit(1);
-
-  // Last completed sync job (not limited by recentJobs window)
-  const [lastCompletedJob] = await db
-    .select({ completedAt: syncJobs.completedAt })
-    .from(syncJobs)
-    .where(
-      and(
-        eq(syncJobs.accountId, accountId),
-        eq(syncJobs.userId, userId),
-        eq(syncJobs.status, "completed")
+      .orderBy(desc(syncJobs.createdAt))
+      .limit(5),
+    db
+      .select({ syncedPosts: sql<number>`count(*)` })
+      .from(posts)
+      .where(eq(posts.accountId, accountId)),
+    db
+      .select({ syncedComments: sql<number>`count(*)` })
+      .from(comments)
+      .innerJoin(posts, eq(comments.postId, posts.id))
+      .where(eq(posts.accountId, accountId)),
+    db
+      .select({
+        videoCount: tiktokAccounts.videoCount,
+        lastSyncedAt: tiktokAccounts.lastSyncedAt,
+      })
+      .from(tiktokAccounts)
+      .where(eq(tiktokAccounts.id, accountId))
+      .limit(1),
+    db
+      .select({ completedAt: syncJobs.completedAt })
+      .from(syncJobs)
+      .where(
+        and(
+          eq(syncJobs.accountId, accountId),
+          eq(syncJobs.userId, userId),
+          eq(syncJobs.status, "completed")
+        )
       )
-    )
-    .orderBy(desc(syncJobs.completedAt))
-    .limit(1);
+      .orderBy(desc(syncJobs.completedAt))
+      .limit(1),
+  ]);
 
   // Enrich running jobs with live dataset item counts for progress tracking
   const enrichedActiveJobs = activeJobs.map((job) => {

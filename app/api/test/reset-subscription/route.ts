@@ -3,7 +3,7 @@ import { endSubscription } from "@/lib/services/subscription-service";
 
 export async function POST(request: NextRequest) {
   // Guard: only available in non-production
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV === "production" || process.env.BYPASS_AUTH !== "true") {
     return NextResponse.json({ error: "Not available" }, { status: 404 });
   }
 

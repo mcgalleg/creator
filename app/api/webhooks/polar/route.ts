@@ -1,5 +1,5 @@
 import { Webhooks } from "@polar-sh/nextjs";
-import { POLAR_PRODUCT_TO_TIER } from "@/lib/polar";
+import { getProductToTier } from "@/lib/polar";
 import { syncCreditBalance } from "@/lib/services/credit-service";
 import {
   provisionSubscription,
@@ -15,13 +15,16 @@ import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
+const webhookSecret = process.env.POLAR_WEBHOOK_SECRET;
+if (!webhookSecret) throw new Error("POLAR_WEBHOOK_SECRET is required");
+
 export const POST = Webhooks({
-  webhookSecret: process.env.POLAR_WEBHOOK_SECRET!,
+  webhookSecret,
 
   onSubscriptionActive: async (payload) => {
     const userId = payload.data.customer.externalId;
     const productId = payload.data.productId;
-    const tier = POLAR_PRODUCT_TO_TIER[productId];
+    const tier = getProductToTier()[productId];
     if (!userId || !tier) return;
 
     // Free product activation: just sync balance, don't change tier
@@ -72,7 +75,7 @@ export const POST = Webhooks({
     if (!userId) return;
 
     const productId = payload.data.productId;
-    const tier = POLAR_PRODUCT_TO_TIER[productId];
+    const tier = getProductToTier()[productId];
 
     // Free product revoked: just log, don't change tier
     if (tier === "free") {

@@ -25,6 +25,7 @@ import { getAnalyticsSchema, executeReadQuery } from "@/lib/mcp-app/data";
 import { createDiagramTool } from "@/lib/ai-tools/excalidraw-tools";
 import { addCacheControlToMessages, ANTHROPIC_CACHE_CONTROL } from "@/lib/ai-tools/prompt-cache";
 import { getAnalyticsChatPrompt } from "@/lib/catalog";
+import { chatLimiter } from "@/lib/rate-limit";
 
 // =============================================================================
 // Message sanitization — fix malformed tool_use inputs in conversation history
@@ -147,6 +148,10 @@ export async function POST(req: Request) {
       return new Response("Unauthorized", { status: 401 });
     }
 
+    // Rate limit
+    const { limited } = chatLimiter.check(userId);
+    if (limited) return Response.json({ error: "Rate limit exceeded" }, { status: 429 });
+
     // Check feature access via DB tier lookup
     const canChat = await hasFeature("analytics_assistant");
     if (!canChat) {
@@ -223,6 +228,7 @@ export async function POST(req: Request) {
 
     const result = streamText({
       model,
+      maxOutputTokens: 16384,
       messages: allMessages,
       stopWhen: stepCountIs(5),
       prepareStep: ({ messages, model }) => ({

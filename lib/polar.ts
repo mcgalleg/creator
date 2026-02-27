@@ -15,18 +15,32 @@ export function getPolar(): Polar {
   return _polar;
 }
 
-// Product ID -> tier mapping (monthly + annual variants)
-export const POLAR_PRODUCT_TO_TIER: Record<string, "free" | "basic" | "pro" | "agency" | "mcp"> = {
-  [process.env.NEXT_PUBLIC_POLAR_PRODUCT_FREE!]: "free",
-  [process.env.NEXT_PUBLIC_POLAR_PRODUCT_BASIC!]: "basic",
-  [process.env.NEXT_PUBLIC_POLAR_PRODUCT_PRO!]: "pro",
-  [process.env.NEXT_PUBLIC_POLAR_PRODUCT_AGENCY!]: "agency",
-  [process.env.NEXT_PUBLIC_POLAR_PRODUCT_MCP!]: "mcp",
-  // Annual variants map to the same tier
-  [process.env.NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_BASIC!]: "basic",
-  [process.env.NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_PRO!]: "pro",
-  [process.env.NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_AGENCY!]: "agency",
-};
+// Product ID -> tier mapping (lazy-validated to avoid "undefined" keys at import time)
+let _productToTier: Record<string, "free" | "basic" | "pro" | "agency" | "mcp"> | null = null;
+
+export function getProductToTier(): Record<string, "free" | "basic" | "pro" | "agency" | "mcp"> {
+  if (_productToTier) return _productToTier;
+
+  const envMap: Record<string, "free" | "basic" | "pro" | "agency" | "mcp"> = {
+    NEXT_PUBLIC_POLAR_PRODUCT_FREE: "free",
+    NEXT_PUBLIC_POLAR_PRODUCT_BASIC: "basic",
+    NEXT_PUBLIC_POLAR_PRODUCT_PRO: "pro",
+    NEXT_PUBLIC_POLAR_PRODUCT_AGENCY: "agency",
+    NEXT_PUBLIC_POLAR_PRODUCT_MCP: "mcp",
+    NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_BASIC: "basic",
+    NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_PRO: "pro",
+    NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_AGENCY: "agency",
+  };
+
+  const mapping: Record<string, "free" | "basic" | "pro" | "agency" | "mcp"> = {};
+  for (const [envVar, tier] of Object.entries(envMap)) {
+    const val = process.env[envVar];
+    if (!val) throw new Error(`Missing required env var: ${envVar}`);
+    mapping[val] = tier;
+  }
+  _productToTier = mapping;
+  return _productToTier;
+}
 
 // Fetch BOTH meter balances from Polar for a customer
 export async function getPolarMeterBalances(externalCustomerId: string): Promise<{

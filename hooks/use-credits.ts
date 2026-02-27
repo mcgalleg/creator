@@ -35,11 +35,8 @@ const creditsFetcher = async (url: string): Promise<CreditsData> => {
  */
 export function useCredits(): CreditsState {
   const ctx = useContext(CreditsContext);
-  if (ctx) return ctx;
-
-  // Fallback: standalone usage (should not happen in dashboard)
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  return useCreditsInternal();
+  const internal = useCreditsInternal();
+  return ctx ?? internal;
 }
 
 function useCreditsInternal(): CreditsState {

@@ -42,7 +42,7 @@ export default function SettingsError({
               Failed to load settings
             </CardTitle>
             <CardDescription>
-              {error.message || 'An unexpected error occurred while loading your settings.'}
+              Something went wrong. Please try again.{error.digest && ` (ref: ${error.digest})`}
             </CardDescription>
           </CardHeader>
           <CardContent>

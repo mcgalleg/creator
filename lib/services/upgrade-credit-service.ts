@@ -28,6 +28,16 @@ export async function compensateUpgradeCredits(
   // Nothing to compensate if the old tier had no credits
   if (oldAiTokens === 0 && oldSyncCredits === 0) return;
 
+  // Idempotency guard: skip if carryover was already set
+  const [existingUser] = await db
+    .select({
+      carryoverAiTokens: users.carryoverAiTokens,
+      carryoverSyncCredits: users.carryoverSyncCredits,
+    })
+    .from(users)
+    .where(eq(users.id, userId));
+  if (existingUser && (existingUser.carryoverAiTokens > 0 || existingUser.carryoverSyncCredits > 0)) return;
+
   // Read current meter state to find consumed_units
   const polar = getPolar();
   const state = await polar.customers.getStateExternal({ externalId: userId });

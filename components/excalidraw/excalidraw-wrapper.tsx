@@ -5,8 +5,7 @@ import { useTheme } from "next-themes";
 import { useDrawingBridgeOptional } from "@/contexts/drawing-bridge-context";
 import { Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { ExcalidrawElement, ExcalidrawAPI } from "@/types/excalidraw";
 
 // Dynamic import of inner component (loads Excalidraw + its CSS client-side only)
 const ExcalidrawDynamic = dynamic(
@@ -33,23 +32,24 @@ export function ExcalidrawWrapper({
   onChange,
 }: ExcalidrawWrapperProps) {
   const { resolvedTheme } = useTheme();
-  const excalidrawAPIRef = useRef<any>(null);
+  const excalidrawAPIRef = useRef<ExcalidrawAPI | null>(null);
   const drawingBridge = useDrawingBridgeOptional();
   const [isReady, setIsReady] = useState(false);
 
-  const handleAPIReady = useCallback((api: any) => {
+  const handleAPIReady = useCallback((api: ExcalidrawAPI) => {
     excalidrawAPIRef.current = api;
     setIsReady(true);
   }, []);
 
   const handleChange = useCallback(
-    (elements: any, appState: any) => {
+    (elements: readonly unknown[], appState: Record<string, unknown>) => {
       onChange?.(elements, appState);
     },
     [onChange]
   );
 
   // Ref to hold the dynamically imported convertToExcalidrawElements
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Excalidraw converter accepts skeleton elements
   const converterRef = useRef<any>(null);
   // Track whether we need to scroll to content when the tab becomes visible
   const pendingScrollRef = useRef(false);
@@ -96,7 +96,8 @@ export function ExcalidrawWrapper({
       // Verify zoom didn't end up as NaN — if so, reset to a sane default
       setTimeout(() => {
         const appState = api.getAppState?.();
-        const zoomVal = appState?.zoom?.value ?? appState?.zoom;
+        const zoom = appState?.zoom as { value?: number } | number | undefined;
+        const zoomVal = typeof zoom === "object" && zoom !== null ? zoom.value : zoom;
         if (typeof zoomVal !== "number" || !isFinite(zoomVal)) {
           api.updateScene({
             appState: { zoom: { value: 1 } },
@@ -143,7 +144,7 @@ export function ExcalidrawWrapper({
         "rectangle", "ellipse", "diamond", "text", "arrow", "line",
         "freedraw", "image", "frame", "embeddable",
       ]);
-      const skeletonElements: any[] = [];
+      const skeletonElements: Record<string, unknown>[] = [];
 
       for (const el of data.elements) {
         const element = el as Record<string, unknown>;
@@ -197,8 +198,8 @@ export function ExcalidrawWrapper({
   return (
     <div ref={containerRef} className="h-full w-full">
       <ExcalidrawDynamic
-        initialElements={initialElements}
-        initialAppState={initialAppState}
+        initialElements={initialElements ?? []}
+        initialAppState={initialAppState ?? null}
         onChange={handleChange}
         onAPIReady={handleAPIReady}
         theme={theme}

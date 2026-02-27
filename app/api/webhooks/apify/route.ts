@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { handleSyncWebhook } from "@/lib/services/sync-service";
 
 export async function POST(request: NextRequest) {
@@ -6,7 +7,7 @@ export async function POST(request: NextRequest) {
   const headerSecret = request.headers.get("X-Apify-Webhook-Secret");
   const expectedSecret = process.env.APIFY_WEBHOOK_SECRET;
 
-  if (!expectedSecret || headerSecret !== expectedSecret) {
+  if (!expectedSecret || !headerSecret || headerSecret.length !== expectedSecret.length || !timingSafeEqual(Buffer.from(headerSecret), Buffer.from(expectedSecret))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

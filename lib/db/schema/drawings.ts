@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, serial, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, serial, jsonb, boolean, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
 export const drawings = pgTable("drawings", {
@@ -15,4 +15,6 @@ export const drawings = pgTable("drawings", {
   }>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("drawings_user_id_idx").on(table.userId),
+]);

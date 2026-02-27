@@ -150,18 +150,23 @@ export function useDrawingState(drawingId: number | null) {
 
   // Add AI-generated elements to the scene
   const addElements = useCallback((newElements: unknown[]) => {
-    setElements((prev) => [...prev, ...newElements]);
+    setElements((prev) => {
+      const merged = [...prev, ...newElements];
+      pendingSaveRef.current = { elements: merged, appState };
+      return merged;
+    });
 
-    // Trigger a save for the merged elements
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
     }
 
     saveTimerRef.current = setTimeout(() => {
-      const merged = [...elements, ...newElements];
-      save(merged, appState);
+      if (pendingSaveRef.current) {
+        save(pendingSaveRef.current.elements, pendingSaveRef.current.appState);
+        pendingSaveRef.current = null;
+      }
     }, 750);
-  }, [elements, appState, save]);
+  }, [appState, save]);
 
   // Cleanup timer on unmount
   useEffect(() => {

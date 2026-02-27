@@ -242,13 +242,21 @@ export async function holdCredits(
     );
   }
 
-  // Only record the hold after successful deduction
-  await db.insert(creditTransactions).values({
-    userId,
-    amount: -amount,
-    type: "credit_hold",
-    description,
-  });
+  // Only record the hold after successful deduction — refund if log insert fails
+  try {
+    await db.insert(creditTransactions).values({
+      userId,
+      amount: -amount,
+      type: "credit_hold",
+      description,
+    });
+  } catch (logError) {
+    // Refund the deduction if we can't log it
+    await db.update(users)
+      .set({ creditBalance: sql`${users.creditBalance} + ${amount}` })
+      .where(eq(users.id, userId));
+    throw logError;
+  }
 
   return balanceUpdate[0].creditBalance;
 }
@@ -267,11 +275,7 @@ export async function finalizeCredits(
 ): Promise<void> {
   const difference = held - actual;
 
-  // Ingest the actual usage to Polar (source of truth)
-  if (actual > 0) {
-    await ingestSyncCreditEvent(userId, actual, { type });
-  }
-
+  // 1. Adjust local DB first (authoritative ledger)
   if (difference > 0) {
     // Overestimate — refund overage to local cache, record actual usage
     await db.batch([
@@ -314,6 +318,15 @@ export async function finalizeCredits(
       type,
       description,
     });
+  }
+
+  // 2. Ingest the actual usage to Polar (best-effort, local DB is authoritative)
+  if (actual > 0) {
+    try {
+      await ingestSyncCreditEvent(userId, actual, { type });
+    } catch (e) {
+      console.error("Polar ingest failed, will reconcile:", e);
+    }
   }
 }
 

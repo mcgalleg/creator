@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, serial, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, serial, jsonb, boolean, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
 // TypeScript interfaces for widget positioning
@@ -28,4 +28,6 @@ export const dashboardLayouts = pgTable("dashboard_layouts", {
   widgetConfigs: jsonb("widget_configs").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("dashboard_layouts_user_id_idx").on(table.userId),
+]);

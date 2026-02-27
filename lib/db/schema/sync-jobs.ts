@@ -51,4 +51,5 @@ export const syncJobs = pgTable("sync_jobs", {
 }, (table) => [
   index("sync_jobs_apify_run_id_idx").on(table.apifyRunId),
   index("sync_jobs_account_status_idx").on(table.accountId, table.status),
+  index("sync_jobs_user_id_idx").on(table.userId),
 ]);

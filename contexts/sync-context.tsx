@@ -7,6 +7,7 @@ import {
   useRef,
   useEffect,
   useState,
+  useMemo,
   type ReactNode,
 } from "react";
 import { useAccounts } from "@/hooks/use-accounts";
@@ -170,7 +171,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  const value: SyncContextValue = {
+  const value = useMemo<SyncContextValue>(() => ({
     accounts,
     accountsLoading: loading,
     accountsError: error,
@@ -190,7 +191,12 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     totalActiveJobs,
     activeJobsFor,
     onSyncCompleted,
-  };
+  }), [
+    accounts, loading, error, fetchAccounts, connectAccount, disconnectAccount,
+    triggerSync, refreshProfile, syncData, fetchSyncData,
+    connecting, syncing, disconnecting,
+    selectedAccountId, isSyncing, totalActiveJobs, activeJobsFor, onSyncCompleted,
+  ]);
 
   return <SyncContext value={value}>{children}</SyncContext>;
 }

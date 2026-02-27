@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { comments, tiktokAccounts } from "@/lib/db/schema";
 import { sql, eq } from "drizzle-orm";
 import { isAllowedHost, fetchImage } from "@/lib/image-cache";
+import { avatarLimiter } from "@/lib/rate-limit";
 
 /**
  * GET /api/avatar?username=liliarochel   — commenter avatar (freshest from comments)
@@ -15,6 +16,11 @@ import { isAllowedHost, fetchImage } from "@/lib/image-cache";
  * than a full encoded CDN URL.
  */
 export async function GET(request: NextRequest) {
+  // Rate limit by IP
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const { limited } = avatarLimiter.check(ip);
+  if (limited) return new Response("Rate limit exceeded", { status: 429 });
+
   const username = request.nextUrl.searchParams.get("username");
   const accountId = request.nextUrl.searchParams.get("accountId");
 

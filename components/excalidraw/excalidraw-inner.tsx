@@ -1,11 +1,10 @@
 "use client";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import "@excalidraw/excalidraw/index.css";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { Loader2 } from "lucide-react";
+import type { ExcalidrawElement, AppState, ExcalidrawAPI } from "@/types/excalidraw";
 
 export default function ExcalidrawInner({
   initialElements,
@@ -14,14 +13,15 @@ export default function ExcalidrawInner({
   onAPIReady,
   theme,
 }: {
-  initialElements: any;
-  initialAppState: any;
-  onChange: any;
-  onAPIReady: (api: any) => void;
+  initialElements: readonly unknown[];
+  initialAppState: Record<string, unknown> | null;
+  onChange: (elements: readonly unknown[], appState: Record<string, unknown>) => void;
+  onAPIReady: (api: ExcalidrawAPI) => void;
   theme: string;
 }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Excalidraw module has no exported types
   const [excalidrawModule, setExcalidrawModule] = useState<any>(null);
-  const apiRef = useRef<any>(null);
+  const apiRef = useRef<ExcalidrawAPI | null>(null);
 
   useEffect(() => {
     // Use the shared loader that suppresses the Worker constructor to avoid
@@ -32,7 +32,7 @@ export default function ExcalidrawInner({
   }, []);
 
   const handleAPIReady = useCallback(
-    (api: any) => {
+    (api: ExcalidrawAPI) => {
       apiRef.current = api;
       onAPIReady(api);
     },

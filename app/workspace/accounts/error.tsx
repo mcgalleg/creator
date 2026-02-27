@@ -32,7 +32,7 @@ export default function AccountsError({
             Failed to load accounts
           </CardTitle>
           <CardDescription>
-            {error.message || 'An unexpected error occurred while loading your accounts.'}
+            Something went wrong. Please try again.{error.digest && ` (ref: ${error.digest})`}
           </CardDescription>
         </CardHeader>
         <CardContent>

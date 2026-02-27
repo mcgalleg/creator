@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAllowedHost, fetchImage } from "@/lib/image-cache";
+import { imageLimiter } from "@/lib/rate-limit";
 
 /** Return a plain-text error so <img onError> fires (NOT a valid image). */
 function errorResponse(status: number, message: string, noStore = false) {
@@ -15,6 +16,11 @@ function errorResponse(status: number, message: string, noStore = false) {
 }
 
 export async function GET(request: NextRequest) {
+  // Rate limit by IP
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const { limited } = imageLimiter.check(ip);
+  if (limited) return errorResponse(429, "Rate limit exceeded");
+
   const url = request.nextUrl.searchParams.get("url");
 
   if (!url) {

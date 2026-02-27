@@ -5,7 +5,10 @@ import { getUserAccountIds } from "./accounts";
 const MAX_ROWS = 500;
 
 const FORBIDDEN_KEYWORDS =
-  /\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|GRANT|REVOKE|EXECUTE|COPY)\b/i;
+  /\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|GRANT|REVOKE|EXECUTE|COPY|SET|CALL|DO|VACUUM|EXPLAIN|LISTEN|NOTIFY|LOAD|REINDEX)\b/i;
+
+const FORBIDDEN_PATTERNS =
+  /\b(pg_read_file|pg_read_binary_file|pg_ls_dir|pg_stat_file|current_setting|set_config|pg_sleep|lo_import|lo_export|dblink|query_to_xml|pg_terminate_backend|pg_cancel_backend|information_schema|pg_catalog)\b/i;
 
 const ALLOWED_TABLES = new Set([
   "tiktok_accounts",
@@ -208,7 +211,10 @@ function validateTableReferences(query: string): void {
  * pre-filtered to only the authenticated user's account data.
  */
 function buildScopedQuery(userQuery: string, accountIds: number[]): string {
-  const ids = accountIds.join(", ");
+  const ids = accountIds.map(id => {
+    if (!Number.isFinite(id) || id !== Math.floor(id)) throw new Error("Invalid account ID");
+    return id;
+  }).join(", ");
 
   // CTEs that shadow base table names — any reference to "posts" in the user
   // query resolves to the scoped CTE, not the underlying table.
@@ -254,6 +260,10 @@ function validateQuery(queryStr: string): string {
     throw new Error(
       "Query contains forbidden operations (only SELECT is allowed)"
     );
+  }
+
+  if (FORBIDDEN_PATTERNS.test(trimmed)) {
+    throw new Error("Query contains forbidden functions or system references");
   }
 
   const withoutStrings = trimmed

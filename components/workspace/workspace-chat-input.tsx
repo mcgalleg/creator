@@ -25,7 +25,7 @@ export function WorkspaceChatInput({
   onSubmit,
   isLoading,
   disabled,
-  placeholder = 'Ask anything or type / for suggestions...',
+  placeholder = 'Type / for suggestions...',
   toolbar,
 }: WorkspaceChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
