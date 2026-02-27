@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -58,7 +58,10 @@ interface McpConnectionSetupProps {
 }
 
 export function McpConnectionSetup({ compact = false }: McpConnectionSetupProps) {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const [origin, setOrigin] = useState("");
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   const mcpUrl = `${origin}/api/mcp-app/mcp`;
 

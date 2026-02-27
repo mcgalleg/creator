@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   // Fetch user balance
   const user = await db.query.users.findFirst({
     where: eq(users.id, userId),
-    columns: { creditBalance: true },
+    columns: { creditBalance: true, carryoverAiTokens: true, carryoverSyncCredits: true },
   });
 
   if (!user) {

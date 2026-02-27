@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { cancelSubscription } from "@/lib/services/subscription-service";
+import { cancelSubscription, endSubscription } from "@/lib/services/subscription-service";
+import { compensateUpgradeCredits } from "@/lib/services/upgrade-credit-service";
 import { TIER_SYNC_CREDITS } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/lib/subscriptions";
 
@@ -30,6 +31,8 @@ export async function GET(request: NextRequest) {
       subscriptionExpiresAt: true,
       dataPurgeAt: true,
       creditBalance: true,
+      carryoverAiTokens: true,
+      carryoverSyncCredits: true,
     },
   });
 
@@ -45,10 +48,12 @@ export async function POST(request: NextRequest) {
   if (blocked) return blocked;
 
   const body = await request.json();
-  const { userId, action, tier } = body as {
+  const { userId, action, tier, carryoverAiTokens, carryoverSyncCredits } = body as {
     userId?: string;
     action?: string;
     tier?: SubscriptionTier;
+    carryoverAiTokens?: number;
+    carryoverSyncCredits?: number;
   };
 
   if (!userId) {
@@ -106,10 +111,50 @@ export async function POST(request: NextRequest) {
           creditsResetAt: null,
           dataPurgeAt: null,
           creditBalance: TIER_SYNC_CREDITS.free,
+          carryoverAiTokens: 0,
+          carryoverSyncCredits: 0,
           updatedAt: now,
         })
         .where(eq(users.id, userId));
       return NextResponse.json({ success: true, userId, tier: "free", creditBalance: TIER_SYNC_CREDITS.free });
+    }
+
+    case "set-carryover": {
+      await db.update(users)
+        .set({
+          carryoverAiTokens: carryoverAiTokens ?? 0,
+          carryoverSyncCredits: carryoverSyncCredits ?? 0,
+          updatedAt: now,
+        })
+        .where(eq(users.id, userId));
+      return NextResponse.json({ success: true, userId, carryoverAiTokens: carryoverAiTokens ?? 0, carryoverSyncCredits: carryoverSyncCredits ?? 0 });
+    }
+
+    case "trigger-upgrade-compensation": {
+      if (!tier || !["free", "basic", "pro", "agency", "mcp"].includes(tier)) {
+        return NextResponse.json({ error: "Valid old tier required" }, { status: 400 });
+      }
+      try {
+        await compensateUpgradeCredits(userId, tier);
+        const user = await db.query.users.findFirst({
+          where: eq(users.id, userId),
+          columns: { carryoverAiTokens: true, carryoverSyncCredits: true },
+        });
+        return NextResponse.json({ success: true, userId, oldTier: tier, ...user });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("compensateUpgradeCredits failed:", message);
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
+      }
+    }
+
+    case "end-subscription": {
+      await endSubscription(userId);
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+        columns: { subscriptionTier: true, carryoverAiTokens: true, carryoverSyncCredits: true },
+      });
+      return NextResponse.json({ success: true, userId, ...user });
     }
 
     default:

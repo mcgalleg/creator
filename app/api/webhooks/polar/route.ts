@@ -30,14 +30,24 @@ export const POST = Webhooks({
       return;
     }
 
-    // Check if this is an upgrade from a lower tier (user still has old tier in DB)
-    const [user] = await db
-      .select({ subscriptionTier: users.subscriptionTier })
+    // Ensure user row exists (Polar webhook may arrive before Clerk webhook)
+    const [existingUser] = await db
+      .select({ id: users.id, subscriptionTier: users.subscriptionTier })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
 
-    const oldTier = user?.subscriptionTier ?? "free";
+    if (!existingUser) {
+      const customer = payload.data.customer;
+      await db.insert(users).values({
+        id: userId,
+        email: customer.email,
+        name: customer.name ?? null,
+        creditBalance: 0,
+      }).onConflictDoNothing();
+    }
+
+    const oldTier = existingUser?.subscriptionTier ?? "free";
 
     // Paid tier: provision subscription
     await provisionSubscription(userId, tier);
@@ -70,6 +80,23 @@ export const POST = Webhooks({
       return;
     }
 
+    // Ensure user row exists before updating
+    const [existingUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!existingUser) {
+      const customer = payload.data.customer;
+      await db.insert(users).values({
+        id: userId,
+        email: customer.email,
+        name: customer.name ?? null,
+        creditBalance: 0,
+      }).onConflictDoNothing();
+    }
+
     await endSubscription(userId);
   },
 
@@ -77,8 +104,34 @@ export const POST = Webhooks({
     const userId = payload.data.customer.externalId;
     if (!userId) return;
 
+    // Ensure user row exists (Polar webhook may arrive before Clerk webhook)
+    const [existingUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!existingUser) {
+      const customer = payload.data.customer;
+      await db.insert(users).values({
+        id: userId,
+        email: customer.email,
+        name: customer.name ?? null,
+        creditBalance: 0,
+      }).onConflictDoNothing();
+    }
+
     // Subscription renewal — Polar auto-granted meter credits via Benefit
     if (payload.data.billingReason === "subscription_cycle") {
+      // New billing cycle: clear carryover bonus from previous upgrade
+      await db.update(users)
+        .set({
+          carryoverAiTokens: 0,
+          carryoverSyncCredits: 0,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId));
+
       await syncCreditBalance(userId);
       await db.insert(creditTransactions).values({
         userId,

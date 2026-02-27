@@ -1,27 +1,117 @@
 "use client";
 
-import { defineRegistry, useStateStore } from "@json-render/react";
+import { defineRegistry } from "@json-render/react";
 import { shadcnComponents } from "@json-render/shadcn";
 import { catalog } from "@/lib/catalog";
+import {
+  AreaChart as RAreaChart,
+  Area,
+  BarChart as RBarChart,
+  Bar,
+  LineChart as RLineChart,
+  Line,
+  PieChart as RPieChart,
+  Pie,
+  RadarChart as RRadarChart,
+  Radar,
+  RadialBarChart as RRadialBarChart,
+  RadialBar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  PolarGrid,
+  PolarAngleAxis,
+} from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 
-// Custom analytics components
-import { MetricCard } from "@/components/analytics/metric-card";
-import { BarChart } from "@/components/analytics/bar-chart";
-import { LineChart } from "@/components/analytics/line-chart";
-import { AreaChart } from "@/components/analytics/area-chart";
-import { PieChart } from "@/components/analytics/pie-chart";
-import { DataTable } from "@/components/analytics/data-table";
+const {
+  Accordion, Alert, Avatar, Badge, Button, ButtonGroup, Card, Carousel,
+  Checkbox, Collapsible, Dialog, Drawer, DropdownMenu, Heading,
+  Image, Input, Link, Pagination, Popover, Progress, Radio, Select,
+  Separator, Skeleton, Slider, Spinner, Stack, Switch, Table, Tabs,
+  Text, Textarea, Toggle, ToggleGroup, Tooltip,
+} = shadcnComponents;
+
+// ---------------------------------------------------------------------------
+// Chart helpers
+// ---------------------------------------------------------------------------
+
+/** Shared tick styling for cartesian axes — ensures text is always visible. */
+const AXIS_TICK = { fontSize: 12, fill: "currentColor" };
+
+const CHART_COLORS = [
+  "var(--chart-1)", "var(--chart-2)", "var(--chart-3)",
+  "var(--chart-4)", "var(--chart-5)",
+];
+
+function getColor(index: number, explicit?: string | null): string {
+  return explicit ?? CHART_COLORS[index % CHART_COLORS.length];
+}
+
+type SeriesItem = {
+  dataKey: string;
+  label?: string | null;
+  color?: string | null;
+  stackId?: string | null;
+};
+
+/** Build ChartConfig for series-based charts (Area/Bar/Line/Radar). */
+function buildSeriesConfig(series: SeriesItem[]): ChartConfig {
+  const config: ChartConfig = {};
+  series.forEach((s, i) => {
+    config[s.dataKey] = {
+      label: s.label ?? s.dataKey,
+      color: getColor(i, s.color),
+    };
+  });
+  return config;
+}
+
+/** Build ChartConfig for categorical charts (Pie/Radial) and inject fill colors into data. */
+function buildCategoricalChart(
+  data: Record<string, unknown>[],
+  nameKey: string,
+): { config: ChartConfig; coloredData: Record<string, unknown>[] } {
+  const config: ChartConfig = {};
+  const coloredData = data.map((row, i) => {
+    const name = String(row[nameKey] ?? `item-${i}`);
+    config[name] = {
+      label: name,
+      color: CHART_COLORS[i % CHART_COLORS.length],
+    };
+    return { ...row, fill: CHART_COLORS[i % CHART_COLORS.length] };
+  });
+  return { config, coloredData };
+}
+
+// ---------------------------------------------------------------------------
+// Registry
+// ---------------------------------------------------------------------------
 
 export const { registry } = defineRegistry(catalog, {
   components: {
-    // === Standard shadcn implementations (pre-built) ===
-    Stack: shadcnComponents.Stack,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Grid: ({ props, children }: any) => {
+    Accordion, Alert, Avatar, Badge, Button, ButtonGroup, Card, Carousel,
+    Checkbox, Collapsible, Dialog, Drawer, DropdownMenu, Heading,
+    Image, Input, Link, Pagination, Popover, Progress, Radio, Select,
+    Separator, Skeleton, Slider, Spinner, Stack, Switch, Table, Tabs,
+    Text, Textarea, Toggle, ToggleGroup, Tooltip,
+
+    // Override Grid with responsive breakpoints (shadcn Grid uses fixed columns)
+    Grid: ({ props, children }) => {
+      const { columns, gap: gapProp } = props as {
+        columns?: number | null;
+        gap?: "sm" | "md" | "lg" | null;
+      };
       const gapMap: Record<string, string> = { sm: "gap-2", md: "gap-3", lg: "gap-4" };
-      const n = Math.max(1, Math.min(6, props.columns ?? 1));
-      const gap = gapMap[props.gap ?? "md"] ?? "gap-3";
-      // Responsive: collapse to fewer columns on small screens
+      const n = Math.max(1, Math.min(6, columns ?? 1));
+      const gap = gapMap[gapProp ?? "md"] ?? "gap-3";
       const cols =
         n <= 1 ? "grid-cols-1"
         : n === 2 ? "grid-cols-1 sm:grid-cols-2"
@@ -30,94 +120,225 @@ export const { registry } = defineRegistry(catalog, {
         : `grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${n}`;
       return <div className={`grid ${cols} ${gap}`}>{children}</div>;
     },
-    Card: shadcnComponents.Card,
-    Heading: shadcnComponents.Heading,
-    Text: shadcnComponents.Text,
-    Badge: shadcnComponents.Badge,
-    Alert: shadcnComponents.Alert,
-    Progress: shadcnComponents.Progress,
-    Separator: shadcnComponents.Separator,
-    Avatar: shadcnComponents.Avatar,
-    Skeleton: shadcnComponents.Skeleton,
-    Tooltip: shadcnComponents.Tooltip,
-    Accordion: shadcnComponents.Accordion,
-    Tabs: shadcnComponents.Tabs,
-    Collapsible: shadcnComponents.Collapsible,
-    Image: shadcnComponents.Image,
-    Table: shadcnComponents.Table,
 
-    // === Custom analytics components ===
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    MetricCard: ({ props }: any) => (
-      <MetricCard
-        label={props.label}
-        value={props.value}
-        change={props.change}
-        trend={props.trend}
-        className="flex-1 min-w-[140px]"
-      />
-    ),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    BarChart: ({ props }: any) => (
-      <BarChart
-        data={props.data}
-        xKey={props.xKey}
-        yKeys={props.yKeys}
-        title={props.title}
-        height={props.height}
-      />
-    ),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    LineChart: ({ props }: any) => (
-      <LineChart
-        data={props.data}
-        xKey={props.xKey}
-        yKeys={props.yKeys}
-        title={props.title}
-        height={props.height}
-      />
-    ),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    AreaChart: ({ props }: any) => (
-      <AreaChart
-        data={props.data}
-        xKey={props.xKey}
-        yKeys={props.yKeys}
-        title={props.title}
-        height={props.height}
-        stacked={props.stacked}
-      />
-    ),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    PieChart: ({ props }: any) => (
-      <PieChart
-        data={props.data}
-        nameKey={props.nameKey}
-        valueKey={props.valueKey}
-        title={props.title}
-        height={props.height}
-      />
-    ),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    DataTable: ({ props }: any) => {
-      // AI sometimes puts data in /state instead of props.data — resolve from state as fallback
-      const store = useStateStore();
-      let data = props.data;
-      if ((!data || (Array.isArray(data) && data.length === 0)) && store.state) {
-        // Find the first array in state that could be table data
-        for (const [, value] of Object.entries(store.state)) {
-          if (Array.isArray(value) && value.length > 0) {
-            data = value;
-            break;
-          }
-        }
-      }
+    // -----------------------------------------------------------------------
+    // Chart components
+    // -----------------------------------------------------------------------
+
+    AreaChart: ({ props }) => {
+      const { data, xKey, series, stacked, tooltip, legend } = props as {
+        data: Record<string, unknown>[];
+        xKey: string;
+        series: SeriesItem[];
+        stacked?: boolean | null;
+        tooltip?: boolean | null;
+        legend?: boolean | null;
+      };
+      const config = buildSeriesConfig(series);
       return (
-        <DataTable
-          columns={props.columns}
-          data={data}
-          title={props.title}
-        />
+        <ChartContainer config={config}>
+          <RAreaChart data={data} accessibilityLayer>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey={xKey} tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
+            <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
+            {tooltip !== false && (
+              <ChartTooltip content={<ChartTooltipContent />} />
+            )}
+            {legend && <ChartLegend content={<ChartLegendContent />} />}
+            {series.map((s) => (
+              <Area
+                key={s.dataKey}
+                type="monotone"
+                dataKey={s.dataKey}
+                fill={`var(--color-${s.dataKey})`}
+                stroke={`var(--color-${s.dataKey})`}
+                fillOpacity={0.3}
+                stackId={stacked ? "stack" : (s.stackId ?? undefined)}
+              />
+            ))}
+          </RAreaChart>
+        </ChartContainer>
+      );
+    },
+
+    BarChart: ({ props }) => {
+      const { data, xKey, series, stacked, horizontal, tooltip, legend } = props as {
+        data: Record<string, unknown>[];
+        xKey: string;
+        series: SeriesItem[];
+        stacked?: boolean | null;
+        horizontal?: boolean | null;
+        tooltip?: boolean | null;
+        legend?: boolean | null;
+      };
+      const config = buildSeriesConfig(series);
+      return (
+        <ChartContainer config={config}>
+          <RBarChart
+            data={data}
+            layout={horizontal ? "vertical" : "horizontal"}
+            accessibilityLayer
+          >
+            <CartesianGrid vertical={false} />
+            {horizontal ? (
+              <>
+                <YAxis
+                  dataKey={xKey}
+                  type="category"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tick={AXIS_TICK}
+                />
+                <XAxis type="number" tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
+              </>
+            ) : (
+              <>
+                <XAxis dataKey={xKey} tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
+                <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
+              </>
+            )}
+            {tooltip !== false && (
+              <ChartTooltip content={<ChartTooltipContent />} />
+            )}
+            {legend && <ChartLegend content={<ChartLegendContent />} />}
+            {series.map((s) => (
+              <Bar
+                key={s.dataKey}
+                dataKey={s.dataKey}
+                fill={`var(--color-${s.dataKey})`}
+                radius={4}
+                stackId={stacked ? "stack" : (s.stackId ?? undefined)}
+              />
+            ))}
+          </RBarChart>
+        </ChartContainer>
+      );
+    },
+
+    LineChart: ({ props }) => {
+      const { data, xKey, series, dots, tooltip, legend } = props as {
+        data: Record<string, unknown>[];
+        xKey: string;
+        series: SeriesItem[];
+        dots?: boolean | null;
+        tooltip?: boolean | null;
+        legend?: boolean | null;
+      };
+      const config = buildSeriesConfig(series);
+      return (
+        <ChartContainer config={config}>
+          <RLineChart data={data} accessibilityLayer>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey={xKey} tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
+            <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
+            {tooltip !== false && (
+              <ChartTooltip content={<ChartTooltipContent />} />
+            )}
+            {legend && <ChartLegend content={<ChartLegendContent />} />}
+            {series.map((s) => (
+              <Line
+                key={s.dataKey}
+                type="monotone"
+                dataKey={s.dataKey}
+                stroke={`var(--color-${s.dataKey})`}
+                strokeWidth={2}
+                dot={!!dots}
+              />
+            ))}
+          </RLineChart>
+        </ChartContainer>
+      );
+    },
+
+    PieChart: ({ props }) => {
+      const { data, nameKey, valueKey, donut, tooltip, legend } = props as {
+        data: Record<string, unknown>[];
+        nameKey: string;
+        valueKey: string;
+        donut?: boolean | null;
+        tooltip?: boolean | null;
+        legend?: boolean | null;
+      };
+      const { config, coloredData } = buildCategoricalChart(data, nameKey);
+      return (
+        <ChartContainer config={config}>
+          <RPieChart accessibilityLayer>
+            {tooltip !== false && (
+              <ChartTooltip content={<ChartTooltipContent nameKey={nameKey} hideLabel />} />
+            )}
+            {legend !== false && (
+              <ChartLegend content={<ChartLegendContent nameKey={nameKey} />} />
+            )}
+            <Pie
+              data={coloredData}
+              dataKey={valueKey}
+              nameKey={nameKey}
+              innerRadius={donut ? "40%" : 0}
+            />
+          </RPieChart>
+        </ChartContainer>
+      );
+    },
+
+    RadarChart: ({ props }) => {
+      const { data, subjectKey, series, tooltip, legend } = props as {
+        data: Record<string, unknown>[];
+        subjectKey: string;
+        series: SeriesItem[];
+        tooltip?: boolean | null;
+        legend?: boolean | null;
+      };
+      const config = buildSeriesConfig(series);
+      return (
+        <ChartContainer config={config}>
+          <RRadarChart data={data} accessibilityLayer>
+            <PolarGrid />
+            <PolarAngleAxis dataKey={subjectKey} tick={AXIS_TICK} />
+            {tooltip !== false && (
+              <ChartTooltip content={<ChartTooltipContent />} />
+            )}
+            {legend && <ChartLegend content={<ChartLegendContent />} />}
+            {series.map((s) => (
+              <Radar
+                key={s.dataKey}
+                dataKey={s.dataKey}
+                fill={`var(--color-${s.dataKey})`}
+                stroke={`var(--color-${s.dataKey})`}
+                fillOpacity={0.3}
+              />
+            ))}
+          </RRadarChart>
+        </ChartContainer>
+      );
+    },
+
+    RadialChart: ({ props }) => {
+      const { data, nameKey, valueKey, tooltip, legend } = props as {
+        data: Record<string, unknown>[];
+        nameKey: string;
+        valueKey: string;
+        tooltip?: boolean | null;
+        legend?: boolean | null;
+      };
+      const { config, coloredData } = buildCategoricalChart(data, nameKey);
+      return (
+        <ChartContainer config={config}>
+          <RRadialBarChart
+            data={coloredData}
+            innerRadius="30%"
+            outerRadius="90%"
+            accessibilityLayer
+          >
+            {tooltip !== false && (
+              <ChartTooltip content={<ChartTooltipContent nameKey={nameKey} hideLabel />} />
+            )}
+            {legend !== false && (
+              <ChartLegend content={<ChartLegendContent nameKey={nameKey} />} />
+            )}
+            <RadialBar dataKey={valueKey} background />
+          </RRadialBarChart>
+        </ChartContainer>
       );
     },
   },

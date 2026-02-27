@@ -12,6 +12,7 @@ import {
 } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { pipeJsonRender } from "@json-render/core";
+import { createSpecRepairTransform } from "@/lib/spec-repair";
 import { auth, hasFeature } from "@/lib/auth";
 import { checkAiTokens } from "@/lib/services/credit-service";
 import { ingestAiTokenEvent } from "@/lib/polar";
@@ -101,9 +102,6 @@ const SYSTEM_PROMPT = `You are a TikTok analytics assistant.
 
 ## Database
 
-Data is automatically scoped to the current user's accounts — no account_id filters needed.
-Use query_data to run SELECT queries. Use describe_tables for full schema details.
-
 ### Tables (quick reference)
 
 tiktok_accounts, posts, comments, account_metrics_history, post_collaborators
@@ -123,16 +121,21 @@ tiktok_accounts, posts, comments, account_metrics_history, post_collaborators
 ${CATALOG_PROMPT}
 
 ## Output Routing
-- For analytics, data, KPIs, charts, and tables: ALWAYS use the \`\`\`spec JSONL format above. NEVER use the createDiagram tool for these.
-- The createDiagram tool is ONLY for hand-drawn spatial diagrams: flowcharts, architecture diagrams, mind maps, process flows. It uses Excalidraw elements (rectangle, ellipse, arrow, text) — NOT spec components.
-- If you are displaying query results, metrics, or any data visualization, use the spec format with MetricCard, BarChart, LineChart, PieChart, DataTable, etc.
+- For analytics, data, KPIs, charts, and tables: ALWAYS use the \`\`\`spec JSONL format above.
+- The createDiagram tool is ONLY for hand-drawn spatial diagrams — NOT for data visualization.
 
 ## Analytics Context
-- Wrap the overall response in a Stack (direction: column)
-- When showing multiple MetricCards, wrap them in a Grid (columns: 3, gap: sm) — NEVER stack MetricCards vertically in a column
-- Use MetricCard for KPIs, charts for trends, DataTable for detail
-- Format numbers compactly (1.2M). No emoji.
-- Match data property names exactly to component prop keys.`;
+- Wrap the overall response in a Stack (direction: vertical).
+- For KPIs: use a Grid of Cards. Each Card contains a Heading (h3) for the metric name and Text (lead variant) for the value. Add a Badge for trend (default=up, destructive=down, outline=neutral). Use Grid (columns: 3, gap: sm) — NEVER stack KPI cards vertically.
+- For tabular data: use Table (columns: string[], rows: string[][]). Format all cell values as pre-formatted strings.
+- For time-series trends: use LineChart or AreaChart (AreaChart for volume emphasis, LineChart for cleaner comparison).
+- For categorical comparisons: use BarChart. Set horizontal=true when category labels are long.
+- For proportions/shares: use PieChart (set donut=true for a cleaner look) or RadialChart.
+- For multi-dimensional comparison: use RadarChart.
+- Always wrap charts in a Card with a title Heading for context.
+- Keep data arrays concise (max ~20 data points for readability; aggregate if needed).
+- Format numbers compactly (1.2M).
+- NEVER use emoji in your responses. Use plain text only — no emoji characters anywhere in headings, lists, or body text.`;
 
 export async function POST(req: Request) {
   try {
@@ -335,7 +338,9 @@ export async function POST(req: Request) {
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
         writer.merge(
-          pipeJsonRender(result.toUIMessageStream()),
+          pipeJsonRender(
+            result.toUIMessageStream().pipeThrough(createSpecRepairTransform())
+          ),
         );
       },
     });

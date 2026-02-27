@@ -8,6 +8,7 @@ import { useAnalyticsChat } from '@/hooks/use-analytics-chat';
 import { MessageList } from '@/components/chat/message-list';
 import { WorkspaceChatInput } from './workspace-chat-input';
 import { WorkspaceEmptyState } from './workspace-empty-state';
+import { WorkspaceSyncBanner } from './workspace-sync-banner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSyncOptional } from '@/contexts/sync-context';
 import { useCredits } from '@/hooks/use-credits';
@@ -124,6 +125,7 @@ export function WorkspaceChat({ accounts }: WorkspaceChatProps) {
         className="flex-1 overflow-y-auto"
       >
         <div className="mx-auto max-w-3xl px-4 py-6">
+          <WorkspaceSyncBanner />
           {messages.length === 0 ? (
             <WorkspaceEmptyState onSuggestionClick={handleSuggestionClick} />
           ) : (

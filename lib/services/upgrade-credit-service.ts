@@ -1,24 +1,22 @@
 import { getPolar } from "@/lib/polar";
-import { ingestAiTokenEvent, ingestSyncCreditEvent } from "@/lib/polar";
 import { TIER_AI_TOKENS, TIER_SYNC_CREDITS } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/lib/subscriptions";
 import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
 import { creditTransactions } from "@/lib/db/schema/credits";
+import { eq } from "drizzle-orm";
 
 /**
- * When a user upgrades from one tier to another, Polar revokes the old tier's
- * meter credits and grants the new tier's credits — but the consumed_units
- * counter doesn't reset. This means consumption from the old tier eats into
- * the new tier's allocation.
+ * When a user upgrades from one tier to another, carry over unused credits
+ * from the old tier as a bonus on the new tier.
  *
- * This function issues compensating negative-consumption events to:
- * 1. Ensure old-tier consumption doesn't penalize the new tier
- * 2. Carry over any leftover old-tier credits as a bonus
+ * Instead of sending negative Polar meter events (which don't work with Sum
+ * aggregation), we store the carryover in local DB columns. These are added
+ * to Polar balances when reading credits.
  *
- * Formula per meter: compensating = max(consumed_units, old_tier_credits)
- *   - If consumed >= old_tier_credits: resets all consumption (clean slate)
- *   - If consumed < old_tier_credits: resets consumption AND adds the
- *     unused old-tier credits as a bonus on the new tier
+ * Formula per meter: carryover = max(0, oldAllocation - consumed)
+ *   - If consumed >= oldAllocation: no carryover (all credits were used)
+ *   - If consumed < oldAllocation: unused portion carries forward
  */
 export async function compensateUpgradeCredits(
   userId: string,
@@ -44,47 +42,30 @@ export async function compensateUpgradeCredits(
   const aiConsumed = aiMeter?.consumedUnits ?? 0;
   const syncConsumed = syncMeter?.consumedUnits ?? 0;
 
-  // Calculate compensating amounts:
-  // max(consumed, old_tier_credits) ensures both clean-slate and carryover
-  const aiCompensation = oldAiTokens > 0
-    ? Math.max(aiConsumed, oldAiTokens)
-    : 0;
-  const syncCompensation = oldSyncCredits > 0
-    ? Math.max(syncConsumed, oldSyncCredits)
-    : 0;
+  // Calculate unused portion of old tier's allocation
+  const aiCarryover = Math.max(0, oldAiTokens - aiConsumed);
+  const syncCarryover = Math.max(0, oldSyncCredits - syncConsumed);
 
-  // Inject negative consumption events to offset old-tier usage
-  const promises: Promise<void>[] = [];
-
-  if (aiCompensation > 0) {
-    promises.push(
-      ingestAiTokenEvent(userId, -aiCompensation, {
-        externalId: `upgrade-comp-ai-${userId}-${Date.now()}`,
+  // Store carryover in local DB columns
+  if (aiCarryover > 0 || syncCarryover > 0) {
+    await db.update(users)
+      .set({
+        carryoverAiTokens: aiCarryover,
+        carryoverSyncCredits: syncCarryover,
+        updatedAt: new Date(),
       })
-    );
-  }
-
-  if (syncCompensation > 0) {
-    promises.push(
-      ingestSyncCreditEvent(userId, -syncCompensation, {
-        externalId: `upgrade-comp-sync-${userId}-${Date.now()}`,
-      })
-    );
-  }
-
-  if (promises.length > 0) {
-    await Promise.all(promises);
+      .where(eq(users.id, userId));
   }
 
   // Log the compensation as a credit transaction
   const parts: string[] = [];
-  if (aiCompensation > 0) parts.push(`${aiCompensation.toLocaleString()} AI tokens`);
-  if (syncCompensation > 0) parts.push(`${syncCompensation} sync credits`);
+  if (aiCarryover > 0) parts.push(`${aiCarryover.toLocaleString()} AI tokens`);
+  if (syncCarryover > 0) parts.push(`${syncCarryover} sync credits`);
 
   if (parts.length > 0) {
     await db.insert(creditTransactions).values({
       userId,
-      amount: syncCompensation,
+      amount: syncCarryover,
       type: "upgrade_compensation",
       description: `Upgrade credit compensation: ${parts.join(", ")} carried over from ${oldTier} tier`,
     });

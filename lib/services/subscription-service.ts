@@ -15,7 +15,7 @@ export async function provisionSubscription(
 ): Promise<void> {
   const now = new Date();
 
-  await db.update(users)
+  const [result] = await db.update(users)
     .set({
       subscriptionTier: tier,
       subscriptionStartedAt: now,
@@ -24,7 +24,12 @@ export async function provisionSubscription(
       dataPurgeAt: null,
       updatedAt: now,
     })
-    .where(eq(users.id, userId));
+    .where(eq(users.id, userId))
+    .returning({ id: users.id });
+
+  if (!result) {
+    throw new Error(`provisionSubscription: user ${userId} not found in DB`);
+  }
 
   console.log(`Provisioned ${tier} subscription for user ${userId}`);
 }
@@ -40,13 +45,18 @@ export async function cancelSubscription(
   const expiresAt = periodEnd ?? new Date();
   const purgeAt = new Date(expiresAt.getTime() + DATA_PURGE_DAYS * 24 * 60 * 60 * 1000);
 
-  await db.update(users)
+  const [result] = await db.update(users)
     .set({
       subscriptionExpiresAt: expiresAt,
       dataPurgeAt: purgeAt,
       updatedAt: new Date(),
     })
-    .where(eq(users.id, userId));
+    .where(eq(users.id, userId))
+    .returning({ id: users.id });
+
+  if (!result) {
+    throw new Error(`cancelSubscription: user ${userId} not found in DB`);
+  }
 
   console.log(`Subscription canceled for user ${userId}, expires at ${expiresAt.toISOString()}, purge at ${purgeAt.toISOString()}`);
 }
@@ -59,16 +69,23 @@ export async function endSubscription(userId: string): Promise<void> {
   const now = new Date();
   const purgeAt = new Date(now.getTime() + DATA_PURGE_DAYS * 24 * 60 * 60 * 1000);
 
-  await db.update(users)
+  const [result] = await db.update(users)
     .set({
       subscriptionTier: "free",
       subscriptionStartedAt: null,
       subscriptionExpiresAt: null,
       creditsResetAt: null,
+      carryoverAiTokens: 0,
+      carryoverSyncCredits: 0,
       dataPurgeAt: purgeAt,
       updatedAt: now,
     })
-    .where(eq(users.id, userId));
+    .where(eq(users.id, userId))
+    .returning({ id: users.id });
+
+  if (!result) {
+    throw new Error(`endSubscription: user ${userId} not found in DB`);
+  }
 
   console.log(`Subscription ended for user ${userId}, reverted to free tier, purge at ${purgeAt.toISOString()}`);
 }

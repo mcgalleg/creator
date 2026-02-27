@@ -10,6 +10,8 @@ export const users = pgTable("users", {
   name: text("name"),
   imageUrl: text("image_url"),
   creditBalance: integer("credit_balance").default(100).notNull(),
+  carryoverAiTokens: integer("carryover_ai_tokens").default(0).notNull(),
+  carryoverSyncCredits: integer("carryover_sync_credits").default(0).notNull(),
   subscriptionTier: subscriptionTierEnum("subscription_tier").default("free").notNull(),
   subscriptionStartedAt: timestamp("subscription_started_at"),
   subscriptionExpiresAt: timestamp("subscription_expires_at"),

@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { getUserCredits, getCreditPricing, syncCreditBalance } from "@/lib/services/credit-service";
+import { getUserCredits, getCreditPricing, syncCreditBalance, getCarryover } from "@/lib/services/credit-service";
 import { ensureUserExists } from "@/lib/services/user-service";
 import { getPolarMeterBalances } from "@/lib/polar";
 
@@ -16,9 +16,12 @@ export async function GET() {
 
     const pricing = getCreditPricing();
 
-    // Primary: read from Polar (source of truth)
+    // Primary: read from Polar (source of truth) + carryover from DB
     try {
-      const meterBalances = await getPolarMeterBalances(userId);
+      const [meterBalances, carryover] = await Promise.all([
+        getPolarMeterBalances(userId),
+        getCarryover(userId),
+      ]);
 
       // Fire-and-forget: update local DB cache
       syncCreditBalance(userId).catch((err) =>
@@ -26,8 +29,8 @@ export async function GET() {
       );
 
       return NextResponse.json({
-        balance: meterBalances.syncCredits,
-        aiTokens: meterBalances.aiTokens,
+        balance: meterBalances.syncCredits + carryover.syncCredits,
+        aiTokens: meterBalances.aiTokens + carryover.aiTokens,
         pricing,
       });
     } catch (polarError) {

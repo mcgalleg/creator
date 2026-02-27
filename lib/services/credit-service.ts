@@ -4,6 +4,27 @@ import { eq, desc, sql, and, gte } from "drizzle-orm";
 import { CREDIT_PRICING_DISPLAY } from "@/lib/credits";
 import { ingestSyncCreditEvent, getPolarMeterBalances } from "@/lib/polar";
 
+/**
+ * Read carryover columns from the users table.
+ * These represent unused credits from a previous tier after an upgrade.
+ */
+export async function getCarryover(userId: string): Promise<{ aiTokens: number; syncCredits: number }> {
+  const result = await db
+    .select({
+      carryoverAiTokens: users.carryoverAiTokens,
+      carryoverSyncCredits: users.carryoverSyncCredits,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (result.length === 0) return { aiTokens: 0, syncCredits: 0 };
+  return {
+    aiTokens: result[0].carryoverAiTokens,
+    syncCredits: result[0].carryoverSyncCredits,
+  };
+}
+
 export type CreditTransactionType =
   | "sync_posts"
   | "sync_comments"
@@ -44,8 +65,11 @@ export async function checkCredits(
   let balance: number;
 
   try {
-    const meterBalances = await getPolarMeterBalances(userId);
-    balance = meterBalances.syncCredits;
+    const [meterBalances, carryover] = await Promise.all([
+      getPolarMeterBalances(userId),
+      getCarryover(userId),
+    ]);
+    balance = meterBalances.syncCredits + carryover.syncCredits;
 
     // Fire-and-forget: update local DB cache
     syncCreditBalance(userId).catch((err) =>
@@ -68,12 +92,17 @@ export async function checkCredits(
  * Polar meters are the source of truth; this updates the local DB cache.
  */
 export async function syncCreditBalance(userId: string): Promise<number> {
-  const balances = await getPolarMeterBalances(userId);
+  const [balances, carryover] = await Promise.all([
+    getPolarMeterBalances(userId),
+    getCarryover(userId),
+  ]);
+
+  const totalSyncCredits = Math.max(0, balances.syncCredits) + carryover.syncCredits;
 
   const [updateResult] = await db
     .update(users)
     .set({
-      creditBalance: Math.max(0, balances.syncCredits),
+      creditBalance: totalSyncCredits,
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId))
@@ -98,8 +127,11 @@ export async function checkAiTokens(
   let balance: number;
 
   try {
-    const meterBalances = await getPolarMeterBalances(userId);
-    balance = meterBalances.aiTokens;
+    const [meterBalances, carryover] = await Promise.all([
+      getPolarMeterBalances(userId),
+      getCarryover(userId),
+    ]);
+    balance = meterBalances.aiTokens + carryover.aiTokens;
   } catch {
     // Polar unreachable — deny by default (no local cache for AI tokens)
     balance = 0;

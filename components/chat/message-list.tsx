@@ -79,7 +79,7 @@ function MessageBubble({ message, isStreaming }: { message: UIMessage; isStreami
 
         {hasSpec && (
           <div className="w-full min-w-0 overflow-x-auto mt-3">
-            <JSONUIProvider registry={registry} initialState={spec!.state}>
+            <JSONUIProvider registry={registry} initialState={spec!.state ?? {}}>
               <Renderer spec={spec!} registry={registry} loading={isStreaming} />
             </JSONUIProvider>
           </div>
