@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useUser, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
@@ -105,6 +105,22 @@ export default function PricingPage() {
   const bestValue = bestValuePackId();
   const bestValueAi = bestValueAiPackId();
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
+  const [currentTier, setCurrentTier] = useState<SubscriptionTier | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setCurrentTier(null);
+      return;
+    }
+    fetch("/api/user/subscription")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.subscriptionTier) {
+          setCurrentTier(data.subscriptionTier as SubscriptionTier);
+        }
+      })
+      .catch(() => {});
+  }, [user]);
 
   function getCheckoutUrl(productId: string): string {
     if (!user || !productId) return "/pricing";
@@ -221,14 +237,20 @@ export default function PricingPage() {
               const isMcp = tier === "mcp";
               const isFree = tier === "free";
               const price = tierPrice(tier);
+              const isCurrentTier = currentTier === tier;
 
               return (
                 <Card
                   key={tier}
                   id={isMcp ? "mcp" : undefined}
-                  className={`relative ${highlighted ? "border-primary shadow-md" : ""} ${isMcp ? "scroll-mt-20" : ""}`}
+                  className={`relative ${isCurrentTier ? "border-primary ring-2 ring-primary/20 shadow-md" : highlighted ? "border-primary shadow-md" : ""} ${isMcp ? "scroll-mt-20" : ""}`}
                 >
-                  {highlighted && (
+                  {isCurrentTier ? (
+                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <Check className="mr-1 size-3" />
+                      Current Plan
+                    </Badge>
+                  ) : highlighted && (
                     <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
                       Most Popular
                     </Badge>
@@ -313,7 +335,14 @@ export default function PricingPage() {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    {isFree ? (
+                    {isCurrentTier ? (
+                      <Button asChild className="w-full" variant="secondary" disabled>
+                        <Link href="/workspace">
+                          <Check className="mr-2 h-4 w-4" />
+                          Current Plan
+                        </Link>
+                      </Button>
+                    ) : isFree ? (
                       <>
                         <SignedIn>
                           <Button asChild className="w-full" variant="outline">
@@ -338,7 +367,7 @@ export default function PricingPage() {
                           <Button
                             asChild
                             className="w-full"
-                            variant={highlighted ? "default" : "outline"}
+                            variant={highlighted && !currentTier ? "default" : "outline"}
                           >
                             <a href={getCheckoutUrl(getTierProductId(tier))}>
                               {isMcp ? "Get Started" : "Subscribe"}

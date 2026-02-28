@@ -172,8 +172,12 @@ export const { registry } = defineRegistry(catalog, {
         legend?: boolean | null;
       };
       const config = buildSeriesConfig(series);
+      // Horizontal bar charts need enough height for each bar row
+      const minH = horizontal && Array.isArray(data)
+        ? `${Math.max(200, data.length * 40)}px`
+        : undefined;
       return (
-        <ChartContainer config={config}>
+        <ChartContainer config={config} style={minH ? { minHeight: minH } : undefined}>
           <RBarChart
             data={data}
             layout={horizontal ? "vertical" : "horizontal"}
@@ -189,6 +193,7 @@ export const { registry } = defineRegistry(catalog, {
                   axisLine={false}
                   tickMargin={8}
                   tick={AXIS_TICK}
+                  width={120}
                 />
                 <XAxis type="number" tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
               </>

@@ -67,24 +67,28 @@ export function CompactHeader({ subscriptionTier = "free" }: CompactHeaderProps)
 
         {/* AI Tokens Badge - hidden for MCP tier (BYOLLM) */}
         {!isMcp && !creditsLoading && creditsSettled && aiTokens !== null && (
-          <Badge
-            variant={aiTokensLow ? "outline" : "secondary"}
-            className={`gap-1 shrink-0 text-xs md:text-sm ${aiTokensLow ? "border-amber-500/30 text-amber-600 dark:text-amber-400" : ""}`}
-          >
-            <Sparkles className={`h-3 w-3 ${aiTokensLow ? "text-amber-500" : ""}`} />
-            <span>{aiTokens >= 1000 ? `${Math.round(aiTokens / 1000)}K` : aiTokens}</span>
-          </Badge>
+          <Link href="/pricing#ai-tokens">
+            <Badge
+              variant={aiTokensLow ? "outline" : "secondary"}
+              className={`gap-1 shrink-0 text-xs md:text-sm cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground ${aiTokensLow ? "border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white hover:border-amber-500" : ""}`}
+            >
+              <Sparkles className={`h-3 w-3 ${aiTokensLow ? "text-amber-500" : ""}`} />
+              <span>{aiTokens >= 1000 ? `${Math.round(aiTokens / 1000)}K` : aiTokens}</span>
+            </Badge>
+          </Link>
         )}
 
         {/* Sync Credits Badge */}
         {!creditsLoading && creditsSettled && (
-          <Badge
-            variant={syncCreditsLow ? "outline" : "secondary"}
-            className={`gap-1 shrink-0 text-xs md:text-sm ${syncCreditsLow ? "border-amber-500/30 text-amber-600 dark:text-amber-400" : ""}`}
-          >
-            <Coins className={`h-3 w-3 ${syncCreditsLow ? "text-amber-500" : ""}`} />
-            <span>{credits}</span>
-          </Badge>
+          <Link href="/pricing#credits">
+            <Badge
+              variant={syncCreditsLow ? "outline" : "secondary"}
+              className={`gap-1 shrink-0 text-xs md:text-sm cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground ${syncCreditsLow ? "border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white hover:border-amber-500" : ""}`}
+            >
+              <Coins className={`h-3 w-3 ${syncCreditsLow ? "text-amber-500" : ""}`} />
+              <span>{credits}</span>
+            </Badge>
+          </Link>
         )}
 
         {/* Theme & Accent Color - desktop only, moves to sheet on mobile */}

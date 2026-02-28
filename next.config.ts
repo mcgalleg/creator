@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
         { key: "X-Frame-Options", value: "DENY" },
         { key: "X-Content-Type-Options", value: "nosniff" },
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' *.clerk.accounts.dev; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tiktokcdn.com *.tiktokcdn-us.com *.tiktokcdn-eu.com *.clerk.com; connect-src 'self' *.clerk.accounts.dev *.clerk.com *.polar.sh vitals.vercel-insights.com; font-src 'self'; frame-src 'self' *.clerk.accounts.dev" },
+        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' *.clerk.accounts.dev; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tiktokcdn.com *.tiktokcdn-us.com *.tiktokcdn-eu.com *.clerk.com https://img.clerk.com; connect-src 'self' *.clerk.accounts.dev *.clerk.com https://clerk-telemetry.com https://*.clerk-telemetry.com *.polar.sh vitals.vercel-insights.com; font-src 'self'; frame-src 'self' *.clerk.accounts.dev https://challenges.cloudflare.com; worker-src 'self' blob:" },
       ],
     }];
   },
