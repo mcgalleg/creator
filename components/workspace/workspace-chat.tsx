@@ -21,6 +21,7 @@ import {
 
 interface WorkspaceChatProps {
   accounts: Array<{ id: number; username: string; avatarUrl: string | null }>;
+  goals?: string[];
 }
 
 /**
@@ -28,7 +29,7 @@ interface WorkspaceChatProps {
  * Replaces the old split-pane ChatPanel + ViewTabs layout.
  * Uses RAF-debounced scroll with near-bottom detection for smooth streaming.
  */
-export function WorkspaceChat({ accounts }: WorkspaceChatProps) {
+export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
   const [input, setInput] = useState('');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -127,7 +128,7 @@ export function WorkspaceChat({ accounts }: WorkspaceChatProps) {
         <div className="mx-auto max-w-3xl px-4 py-6">
           <WorkspaceSyncBanner />
           {messages.length === 0 ? (
-            <WorkspaceEmptyState onSuggestionClick={handleSuggestionClick} />
+            <WorkspaceEmptyState onSuggestionClick={handleSuggestionClick} goals={goals} />
           ) : (
             <MessageList
               messages={messages}

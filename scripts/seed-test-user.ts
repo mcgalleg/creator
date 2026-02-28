@@ -24,6 +24,7 @@ async function seedTestUser() {
         creditBalance: 1000, // Generous balance for testing
         subscriptionTier: "pro", // Pro tier for full feature access
         subscriptionStartedAt: new Date(), // Prevents starter expiry logic
+        goals: ["Performance Overview", "Content Strategy", "Growth & Trends"],
       })
       .onConflictDoUpdate({
         target: users.id,
@@ -31,6 +32,7 @@ async function seedTestUser() {
           creditBalance: 1000,
           subscriptionTier: "pro",
           subscriptionStartedAt: new Date(),
+          goals: ["Performance Overview", "Content Strategy", "Growth & Trends"],
         },
       });
 
@@ -38,6 +40,7 @@ async function seedTestUser() {
     console.log("   Email: test@example.com");
     console.log("   Credits: 1000");
     console.log("   Tier: pro");
+    console.log("   Goals: Performance Overview, Content Strategy, Growth & Trends");
   } catch (error) {
     console.error("Failed to seed test user:", error);
     process.exit(1);

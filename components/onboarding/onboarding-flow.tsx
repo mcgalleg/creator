@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { OnboardingWelcome } from "./onboarding-welcome";
+import { OnboardingGoals } from "./onboarding-goals";
 import { OnboardingConnect } from "./onboarding-connect";
 
-type Step = "welcome" | "connect";
+type Step = "welcome" | "goals" | "connect";
 
 async function completeOnboarding() {
   await fetch("/api/user/onboarding", { method: "POST" });
@@ -28,16 +29,26 @@ export function OnboardingFlow() {
   if (step === "connect") {
     return (
       <OnboardingConnect
-        onBack={() => setStep("welcome")}
+        onBack={() => setStep("goals")}
         onSkip={handleSkip}
         onConnected={handleConnected}
       />
     );
   }
 
+  if (step === "goals") {
+    return (
+      <OnboardingGoals
+        onContinue={() => setStep("connect")}
+        onBack={() => setStep("welcome")}
+        onSkip={handleSkip}
+      />
+    );
+  }
+
   return (
     <OnboardingWelcome
-      onContinue={() => setStep("connect")}
+      onContinue={() => setStep("goals")}
       onSkip={handleSkip}
     />
   );

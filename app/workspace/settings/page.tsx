@@ -19,16 +19,17 @@ export default async function SettingsPage() {
     redirect("/sign-in");
   }
 
-  // Fetch subscription tier
+  // Fetch subscription tier and goals
   const userRecord = userId
     ? await db
-        .select({ subscriptionTier: users.subscriptionTier })
+        .select({ subscriptionTier: users.subscriptionTier, goals: users.goals })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1)
     : [];
 
   const tier = userRecord[0]?.subscriptionTier ?? "free";
+  const goals = (userRecord[0]?.goals as string[] | null) ?? [];
 
   return (
     <div className="container max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
@@ -48,7 +49,7 @@ export default async function SettingsPage() {
 
         <Separator />
 
-        <SettingsTabs tier={tier} />
+        <SettingsTabs tier={tier} goals={goals} />
       </div>
     </div>
   );

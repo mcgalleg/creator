@@ -72,7 +72,7 @@ export function OnboardingWelcome({ onContinue, onSkip }: OnboardingWelcomeProps
 
         <div className="space-y-3 pt-2">
           <Button size="lg" onClick={onContinue} className="w-full sm:w-auto px-8">
-            Connect Your TikTok Account
+            Get Started
           </Button>
           <div>
             <button

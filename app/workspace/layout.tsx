@@ -52,6 +52,7 @@ export default async function WorkspaceRootLayout({
         .select({
           onboardingCompletedAt: users.onboardingCompletedAt,
           subscriptionTier: users.subscriptionTier,
+          goals: users.goals,
         })
         .from(users)
         .where(eq(users.id, userId))
@@ -60,6 +61,7 @@ export default async function WorkspaceRootLayout({
 
   const onboardingCompletedAt = userRecord[0]?.onboardingCompletedAt ?? null;
   const subscriptionTier = userRecord[0]?.subscriptionTier ?? "free";
+  const goals = (userRecord[0]?.goals as string[] | null) ?? [];
   const showOnboarding = accounts.length === 0 && !onboardingCompletedAt;
 
   if (showOnboarding) {
@@ -105,7 +107,7 @@ export default async function WorkspaceRootLayout({
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               }>
-                <WorkspaceLayout accounts={accounts}>
+                <WorkspaceLayout accounts={accounts} goals={goals}>
                   {children}
                 </WorkspaceLayout>
               </Suspense>

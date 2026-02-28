@@ -2,21 +2,15 @@
 
 import { Sparkles } from 'lucide-react';
 import { AstriqLogo } from '@/components/astriq-logo';
-
-const SUGGESTIONS = [
-  { label: 'Top videos', prompt: 'Show me my top performing videos this month' },
-  { label: 'Engagement rate', prompt: "What's my engagement rate this week?" },
-  { label: 'Best time to post', prompt: "What's my best time to post?" },
-  { label: 'Content ideas', prompt: 'Give me 5 content ideas based on my niche' },
-  { label: 'Weekly comparison', prompt: 'Compare my engagement this week vs last' },
-  { label: 'Trend analysis', prompt: 'What trends should I hop on this week?' },
-];
+import { getPersonalizedSuggestions } from '@/lib/prompt-catalog';
 
 interface WorkspaceEmptyStateProps {
   onSuggestionClick: (prompt: string) => void;
+  goals?: string[];
 }
 
-export function WorkspaceEmptyState({ onSuggestionClick }: WorkspaceEmptyStateProps) {
+export function WorkspaceEmptyState({ onSuggestionClick, goals = [] }: WorkspaceEmptyStateProps) {
+  const suggestions = getPersonalizedSuggestions(goals);
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
       <div className="mb-6">
@@ -29,7 +23,7 @@ export function WorkspaceEmptyState({ onSuggestionClick }: WorkspaceEmptyStatePr
         Ask about your TikTok analytics, get content ideas, or generate visual reports.
       </p>
       <div className="flex flex-wrap items-center justify-center gap-2 max-w-xl">
-        {SUGGESTIONS.map((chip) => (
+        {suggestions.map((chip) => (
           <button
             key={chip.label}
             type="button"

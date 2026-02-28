@@ -17,12 +17,13 @@ import { SubscriptionManager } from "@/components/settings/subscription-manager"
 import { McpConnectionSetup } from "@/components/settings/mcp-configuration";
 import { CreditBalanceTab } from "@/components/settings/credit-balance-tab";
 import { TransactionHistoryTab } from "@/components/settings/transaction-history-tab";
+import { GoalsTab } from "@/components/settings/goals-tab";
 import type { SubscriptionTier } from "@/lib/subscriptions";
 
-const VALID_TABS = ["plan", "credits", "transactions"] as const;
+const VALID_TABS = ["plan", "goals", "credits", "transactions"] as const;
 type SettingsTab = (typeof VALID_TABS)[number];
 
-function SettingsTabsInner({ tier }: { tier: SubscriptionTier }) {
+function SettingsTabsInner({ tier, goals }: { tier: SubscriptionTier; goals: string[] }) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -48,6 +49,7 @@ function SettingsTabsInner({ tier }: { tier: SubscriptionTier }) {
     <Tabs value={activeTab} onValueChange={handleTabChange}>
       <TabsList className="w-full">
         <TabsTrigger value="plan">Plan</TabsTrigger>
+        <TabsTrigger value="goals">Goals</TabsTrigger>
         <TabsTrigger value="credits">Credits</TabsTrigger>
         <TabsTrigger value="transactions">Transactions</TabsTrigger>
       </TabsList>
@@ -92,6 +94,10 @@ function SettingsTabsInner({ tier }: { tier: SubscriptionTier }) {
         )}
       </TabsContent>
 
+      <TabsContent value="goals" className="mt-4">
+        <GoalsTab initialGoals={goals} />
+      </TabsContent>
+
       <TabsContent value="credits" className="mt-4">
         <CreditBalanceTab />
       </TabsContent>
@@ -103,10 +109,10 @@ function SettingsTabsInner({ tier }: { tier: SubscriptionTier }) {
   );
 }
 
-export function SettingsTabs({ tier }: { tier: SubscriptionTier }) {
+export function SettingsTabs({ tier, goals }: { tier: SubscriptionTier; goals: string[] }) {
   return (
     <Suspense>
-      <SettingsTabsInner tier={tier} />
+      <SettingsTabsInner tier={tier} goals={goals} />
     </Suspense>
   );
 }

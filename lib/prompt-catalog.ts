@@ -82,3 +82,92 @@ export const PROMPT_CATALOG: PromptCategory[] = [
     ],
   },
 ];
+
+export interface GoalDefinition {
+  categoryName: string;
+  label: string;
+  description: string;
+  icon: string;
+}
+
+export const GOALS: GoalDefinition[] = [
+  {
+    categoryName: "Performance Overview",
+    label: "Track Performance",
+    description: "Monitor views, likes, and engagement metrics across your videos",
+    icon: "bar-chart-3",
+  },
+  {
+    categoryName: "Content Strategy",
+    label: "Optimize Content",
+    description: "Find the best times, hashtags, and formats for your content",
+    icon: "lightbulb",
+  },
+  {
+    categoryName: "Audience & Comments",
+    label: "Understand Audience",
+    description: "Learn who your commenters are and what they care about",
+    icon: "users",
+  },
+  {
+    categoryName: "Growth & Trends",
+    label: "Grow Followers",
+    description: "Track growth trends and discover what drives new followers",
+    icon: "trending-up",
+  },
+  {
+    categoryName: "Collaborations",
+    label: "Find Collaborations",
+    description: "Analyze collab performance and find your best partners",
+    icon: "handshake",
+  },
+  {
+    categoryName: "Saves & Shares",
+    label: "Boost Virality",
+    description: "Understand what makes your content get saved and shared",
+    icon: "share-2",
+  },
+];
+
+const DEFAULT_SUGGESTIONS: PromptItem[] = [
+  { label: "Top videos", prompt: "Show me my top performing videos this month" },
+  { label: "Engagement rate", prompt: "What's my engagement rate this week?" },
+  { label: "Best time to post", prompt: "What's my best time to post?" },
+  { label: "Content ideas", prompt: "Give me 5 content ideas based on my niche" },
+  { label: "Weekly comparison", prompt: "Compare my engagement this week vs last" },
+  { label: "Trend analysis", prompt: "What trends should I hop on this week?" },
+];
+
+export function getPersonalizedSuggestions(goals: string[]): PromptItem[] {
+  if (!goals || goals.length === 0) return DEFAULT_SUGGESTIONS;
+
+  const matchedCategories = PROMPT_CATALOG.filter((cat) =>
+    goals.includes(cat.name)
+  );
+
+  if (matchedCategories.length === 0) return DEFAULT_SUGGESTIONS;
+
+  const suggestions: PromptItem[] = [];
+  const perCategory = Math.max(1, Math.floor(6 / matchedCategories.length));
+
+  for (const category of matchedCategories) {
+    const picked = category.items.slice(0, perCategory);
+    suggestions.push(...picked);
+  }
+
+  // Fill remaining slots round-robin from matched categories
+  let catIdx = 0;
+  const usedPerCategory = matchedCategories.map(() => perCategory);
+  while (suggestions.length < 6) {
+    const cat = matchedCategories[catIdx % matchedCategories.length];
+    const used = usedPerCategory[catIdx % matchedCategories.length];
+    if (used < cat.items.length) {
+      suggestions.push(cat.items[used]);
+      usedPerCategory[catIdx % matchedCategories.length]++;
+    }
+    catIdx++;
+    if (catIdx >= matchedCategories.length * 8) break; // safety
+  }
+
+  return suggestions.slice(0, 6);
+}

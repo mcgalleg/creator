@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, text, integer, timestamp, uniqueIndex, check } from "drizzle-orm/pg-core";
+import { pgTable, pgEnum, text, integer, timestamp, jsonb, uniqueIndex, check } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // Subscription tier enum (also exported from feature-flags.ts for convenience)
@@ -16,6 +16,7 @@ export const users = pgTable("users", {
   subscriptionStartedAt: timestamp("subscription_started_at"),
   subscriptionExpiresAt: timestamp("subscription_expires_at"),
   creditsResetAt: timestamp("credits_reset_at"),
+  goals: jsonb("goals").$type<string[]>().default([]),
   onboardingCompletedAt: timestamp("onboarding_completed_at"),
   starterExpiresAt: timestamp("starter_expires_at"),
   dataPurgeAt: timestamp("data_purge_at"),

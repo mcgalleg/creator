@@ -5,6 +5,7 @@ import { WorkspaceChat } from './workspace-chat';
 
 interface WorkspaceLayoutProps {
   accounts: Array<{ id: number; username: string; avatarUrl: string | null }>;
+  goals?: string[];
   children?: React.ReactNode;
 }
 
@@ -13,7 +14,7 @@ interface WorkspaceLayoutProps {
  * On /workspace, renders the AI chat as the primary view.
  * On sub-pages (accounts, settings, mcp, reports), renders children.
  */
-export function WorkspaceLayout({ accounts, children }: WorkspaceLayoutProps) {
+export function WorkspaceLayout({ accounts, goals, children }: WorkspaceLayoutProps) {
   const pathname = usePathname();
   const isMainWorkspace = pathname === '/workspace';
 
@@ -21,5 +22,5 @@ export function WorkspaceLayout({ accounts, children }: WorkspaceLayoutProps) {
     return <div className="h-full overflow-auto p-6">{children}</div>;
   }
 
-  return <WorkspaceChat accounts={accounts} />;
+  return <WorkspaceChat accounts={accounts} goals={goals} />;
 }
