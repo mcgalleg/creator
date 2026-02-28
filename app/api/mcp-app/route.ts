@@ -6,6 +6,23 @@ import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { registerAllTools } from "@/lib/mcp-app/tools";
 import { registerViewResource } from "@/lib/mcp-app/resource";
 
+// ── Resource metadata path for OAuth discovery (RFC 9728) ──
+const RESOURCE_METADATA_PATH = "/.well-known/oauth-protected-resource/mcp-app";
+
+function unauthorizedResponse(req: Request): Response {
+  const url = new URL(req.url);
+  const resourceMetadataUrl = `${url.origin}${RESOURCE_METADATA_PATH}`;
+  return Response.json(
+    { jsonrpc: "2.0", error: { code: -32000, message: "Unauthorized" }, id: null },
+    {
+      status: 401,
+      headers: {
+        "WWW-Authenticate": `Bearer resource_metadata="${resourceMetadataUrl}"`,
+      },
+    }
+  );
+}
+
 // ── Auth helper ──
 async function extractAuthInfo(req: Request): Promise<AuthInfo | undefined> {
   if (process.env.BYPASS_AUTH === "true") {
@@ -30,14 +47,11 @@ async function handleMcpRequest(req: Request): Promise<Response> {
   const authInfo = await extractAuthInfo(req);
 
   if (!authInfo && process.env.BYPASS_AUTH !== "true") {
-    return Response.json(
-      { jsonrpc: "2.0", error: { code: -32000, message: "Unauthorized" }, id: null },
-      { status: 401 }
-    );
+    return unauthorizedResponse(req);
   }
 
   const server = new McpServer({
-    name: "creator-mcp-app",
+    name: "astriq",
     version: "1.0.0",
   });
   registerAllTools(server);
@@ -66,8 +80,8 @@ export async function POST(req: Request) {
   return handleMcpRequest(req);
 }
 
-export async function GET() {
-  return new Response(null, { status: 405 });
+export async function GET(req: Request) {
+  return handleMcpRequest(req);
 }
 
 export async function DELETE() {

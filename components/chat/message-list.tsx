@@ -73,7 +73,7 @@ function MessageBubble({ message, isStreaming }: { message: UIMessage; isStreami
       >
         {text && (
           isUser ? (
-            <p className="text-sm whitespace-pre-wrap">{text}</p>
+            <p className="text-base whitespace-pre-wrap">{text}</p>
           ) : (
             <MarkdownRenderer content={text} />
           )

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plug, Copy, Check, ExternalLink } from "lucide-react";
+import { Plug, Copy, Check } from "lucide-react";
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -58,17 +58,12 @@ interface McpConnectionSetupProps {
 }
 
 export function McpConnectionSetup({ compact = false }: McpConnectionSetupProps) {
-  const [origin, setOrigin] = useState("");
-  useEffect(() => {
-    setOrigin(window.location.origin);
-  }, []);
-
-  const mcpUrl = `${origin}/api/mcp-app/mcp`;
+  const mcpUrl = "https://astriq.ai/api/mcp-app";
 
   const claudeDesktopConfig = JSON.stringify(
     {
       mcpServers: {
-        "creator-analytics": {
+        astriq: {
           url: mcpUrl,
         },
       },
@@ -77,7 +72,7 @@ export function McpConnectionSetup({ compact = false }: McpConnectionSetupProps)
     2
   );
 
-  const claudeCodeCommand = `claude mcp add creator-analytics ${mcpUrl}`;
+  const claudeCodeCommand = `claude mcp add astriq ${mcpUrl}`;
 
   return (
     <Card>
@@ -119,13 +114,6 @@ export function McpConnectionSetup({ compact = false }: McpConnectionSetupProps)
           code={`Server URL: ${mcpUrl}\nTransport: Streamable HTTP`}
         />
 
-        {/* Docs link */}
-        <Button variant="outline" size="sm" asChild className="w-full">
-          <a href="/docs/mcp" target="_blank" rel="noopener noreferrer">
-            View full documentation
-            <ExternalLink className="ml-2 h-3.5 w-3.5" />
-          </a>
-        </Button>
       </CardContent>
     </Card>
   );

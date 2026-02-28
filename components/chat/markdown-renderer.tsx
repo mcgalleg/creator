@@ -14,7 +14,7 @@ interface MarkdownRendererProps {
  */
 export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
   return (
-    <div className={cn('markdown-content text-sm', className)}>
+    <div className={cn('markdown-content text-base', className)}>
       <ReactMarkdown
         components={{
           // Headings
@@ -28,7 +28,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
             <h3 className="text-base font-semibold mt-3 mb-1.5 first:mt-0">{children}</h3>
           ),
           h4: ({ children }) => (
-            <h4 className="text-sm font-semibold mt-2 mb-1 first:mt-0">{children}</h4>
+            <h4 className="text-base font-semibold mt-2 mb-1 first:mt-0">{children}</h4>
           ),
           // Paragraphs
           p: ({ children }) => (
@@ -60,13 +60,13 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
             const isBlock = className?.includes('language-');
             if (isBlock) {
               return (
-                <code className={cn('block bg-muted/50 rounded p-2 text-xs font-mono overflow-x-auto', className)}>
+                <code className={cn('block bg-muted/50 rounded p-2 text-sm font-mono overflow-x-auto', className)}>
                   {children}
                 </code>
               );
             }
             return (
-              <code className="bg-muted/50 rounded px-1 py-0.5 text-xs font-mono">
+              <code className="bg-muted/50 rounded px-1 py-0.5 text-sm font-mono">
                 {children}
               </code>
             );

@@ -136,7 +136,13 @@ ${CATALOG_PROMPT}
 - Always wrap charts in a Card with a title Heading for context.
 - Keep data arrays concise (max ~20 data points for readability; aggregate if needed).
 - Format numbers compactly (1.2M).
-- NEVER use emoji in your responses. Use plain text only — no emoji characters anywhere in headings, lists, or body text.`;
+- NEVER use emoji in your responses. Use plain text only — no emoji characters anywhere in headings, lists, or body text.
+
+## Tool Call Efficiency
+- You have a LIMITED budget of tool call steps. Be efficient — combine data needs into as few SQL queries as possible.
+- Do NOT narrate each tool call ("Let me now check...", "Now let me get..."). Just call the tools silently, then present your full analysis once all data is gathered.
+- Aim to gather all data in 1-3 tool calls, then spend the remaining budget on your analysis response.
+- If you need multiple metrics, write a single SQL query with multiple aggregations rather than separate queries for each metric.`;
 
 export async function POST(req: Request) {
   try {
@@ -230,7 +236,7 @@ export async function POST(req: Request) {
       model,
       maxOutputTokens: 16384,
       messages: allMessages,
-      stopWhen: stepCountIs(5),
+      stopWhen: stepCountIs(10),
       prepareStep: ({ messages, model }) => ({
         messages: addCacheControlToMessages({ messages, model }),
       }),

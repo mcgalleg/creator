@@ -95,7 +95,7 @@ export function WorkspaceChatInput({
         placeholder={placeholder}
         disabled={isDisabled}
         rows={1}
-        className="w-full resize-none bg-transparent px-4 py-3 text-sm outline-none placeholder:text-muted-foreground/60 disabled:opacity-50"
+        className="w-full resize-none bg-transparent px-4 py-3 text-base outline-none placeholder:text-muted-foreground/60 disabled:opacity-50"
       />
       {/* Bottom toolbar: chips on the left, submit button on the right */}
       <div className="flex items-center justify-between gap-2 px-2 pb-2">
