@@ -32,12 +32,26 @@ async function extractAuthInfo(req: Request): Promise<AuthInfo | undefined> {
   const authHeader = req.headers.get("Authorization");
   const [type, token] = authHeader?.split(" ") ?? [];
   const bearerToken = type?.toLowerCase() === "bearer" ? token : undefined;
-  if (!bearerToken) return undefined;
+  if (!bearerToken) {
+    console.warn("[MCP Auth] No bearer token in Authorization header");
+    return undefined;
+  }
 
   try {
     const clerkAuthResult = await clerkAuth({ acceptsToken: "oauth_token" });
-    return verifyClerkToken(clerkAuthResult, bearerToken);
-  } catch {
+    console.log("[MCP Auth] clerkAuth result:", JSON.stringify({
+      isAuthenticated: clerkAuthResult.isAuthenticated,
+      tokenType: (clerkAuthResult as Record<string, unknown>).tokenType,
+      userId: clerkAuthResult.userId,
+      hasScopes: !!(clerkAuthResult as Record<string, unknown>).scopes,
+    }));
+    const authInfo = verifyClerkToken(clerkAuthResult, bearerToken);
+    if (!authInfo) {
+      console.error("[MCP Auth] verifyClerkToken returned undefined");
+    }
+    return authInfo;
+  } catch (error) {
+    console.error("[MCP Auth] Exception during auth:", error);
     return undefined;
   }
 }
