@@ -22,6 +22,8 @@ export function ChatContainer() {
   const rafIdRef = useRef<number>(0);
   const syncContext = useSyncOptional();
 
+  const [isArtifactRendering, setIsArtifactRendering] = useState(false);
+
   const {
     messages,
     submitMessage,
@@ -31,6 +33,8 @@ export function ChatContainer() {
   } = useAnalyticsChat({
     selectedAccountIds: syncContext?.selectedAccountId ? [syncContext.selectedAccountId] : [],
   });
+
+  const isBusy = isGenerating || isArtifactRendering;
 
   // Track whether user is near the bottom of the scroll container
   const handleScroll = useCallback(() => {
@@ -53,7 +57,7 @@ export function ChatContainer() {
         el.scrollTop = el.scrollHeight;
       }
     });
-  }, [messages, isGenerating]);
+  }, [messages, isBusy]);
 
   // Cleanup RAF on unmount
   useEffect(() => {
@@ -99,6 +103,7 @@ export function ChatContainer() {
           <MessageList
             messages={messages}
             isStreaming={isGenerating}
+            onBusyChange={setIsArtifactRendering}
           />
         )}
 
@@ -131,7 +136,7 @@ export function ChatContainer() {
           value={input}
           onChange={setInput}
           onSubmit={handleSubmit}
-          isLoading={isLoading || isGenerating}
+          isLoading={isLoading || isBusy}
         />
       </div>
     </Card>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import DOMPurify from 'dompurify';
 import { useJsonRenderMessage, Renderer, JSONUIProvider, type DataPart } from '@json-render/react';
 import { isToolUIPart } from 'ai';
@@ -16,12 +16,29 @@ import { Copy, Check, Download, Image } from 'lucide-react';
 interface MessageListProps {
   messages: UIMessage[];
   isStreaming: boolean;
+  /** Called when async artifact rendering (e.g. Excalidraw diagrams) starts/finishes */
+  onBusyChange?: (busy: boolean) => void;
 }
 
 /**
  * Displays the list of chat messages with progressive spec rendering.
  */
-export function MessageList({ messages, isStreaming }: MessageListProps) {
+export function MessageList({ messages, isStreaming, onBusyChange }: MessageListProps) {
+  const busyCountRef = useRef(0);
+  const reportedBusyRef = useRef(false);
+
+  const onDiagramLoadingChange = useCallback(
+    (loading: boolean) => {
+      busyCountRef.current += loading ? 1 : -1;
+      const busy = busyCountRef.current > 0;
+      if (busy !== reportedBusyRef.current) {
+        reportedBusyRef.current = busy;
+        onBusyChange?.(busy);
+      }
+    },
+    [onBusyChange]
+  );
+
   return (
     <div className="space-y-4">
       {messages.map((message, i) => (
@@ -29,13 +46,22 @@ export function MessageList({ messages, isStreaming }: MessageListProps) {
           key={message.id}
           message={message}
           isStreaming={isStreaming && i === messages.length - 1}
+          onDiagramLoadingChange={onDiagramLoadingChange}
         />
       ))}
     </div>
   );
 }
 
-function MessageBubble({ message, isStreaming }: { message: UIMessage; isStreaming: boolean }) {
+function MessageBubble({
+  message,
+  isStreaming,
+  onDiagramLoadingChange,
+}: {
+  message: UIMessage;
+  isStreaming: boolean;
+  onDiagramLoadingChange?: (loading: boolean) => void;
+}) {
   const { spec, text, hasSpec } = useJsonRenderMessage(message.parts as DataPart[]);
   const { ref: captureRef, copyAsImage, downloadAsPng, copyAsText, isCopying } = useArtifactCopy();
 
@@ -81,7 +107,7 @@ function MessageBubble({ message, isStreaming }: { message: UIMessage; isStreami
 
         {diagramElements && (
           <div ref={!hasSpec ? captureRef : undefined} className="w-full mt-3">
-            <DiagramPreview elements={diagramElements} />
+            <DiagramPreview elements={diagramElements} onLoadingChange={onDiagramLoadingChange} />
           </div>
         )}
 
@@ -180,11 +206,24 @@ function ActionBar({
 /**
  * Lightweight static SVG preview of Excalidraw diagram elements.
  */
-function DiagramPreview({ elements }: { elements: unknown[] }) {
+function DiagramPreview({
+  elements,
+  onLoadingChange,
+}: {
+  elements: unknown[];
+  onLoadingChange?: (loading: boolean) => void;
+}) {
   const [svgHtml, setSvgHtml] = useState<string | null>(null);
+  const reportedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
+
+    // Signal loading started
+    if (!reportedRef.current) {
+      reportedRef.current = true;
+      onLoadingChange?.(true);
+    }
 
     async function generateSvg() {
       try {
@@ -206,14 +245,23 @@ function DiagramPreview({ elements }: { elements: unknown[] }) {
           files: null,
         });
 
-        if (!cancelled) setSvgHtml(DOMPurify.sanitize(svg.outerHTML, { USE_PROFILES: { svg: true } }));
+        if (!cancelled) {
+          setSvgHtml(DOMPurify.sanitize(svg.outerHTML, { USE_PROFILES: { svg: true } }));
+          onLoadingChange?.(false);
+        }
       } catch (err) {
         console.error('Failed to generate Excalidraw SVG preview:', err);
+        if (!cancelled) onLoadingChange?.(false);
       }
     }
 
     if (elements.length > 0) generateSvg();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      // If we're unmounting while still loading, signal done
+      if (reportedRef.current && !svgHtml) onLoadingChange?.(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elements]);
 
   if (!svgHtml) {

@@ -58,6 +58,8 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
   const isSingleAccount = accounts.length === 1;
   const noAccountSelected = accounts.length > 1 && selectedAccountIds.length === 0;
 
+  const [isArtifactRendering, setIsArtifactRendering] = useState(false);
+
   const {
     messages,
     submitMessage,
@@ -69,6 +71,7 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
     selectedAccountIds,
   });
 
+  const isBusy = isGenerating || isArtifactRendering;
   const tokensExhausted = insufficientCredits || (aiTokens !== null && aiTokens <= 0);
 
   // Near-bottom detection for scroll
@@ -86,7 +89,7 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
       const el = scrollContainerRef.current;
       if (el) el.scrollTop = el.scrollHeight;
     });
-  }, [messages, isGenerating]);
+  }, [messages, isBusy]);
 
   // Cleanup RAF on unmount
   useEffect(() => {
@@ -133,11 +136,12 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
             <MessageList
               messages={messages}
               isStreaming={isGenerating}
+              onBusyChange={setIsArtifactRendering}
             />
           )}
 
-          {/* Loading skeleton while generating */}
-          {isGenerating && (
+          {/* Loading skeleton while generating or rendering artifacts */}
+          {isBusy && (
             <div className="flex justify-start mt-4">
               <div className="bg-muted rounded-lg px-4 py-3 max-w-[85%]">
                 <div className="space-y-2">
@@ -179,7 +183,7 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
             value={input}
             onChange={setInput}
             onSubmit={handleSubmit}
-            isLoading={isLoading || isGenerating}
+            isLoading={isLoading || isBusy}
             disabled={tokensExhausted || noAccountSelected}
             placeholder={noAccountSelected ? 'Select an account to start chatting' : undefined}
             toolbar={

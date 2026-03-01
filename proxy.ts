@@ -15,10 +15,10 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  // MCP routes: pre-process OAuth token so route handler auth() can read it.
-  // Don't protect here — the route handler returns 401 with WWW-Authenticate header.
+  // MCP routes: let them through without calling auth() here.
+  // The route handler calls auth({ acceptsToken: "oauth_token" }) itself.
+  // Calling auth() in both middleware AND route handler corrupts Clerk's internal context.
   if (isMcpRoute(req)) {
-    await auth({ acceptsToken: "oauth_token" });
     return NextResponse.next();
   }
 

@@ -39,19 +39,23 @@ async function extractAuthInfo(req: Request): Promise<AuthInfo | undefined> {
 
   try {
     const clerkAuthResult = await clerkAuth({ acceptsToken: "oauth_token" });
-    console.log("[MCP Auth] clerkAuth result:", JSON.stringify({
-      isAuthenticated: clerkAuthResult.isAuthenticated,
-      tokenType: (clerkAuthResult as Record<string, unknown>).tokenType,
-      userId: clerkAuthResult.userId,
-      hasScopes: !!(clerkAuthResult as Record<string, unknown>).scopes,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const r = clerkAuthResult as any;
+    console.log("[MCP Auth] clerkAuth:", JSON.stringify({
+      isAuthenticated: r.isAuthenticated,
+      tokenType: r.tokenType,
+      userId: r.userId,
+      clientId: r.clientId ?? null,
+      hasScopes: !!r.scopes,
+      scopes: r.scopes ?? null,
     }));
     const authInfo = verifyClerkToken(clerkAuthResult, bearerToken);
     if (!authInfo) {
-      console.error("[MCP Auth] verifyClerkToken returned undefined");
+      console.error("[MCP Auth] verifyClerkToken failed — check isAuthenticated, tokenType, clientId, scopes, userId above");
     }
     return authInfo;
   } catch (error) {
-    console.error("[MCP Auth] Exception during auth:", error);
+    console.error("[MCP Auth] Exception:", error);
     return undefined;
   }
 }
