@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { verifyClerkToken } from "@clerk/mcp-tools/next";
-import { auth as clerkAuth } from "@clerk/nextjs/server";
+import { clerkClient } from "@clerk/nextjs/server";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { registerAllTools } from "@/lib/mcp-app/tools";
 import { registerViewResource } from "@/lib/mcp-app/resource";
@@ -38,16 +38,20 @@ async function extractAuthInfo(req: Request): Promise<AuthInfo | undefined> {
   }
 
   try {
-    const clerkAuthResult = await clerkAuth({ acceptsToken: "oauth_token" });
+    const client = await clerkClient();
+    const requestState = await client.authenticateRequest(req, {
+      acceptsToken: "oauth_token",
+    });
+    const clerkAuthResult = requestState.toAuth();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const r = clerkAuthResult as any;
-    console.log("[MCP Auth] clerkAuth:", JSON.stringify({
-      isAuthenticated: r.isAuthenticated,
-      tokenType: r.tokenType,
-      userId: r.userId,
-      clientId: r.clientId ?? null,
-      hasScopes: !!r.scopes,
-      scopes: r.scopes ?? null,
+    console.log("[MCP Auth] authenticateRequest:", JSON.stringify({
+      isAuthenticated: r?.isAuthenticated,
+      tokenType: r?.tokenType,
+      userId: r?.userId,
+      clientId: r?.clientId ?? null,
+      hasScopes: !!r?.scopes,
+      scopes: r?.scopes ?? null,
     }));
     const authInfo = verifyClerkToken(clerkAuthResult, bearerToken);
     if (!authInfo) {
