@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
     const profileOnlyCost = 0;
 
     // Profile + Posts: Use estimateSyncCost for 50 posts
-    const profilePostsEstimate = estimateSyncCost({
+    const postsEstimate = estimateSyncCost({
       postsLimit: 50,
       includeComments: false,
     });
@@ -100,11 +100,6 @@ export async function GET(request: NextRequest) {
     // Estimate ~50 comments per post average, cap at 100 per post
     const estimatedCommentsPerPost = 100;
     const estimatedTotalComments = Math.min(profile.videoCount, 50) * estimatedCommentsPerPost;
-
-    const postsEstimate = estimateSyncCost({
-      postsLimit: 50,
-      includeComments: false,
-    });
 
     const commentsEstimate = estimateCommentSyncCost({
       postCount: Math.min(profile.videoCount, 50),
@@ -130,7 +125,7 @@ export async function GET(request: NextRequest) {
       },
       costEstimates: {
         profileOnly: profileOnlyCost,
-        profilePosts: profilePostsEstimate.credits,
+        profilePosts: postsEstimate.credits,
         profilePostsComments: profilePostsCommentsCost,
       },
     };

@@ -141,17 +141,21 @@ export function useDrawings() {
       try {
         setError(null);
 
-        setDrawings((prev) => prev.filter((d) => d.id !== id));
+        // Use functional updaters for both state values to avoid stale closures
+        let remaining: Drawing[] = [];
+        setDrawings((prev) => {
+          remaining = prev.filter((d) => d.id !== id);
+          return remaining;
+        });
 
-        if (selectedDrawingId === id) {
-          const remainingDrawings = drawings.filter((d) => d.id !== id);
-          if (remainingDrawings.length > 0) {
-            const defaultDrawing = remainingDrawings.find((d) => d.isDefault);
-            setSelectedDrawingId(defaultDrawing?.id ?? remainingDrawings[0].id);
-          } else {
-            setSelectedDrawingId(null);
+        setSelectedDrawingId((prevSelectedId) => {
+          if (prevSelectedId !== id) return prevSelectedId;
+          if (remaining.length > 0) {
+            const defaultDrawing = remaining.find((d) => d.isDefault);
+            return defaultDrawing?.id ?? remaining[0].id;
           }
-        }
+          return null;
+        });
 
         await fetchJson<{ success: boolean }>(`/api/drawings/${id}`, {
           method: "DELETE",
@@ -165,7 +169,7 @@ export function useDrawings() {
         throw err;
       }
     },
-    [drawings, selectedDrawingId, fetchDrawings]
+    [fetchDrawings]
   );
 
   const renameDrawing = useCallback(

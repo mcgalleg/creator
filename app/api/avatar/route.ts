@@ -14,6 +14,9 @@ import { avatarLimiter } from "@/lib/rate-limit";
  *
  * Used by Remotion clips where a short identifier is easier
  * than a full encoded CDN URL.
+ *
+ * Intentionally public (no auth): Remotion renders run in a separate context
+ * without user session. IP-based rate limiting is applied instead.
  */
 export async function GET(request: NextRequest) {
   // Rate limit by IP

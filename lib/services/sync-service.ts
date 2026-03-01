@@ -1230,27 +1230,10 @@ export async function getSyncJobStatus(jobId: number): Promise<{
 }
 
 /**
- * Get active and recent jobs for an account — single endpoint for UI
+ * Clean up stuck jobs for an account: status is still "running" but completedAt was set
+ * (claimed for processing but never finalized). Force-fail them with credit refund.
  */
-export async function getAccountSyncData(accountId: number, userId: string) {
-  // Active jobs (pending or running, and not already claimed for processing).
-  // The completedAt IS NULL check prevents showing jobs that were claimed by
-  // processSyncResults but got stuck before status could be updated.
-  let activeJobs = await db
-    .select()
-    .from(syncJobs)
-    .where(
-      and(
-        eq(syncJobs.accountId, accountId),
-        eq(syncJobs.userId, userId),
-        inArray(syncJobs.status, ["pending", "running"]),
-        isNull(syncJobs.completedAt)
-      )
-    )
-    .orderBy(desc(syncJobs.createdAt));
-
-  // Clean up stuck jobs: status is still "running" but completedAt was set
-  // (claimed for processing but never finalized). Force-fail them.
+async function cleanupStuckJobsForAccount(accountId: number, userId: string): Promise<void> {
   // Grace period: only consider jobs stuck if completedAt was set more than
   // 60 seconds ago, to avoid racing with webhook/polling processors.
   const stuckJobs = await db
@@ -1268,33 +1251,22 @@ export async function getAccountSyncData(accountId: number, userId: string) {
 
   for (const stuckJob of stuckJobs) {
     console.warn(`[Sync Job ${stuckJob.id}] Found stuck job (status=${stuckJob.status}, completedAt set). Force-failing.`);
-    if (stuckJob.creditsHeld && stuckJob.creditsHeld > 0) {
-      try {
-        await refundHold(
-          stuckJob.userId,
-          stuckJob.creditsHeld,
-          `Refund: stuck job ${stuckJob.id} force-failed`
-        );
-      } catch (refundError) {
-        console.error(`[Sync Job ${stuckJob.id}] Failed to refund credits for stuck job:`, refundError);
-      }
-    }
-    await db
-      .update(syncJobs)
-      .set({
-        status: "failed",
-        error: "Job got stuck during processing",
-      })
-      .where(eq(syncJobs.id, stuckJob.id));
+    await handleJobFailure(stuckJob, "Job got stuck during processing");
   }
+}
 
-  // Polling fallback: for any running jobs with an Apify run ID, check if
-  // Apify has finished and process results if so. This handles the case where
-  // webhooks don't reach the server (e.g. local dev without ngrok).
-  // Also enriches running jobs with live dataset item counts for progress tracking.
+/**
+ * Polling fallback: for running jobs with an Apify run ID, check if Apify has
+ * finished and process results. Returns whether any jobs changed state, and
+ * a map of live dataset item counts for progress tracking.
+ */
+async function pollActiveJobs(
+  jobs: (typeof syncJobs.$inferSelect)[]
+): Promise<{ jobsChanged: boolean; liveItemCounts: Map<number, number> }> {
   let jobsChanged = false;
   const liveItemCounts = new Map<number, number>();
-  for (const job of activeJobs) {
+
+  for (const job of jobs) {
     if (job.status === "running" && job.apifyRunId) {
       // Check for timeout
       if (job.startedAt && Date.now() - job.startedAt.getTime() > SYNC_TIMEOUT_MS) {
@@ -1320,6 +1292,33 @@ export async function getAccountSyncData(accountId: number, userId: string) {
       }
     }
   }
+
+  return { jobsChanged, liveItemCounts };
+}
+
+/**
+ * Get active and recent jobs for an account — single endpoint for UI
+ */
+export async function getAccountSyncData(accountId: number, userId: string) {
+  // Active jobs (pending or running, and not already claimed for processing).
+  // The completedAt IS NULL check prevents showing jobs that were claimed by
+  // processSyncResults but got stuck before status could be updated.
+  let activeJobs = await db
+    .select()
+    .from(syncJobs)
+    .where(
+      and(
+        eq(syncJobs.accountId, accountId),
+        eq(syncJobs.userId, userId),
+        inArray(syncJobs.status, ["pending", "running"]),
+        isNull(syncJobs.completedAt)
+      )
+    )
+    .orderBy(desc(syncJobs.createdAt));
+
+  await cleanupStuckJobsForAccount(accountId, userId);
+
+  const { jobsChanged, liveItemCounts } = await pollActiveJobs(activeJobs);
 
   // Re-fetch jobs if any were processed so we return accurate state
   if (jobsChanged) {
@@ -1463,12 +1462,36 @@ async function handleJobTimeout(job: typeof syncJobs.$inferSelect): Promise<void
 }
 
 /**
- * Handle job failure: refund held credits and update status
+ * Handle job failure: refund held credits and update status.
+ * Uses a status guard (AND status IN ('pending','running')) to prevent
+ * double-refund when concurrent callers race on the same job.
  */
 async function handleJobFailure(
   job: typeof syncJobs.$inferSelect,
   errorMessage: string
 ): Promise<void> {
+  // Atomically transition status — only succeeds if job is still active
+  const updated = await db
+    .update(syncJobs)
+    .set({
+      status: "failed",
+      error: errorMessage,
+      completedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(syncJobs.id, job.id),
+        inArray(syncJobs.status, ["pending", "running"])
+      )
+    )
+    .returning({ id: syncJobs.id });
+
+  // If no row was changed, another caller already handled this job
+  if (updated.length === 0) {
+    console.log(`[Sync Job ${job.id}] Already transitioned, skipping refund`);
+    return;
+  }
+
   if (job.creditsHeld && job.creditsHeld > 0) {
     try {
       await refundHold(
@@ -1480,15 +1503,6 @@ async function handleJobFailure(
       console.error(`[Sync Job ${job.id}] Failed to refund credits during failure handling:`, refundError);
     }
   }
-
-  await db
-    .update(syncJobs)
-    .set({
-      status: "failed",
-      error: errorMessage,
-      completedAt: new Date(),
-    })
-    .where(eq(syncJobs.id, job.id));
 }
 
 /**

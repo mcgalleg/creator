@@ -273,31 +273,17 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error connecting account:", error);
 
-    // Get detailed error info - PostgreSQL errors from Drizzle/Neon may have different shapes
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorObj = error as Record<string, unknown>;
-    const errorCode = errorObj?.code ?? errorObj?.constraint ?? "";
-    const errorString = JSON.stringify(error);
-
-    // Check for unique constraint violation (duplicate account)
-    // PostgreSQL error code 23505 = unique_violation
-    if (
-      errorMessage.includes("unique") ||
-      errorMessage.includes("duplicate") ||
-      errorMessage.includes("tiktok_accounts_user_username_idx") ||
-      errorString.includes("23505") ||
-      errorString.includes("unique") ||
-      errorCode === "23505"
-    ) {
+    // Check for unique constraint violation (PostgreSQL error code 23505)
+    if ((error as { code?: string }).code === "23505") {
       return NextResponse.json(
         { error: "This account is already connected" },
         { status: 409 }
       );
     }
 
-    // Return more specific error message for debugging
+    const errorMessage = error instanceof Error ? error.message : "Failed to connect account";
     return NextResponse.json(
-      { error: errorMessage || "Failed to connect account" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

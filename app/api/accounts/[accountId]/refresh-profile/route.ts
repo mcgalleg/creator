@@ -1,9 +1,9 @@
-import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tiktokAccounts, accountMetricsHistory } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { validateUsername } from "@/lib/services/sync-service";
+import { withRouteAuth, isAuthError } from "@/lib/dashboard-utils";
 
 /**
  * POST /api/accounts/[accountId]/refresh-profile
@@ -17,29 +17,16 @@ export async function POST(
   { params }: { params: Promise<{ accountId: string }> }
 ) {
   try {
-    const { userId } = await auth();
-    const { accountId: accountIdStr } = await params;
+    const authResult = await withRouteAuth(params);
+    if (isAuthError(authResult)) return authResult;
+    const { accountId } = authResult;
 
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const accountId = parseInt(accountIdStr, 10);
-    if (isNaN(accountId)) {
-      return NextResponse.json({ error: "Invalid account ID" }, { status: 400 });
-    }
-
-    // Get the account (active only)
+    // Get the account for its username
     const [account] = await db
-      .select()
+      .select({ username: tiktokAccounts.username })
       .from(tiktokAccounts)
-      .where(
-        and(
-          eq(tiktokAccounts.id, accountId),
-          eq(tiktokAccounts.userId, userId),
-          eq(tiktokAccounts.status, "active")
-        )
-      );
+      .where(eq(tiktokAccounts.id, accountId))
+      .limit(1);
 
     if (!account) {
       return NextResponse.json({ error: "Account not found" }, { status: 404 });

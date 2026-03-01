@@ -1,14 +1,11 @@
-import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { tiktokAccounts, syncJobs } from "@/lib/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
 import {
   startSync,
   getSyncJobStatus,
   getAccountSyncData,
 } from "@/lib/services/sync-service";
 import { syncLimiter } from "@/lib/rate-limit";
+import { withRouteAuth, isAuthError, assertNoRunningSync } from "@/lib/dashboard-utils";
 
 interface RouteParams {
   params: Promise<{ accountId: string }>;
@@ -20,39 +17,13 @@ interface RouteParams {
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await withRouteAuth(params);
+    if (isAuthError(authResult)) return authResult;
+    const { userId, accountId } = authResult;
 
     // Rate limit
     const { limited } = syncLimiter.check(userId);
     if (limited) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
-
-    const { accountId } = await params;
-    const accountIdNum = parseInt(accountId, 10);
-
-    if (isNaN(accountIdNum)) {
-      return NextResponse.json({ error: "Invalid account ID" }, { status: 400 });
-    }
-
-    // Verify ownership (active only)
-    const [account] = await db
-      .select()
-      .from(tiktokAccounts)
-      .where(
-        and(
-          eq(tiktokAccounts.id, accountIdNum),
-          eq(tiktokAccounts.userId, userId),
-          eq(tiktokAccounts.status, "active")
-        )
-      )
-      .limit(1);
-
-    if (!account) {
-      return NextResponse.json({ error: "Account not found" }, { status: 404 });
-    }
 
     // Parse body for sync options
     const body = await request.json().catch(() => ({}));
@@ -93,32 +64,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Check if there's already a pending or running sync for this account
-    const [runningJob] = await db
-      .select()
-      .from(syncJobs)
-      .where(
-        and(
-          eq(syncJobs.accountId, accountIdNum),
-          inArray(syncJobs.status, ["pending", "running"])
-        )
-      )
-      .limit(1);
-
-    if (runningJob) {
-      return NextResponse.json(
-        {
-          error: "A sync is already in progress for this account",
-          jobId: runningJob.id,
-          runId: runningJob.apifyRunId,
-        },
-        { status: 409 }
-      );
-    }
+    // Check for existing running sync
+    const syncConflict = await assertNoRunningSync(accountId);
+    if (syncConflict) return syncConflict;
 
     // Start the sync (credit estimation + hold happens inside startSync)
     const syncResult = await startSync({
-      accountId: accountIdNum,
+      accountId,
       userId,
       type: includeComments ? "full" : "posts",
       config: {
@@ -149,18 +101,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { accountId } = await params;
-    const accountIdNum = parseInt(accountId, 10);
-
-    if (isNaN(accountIdNum)) {
-      return NextResponse.json({ error: "Invalid account ID" }, { status: 400 });
-    }
+    const authResult = await withRouteAuth(params);
+    if (isAuthError(authResult)) return authResult;
+    const { userId, accountId } = authResult;
 
     // Get jobId from query params
     const { searchParams } = new URL(request.url);
@@ -168,7 +111,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (!jobIdParam) {
       // No jobId — return unified sync data for this account
-      const syncData = await getAccountSyncData(accountIdNum, userId);
+      const syncData = await getAccountSyncData(accountId, userId);
       return NextResponse.json(syncData);
     }
 
@@ -181,7 +124,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const jobStatus = await getSyncJobStatus(jobId);
 
     // Verify the job belongs to this account and user
-    if (jobStatus.job.accountId !== accountIdNum || jobStatus.job.userId !== userId) {
+    if (jobStatus.job.accountId !== accountId || jobStatus.job.userId !== userId) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 

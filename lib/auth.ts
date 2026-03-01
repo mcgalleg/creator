@@ -19,12 +19,21 @@ export type FeatureKey = (typeof FEATURES)[keyof typeof FEATURES];
 /**
  * Default feature access by tier. Used as fallback in BYPASS_AUTH mode
  * and as reference when syncing features to Clerk metadata.
+ *
+ * NOTE: All non-MCP tiers currently share the same features. This mapping
+ * exists so tier differentiation can be added later without restructuring.
  */
+const COMMON_FEATURES: FeatureKey[] = [
+  FEATURES.CANVAS,
+  FEATURES.ANALYTICS_ASSISTANT,
+  FEATURES.EXPORT_REPORTS,
+];
+
 const DEFAULT_TIER_FEATURES: Record<SubscriptionTier, FeatureKey[]> = {
-  free: [FEATURES.CANVAS, FEATURES.ANALYTICS_ASSISTANT, FEATURES.EXPORT_REPORTS],
-  basic: [FEATURES.CANVAS, FEATURES.ANALYTICS_ASSISTANT, FEATURES.EXPORT_REPORTS],
-  pro: [FEATURES.CANVAS, FEATURES.ANALYTICS_ASSISTANT, FEATURES.EXPORT_REPORTS],
-  agency: [FEATURES.CANVAS, FEATURES.ANALYTICS_ASSISTANT, FEATURES.EXPORT_REPORTS],
+  free: COMMON_FEATURES,
+  basic: COMMON_FEATURES,
+  pro: COMMON_FEATURES,
+  agency: COMMON_FEATURES,
   mcp: [],
 };
 

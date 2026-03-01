@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { Loader2, AlertTriangle, X } from 'lucide-react';
 import { useSyncOptional } from '@/contexts/sync-context';
+import { useDismissedErrors } from '@/hooks/use-dismissed-errors';
 import type { SyncJob } from '@/hooks/use-accounts';
 
 function getJobDescription(job: SyncJob): string {
@@ -23,30 +23,11 @@ function getJobDescription(job: SyncJob): string {
 
 export function WorkspaceSyncBanner() {
   const syncContext = useSyncOptional();
-  const [dismissedErrors, setDismissedErrors] = useState<Set<number>>(() => {
-    if (typeof window === 'undefined') return new Set();
-    try {
-      const stored = localStorage.getItem('dismissedSyncErrors');
-      return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
+  const [dismissedErrors, dismissError] = useDismissedErrors();
 
   if (!syncContext) return null;
 
   const { accounts, syncData, isSyncing } = syncContext;
-
-  const dismissError = (jobId: number) => {
-    setDismissedErrors((prev) => {
-      const next = new Set(prev);
-      next.add(jobId);
-      try {
-        localStorage.setItem('dismissedSyncErrors', JSON.stringify([...next]));
-      } catch { /* ignore */ }
-      return next;
-    });
-  };
 
   // Collect active jobs per account
   const activeEntries: Array<{ username: string; jobs: SyncJob[] }> = [];

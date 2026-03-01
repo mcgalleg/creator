@@ -1,8 +1,8 @@
-import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tiktokAccounts, posts, comments } from "@/lib/db/schema";
-import { eq, and, sql, count } from "drizzle-orm";
+import { eq, sql, count } from "drizzle-orm";
+import { withRouteAuth, isAuthError } from "@/lib/dashboard-utils";
 
 interface AccountStats {
   syncedPosts: number;
@@ -21,45 +21,19 @@ export async function GET(
   { params }: { params: Promise<{ accountId: string }> }
 ) {
   try {
-    const { userId } = await auth();
+    const authResult = await withRouteAuth(params);
+    if (isAuthError(authResult)) return authResult;
+    const { accountId } = authResult;
 
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { accountId } = await params;
-    const accountIdNum = parseInt(accountId, 10);
-
-    if (isNaN(accountIdNum)) {
-      return NextResponse.json(
-        { error: "Invalid account ID" },
-        { status: 400 }
-      );
-    }
-
-    // Verify the account belongs to the user (active only)
+    // Get account metadata for totalPosts and lastSyncedAt
     const [account] = await db
       .select({
-        id: tiktokAccounts.id,
         videoCount: tiktokAccounts.videoCount,
         lastSyncedAt: tiktokAccounts.lastSyncedAt,
       })
       .from(tiktokAccounts)
-      .where(
-        and(
-          eq(tiktokAccounts.id, accountIdNum),
-          eq(tiktokAccounts.userId, userId),
-          eq(tiktokAccounts.status, "active")
-        )
-      )
+      .where(eq(tiktokAccounts.id, accountId))
       .limit(1);
-
-    if (!account) {
-      return NextResponse.json(
-        { error: "Account not found" },
-        { status: 404 }
-      );
-    }
 
     // Get count of synced posts
     const [postStats] = await db
@@ -69,7 +43,7 @@ export async function GET(
         estimatedComments: sql<number>`COALESCE(SUM(${posts.comments}), 0)::int`,
       })
       .from(posts)
-      .where(eq(posts.accountId, accountIdNum));
+      .where(eq(posts.accountId, accountId));
 
     // Get count of synced comments
     const [commentStats] = await db
@@ -78,14 +52,14 @@ export async function GET(
       })
       .from(comments)
       .innerJoin(posts, eq(comments.postId, posts.id))
-      .where(eq(posts.accountId, accountIdNum));
+      .where(eq(posts.accountId, accountId));
 
     const stats: AccountStats = {
       syncedPosts: postStats?.syncedPosts ?? 0,
-      totalPosts: account.videoCount ?? 0,
+      totalPosts: account?.videoCount ?? 0,
       syncedComments: commentStats?.syncedComments ?? 0,
       estimatedComments: postStats?.estimatedComments ?? 0,
-      lastSyncedAt: account.lastSyncedAt?.toISOString() ?? null,
+      lastSyncedAt: account?.lastSyncedAt?.toISOString() ?? null,
     };
 
     return NextResponse.json(stats);

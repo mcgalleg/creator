@@ -45,14 +45,16 @@ async function extractAuthInfo(req: Request): Promise<AuthInfo | undefined> {
     const clerkAuthResult = requestState.toAuth();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const r = clerkAuthResult as any;
-    console.log("[MCP Auth] authenticateRequest:", JSON.stringify({
-      isAuthenticated: r?.isAuthenticated,
-      tokenType: r?.tokenType,
-      userId: r?.userId,
-      clientId: r?.clientId ?? null,
-      hasScopes: !!r?.scopes,
-      scopes: r?.scopes ?? null,
-    }));
+    if (process.env.NODE_ENV === "development") {
+      console.log("[MCP Auth] authenticateRequest:", JSON.stringify({
+        isAuthenticated: r?.isAuthenticated,
+        tokenType: r?.tokenType,
+        userId: r?.userId,
+        clientId: r?.clientId ?? null,
+        hasScopes: !!r?.scopes,
+        scopes: r?.scopes ?? null,
+      }));
+    }
     const authInfo = verifyClerkToken(clerkAuthResult, bearerToken);
     if (!authInfo) {
       console.error("[MCP Auth] verifyClerkToken failed — check isAuthenticated, tokenType, clientId, scopes, userId above");
@@ -65,6 +67,10 @@ async function extractAuthInfo(req: Request): Promise<AuthInfo | undefined> {
 }
 
 // ── Stateless MCP request handler ──
+// A new McpServer is created per request because authInfo (passed to
+// transport.handleRequest) is request-scoped, and the SDK's
+// WebStandardStreamableHTTPServerTransport binds to a single server
+// instance. Module-level caching is not feasible here.
 async function handleMcpRequest(req: Request): Promise<Response> {
   const authInfo = await extractAuthInfo(req);
 

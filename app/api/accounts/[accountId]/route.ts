@@ -1,10 +1,10 @@
-import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tiktokAccounts, posts, syncJobs } from "@/lib/db/schema";
 import { eq, and, inArray, count } from "drizzle-orm";
 import { cancelSyncJob } from "@/lib/services/sync-service";
 import { proxyImageUrl } from "@/lib/image-proxy";
+import { withRouteAuth, isAuthError } from "@/lib/dashboard-utils";
 
 interface RouteParams {
   params: Promise<{ accountId: string }>;
@@ -16,30 +16,15 @@ interface RouteParams {
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { userId } = await auth();
+    const authResult = await withRouteAuth(params);
+    if (isAuthError(authResult)) return authResult;
+    const { accountId } = authResult;
 
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { accountId } = await params;
-    const accountIdNum = parseInt(accountId, 10);
-
-    if (isNaN(accountIdNum)) {
-      return NextResponse.json({ error: "Invalid account ID" }, { status: 400 });
-    }
-
-    // Get the account (active only)
+    // Get the account
     const [account] = await db
       .select()
       .from(tiktokAccounts)
-      .where(
-        and(
-          eq(tiktokAccounts.id, accountIdNum),
-          eq(tiktokAccounts.userId, userId),
-          eq(tiktokAccounts.status, "active")
-        )
-      )
+      .where(eq(tiktokAccounts.id, accountId))
       .limit(1);
 
     if (!account) {
@@ -50,7 +35,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const [postsCountResult] = await db
       .select({ count: count() })
       .from(posts)
-      .where(eq(posts.accountId, accountIdNum));
+      .where(eq(posts.accountId, accountId));
 
     return NextResponse.json({
       account: {
@@ -85,35 +70,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { accountId } = await params;
-    const accountIdNum = parseInt(accountId, 10);
-
-    if (isNaN(accountIdNum)) {
-      return NextResponse.json({ error: "Invalid account ID" }, { status: 400 });
-    }
-
-    // Verify ownership (only active accounts can be disconnected)
-    const [account] = await db
-      .select({ id: tiktokAccounts.id })
-      .from(tiktokAccounts)
-      .where(
-        and(
-          eq(tiktokAccounts.id, accountIdNum),
-          eq(tiktokAccounts.userId, userId),
-          eq(tiktokAccounts.status, "active")
-        )
-      )
-      .limit(1);
-
-    if (!account) {
-      return NextResponse.json({ error: "Account not found" }, { status: 404 });
-    }
+    const authResult = await withRouteAuth(params);
+    if (isAuthError(authResult)) return authResult;
+    const { accountId } = authResult;
 
     // Cancel active sync jobs before deletion
     const activeJobs = await db
@@ -121,7 +80,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       .from(syncJobs)
       .where(
         and(
-          eq(syncJobs.accountId, accountIdNum),
+          eq(syncJobs.accountId, accountId),
           inArray(syncJobs.status, ["pending", "running"])
         )
       );
@@ -138,7 +97,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     await db
       .update(tiktokAccounts)
       .set({ status: "disconnected", updatedAt: new Date() })
-      .where(eq(tiktokAccounts.id, accountIdNum));
+      .where(eq(tiktokAccounts.id, accountId));
 
     return NextResponse.json({ success: true });
   } catch (error) {

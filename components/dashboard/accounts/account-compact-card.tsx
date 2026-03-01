@@ -23,8 +23,9 @@ import {
   AlertTriangle,
   X,
 } from "lucide-react";
-import { formatNumber, formatRelativeTime } from "./shared-utils";
+import { formatNumber, formatRelativeTime, getActiveJobDescription } from "./shared-utils";
 import { AccountDeleteDialog } from "./account-delete-dialog";
+import { useDismissedErrors } from "@/hooks/use-dismissed-errors";
 import type { TikTokAccount, AccountSyncData } from "@/hooks/use-accounts";
 
 interface AccountCompactCardProps {
@@ -50,28 +51,7 @@ export function AccountCompactCard({
 }: AccountCompactCardProps) {
   const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [dismissedErrors, setDismissedErrors] = useState<Set<number>>(() => {
-    if (typeof window === "undefined") return new Set();
-    try {
-      const stored = localStorage.getItem("dismissedSyncErrors");
-      return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
-
-  const dismissError = (jobId: number) => {
-    setDismissedErrors((prev) => {
-      const next = new Set(prev);
-      next.add(jobId);
-      try {
-        localStorage.setItem("dismissedSyncErrors", JSON.stringify([...next]));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  };
+  const [dismissedErrors, dismissError] = useDismissedErrors();
 
   const activeJobs = syncData?.activeJobs ?? [];
   const hasActiveJobs = activeJobs.length > 0;
@@ -119,22 +99,6 @@ export function AccountCompactCard({
     } finally {
       setDeleteDialogOpen(false);
     }
-  };
-
-  const getActiveJobDescription = (job: (typeof activeJobs)[0]): string => {
-    if (job.type === "posts" || job.type === "full") {
-      const count = job.postsCount;
-      if (count) return `Importing posts... (${count} so far)`;
-      return "Importing posts...";
-    }
-    if (job.type === "comments") {
-      const count = job.commentsCount;
-      const estimated = job.commentsEstimated;
-      if (count && estimated)
-        return `Syncing comments... (${count} of ~${estimated})`;
-      return "Syncing comments...";
-    }
-    return "Syncing...";
   };
 
   return (

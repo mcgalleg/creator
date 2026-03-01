@@ -47,14 +47,6 @@ export function Footer() {
                     Canvas
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    href="/#ai-copilot"
-                    className="hover:text-foreground transition-colors"
-                  >
-                    AI Copilot
-                  </Link>
-                </li>
               </ul>
             </div>
 

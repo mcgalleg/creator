@@ -25,6 +25,21 @@ export function formatRelativeTime(dateStr: string | null): string {
   });
 }
 
+export function getActiveJobDescription(job: { type: string; postsCount?: number | null; commentsCount?: number | null; commentsEstimated?: number | null }): string {
+  if (job.type === "posts" || job.type === "full") {
+    const count = job.postsCount;
+    if (count) return `Importing posts... (${count} so far)`;
+    return "Importing posts...";
+  }
+  if (job.type === "comments") {
+    const count = job.commentsCount;
+    const estimated = job.commentsEstimated;
+    if (count && estimated) return `Syncing comments... (${count} of ~${estimated})`;
+    return "Syncing comments...";
+  }
+  return "Syncing...";
+}
+
 export function formatDate(dateStr: string | null): string {
   if (!dateStr) return "\u2014";
   return new Date(dateStr).toLocaleDateString(undefined, {

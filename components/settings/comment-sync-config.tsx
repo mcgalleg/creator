@@ -30,7 +30,7 @@ import {
   Calendar,
   Coins,
   AlertCircle,
-  RefreshCw,
+  Check,
 } from "lucide-react";
 import { CREDIT_RATES, calculateCommentCredits } from "@/lib/credits";
 
@@ -62,8 +62,6 @@ export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
   const [startDate, setStartDate] = React.useState<string>("");
   const [endDate, setEndDate] = React.useState<string>("");
   const [maxCommentsPerPost, setMaxCommentsPerPost] = React.useState<string>("100");
-
-  const [isSyncing, setIsSyncing] = React.useState(false);
 
   // Calculate cost estimate based on sync mode
   const maxComments = parseInt(maxCommentsPerPost) || 100;
@@ -101,23 +99,7 @@ export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
     };
   }, [syncMode, selectedPostIds, selectedPostComments, topN, maxComments]);
 
-  const handleSync = async () => {
-    setIsSyncing(true);
-    try {
-      // TODO: Implement actual sync API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      console.log("Sync started with mode:", syncMode);
-    } catch (error) {
-      console.error("Sync failed:", error);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  const canSync =
-    costEstimate.postsCount > 0 &&
-    costEstimate.estimatedComments > 0 &&
-    !isSyncing;
+  const canSync = false; // Sync not yet implemented
 
   return (
     <>
@@ -316,39 +298,39 @@ export function CommentSyncConfig({ accountId }: CommentSyncConfigProps) {
 
         <CardFooter>
           <Button
-            onClick={handleSync}
             disabled={!canSync}
             className="w-full"
           >
-            {isSyncing ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Syncing Comments...
-              </>
-            ) : (
-              <>
-                <MessageCircle className="h-4 w-4 mr-2" />
-                Sync Comments
-                {costEstimate.creditCost > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {costEstimate.creditCost} credits
-                  </Badge>
-                )}
-              </>
-            )}
+            <MessageCircle className="h-4 w-4 mr-2" />
+            Sync Comments
+            <Badge variant="outline" className="ml-2">
+              Coming Soon
+            </Badge>
           </Button>
         </CardFooter>
       </Card>
 
       {isPickerOpen && (
-        <InlinePostSelector
-          accountId={accountId}
-          selectedTiktokIds={selectedPostIds}
-          onSelectionChange={(ids, commentCounts) => {
-            setSelectedPostIds(ids);
-            setSelectedPostComments(commentCounts);
-          }}
-        />
+        <>
+          <InlinePostSelector
+            accountId={accountId}
+            selectedTiktokIds={selectedPostIds}
+            onSelectionChange={(ids, commentCounts) => {
+              setSelectedPostIds(ids);
+              setSelectedPostComments(commentCounts);
+            }}
+          />
+          <div className="flex justify-end mt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsPickerOpen(false)}
+            >
+              <Check className="h-4 w-4 mr-1" />
+              Done
+            </Button>
+          </div>
+        </>
       )}
     </>
   );

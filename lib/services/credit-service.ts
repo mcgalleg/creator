@@ -38,6 +38,21 @@ export type CreditTransactionType =
   | "ai_token_pack_purchase";
 
 /**
+ * Get effective balances (meter + carryover) from Polar.
+ * Combines Polar meter balances with carryover credits from the users table.
+ */
+async function getEffectiveBalances(userId: string): Promise<{ syncCredits: number; aiTokens: number }> {
+  const [meterBalances, carryover] = await Promise.all([
+    getPolarMeterBalances(userId),
+    getCarryover(userId),
+  ]);
+  return {
+    syncCredits: meterBalances.syncCredits + carryover.syncCredits,
+    aiTokens: meterBalances.aiTokens + carryover.aiTokens,
+  };
+}
+
+/**
  * Get current credit balance for user (sync credits from local cache)
  */
 export async function getUserCredits(userId: string): Promise<number> {
@@ -65,11 +80,8 @@ export async function checkCredits(
   let balance: number;
 
   try {
-    const [meterBalances, carryover] = await Promise.all([
-      getPolarMeterBalances(userId),
-      getCarryover(userId),
-    ]);
-    balance = meterBalances.syncCredits + carryover.syncCredits;
+    const effective = await getEffectiveBalances(userId);
+    balance = effective.syncCredits;
 
     // Fire-and-forget: update local DB cache
     syncCreditBalance(userId).catch((err) =>
@@ -92,12 +104,9 @@ export async function checkCredits(
  * Polar meters are the source of truth; this updates the local DB cache.
  */
 export async function syncCreditBalance(userId: string): Promise<number> {
-  const [balances, carryover] = await Promise.all([
-    getPolarMeterBalances(userId),
-    getCarryover(userId),
-  ]);
+  const effective = await getEffectiveBalances(userId);
 
-  const totalSyncCredits = Math.max(0, balances.syncCredits) + carryover.syncCredits;
+  const totalSyncCredits = Math.max(0, effective.syncCredits);
 
   const [updateResult] = await db
     .update(users)
@@ -127,11 +136,8 @@ export async function checkAiTokens(
   let balance: number;
 
   try {
-    const [meterBalances, carryover] = await Promise.all([
-      getPolarMeterBalances(userId),
-      getCarryover(userId),
-    ]);
-    balance = meterBalances.aiTokens + carryover.aiTokens;
+    const effective = await getEffectiveBalances(userId);
+    balance = effective.aiTokens;
   } catch {
     // Polar unreachable — deny by default (no local cache for AI tokens)
     balance = 0;
@@ -276,30 +282,15 @@ export async function finalizeCredits(
   const difference = held - actual;
 
   // 1. Adjust local DB first (authoritative ledger)
-  if (difference > 0) {
-    // Overestimate — refund overage to local cache, record actual usage
+  if (difference !== 0) {
+    // difference > 0: overestimate — refund overage (+ positive difference)
+    // difference < 0: underestimate — charge more (+ negative difference, clamped to 0)
     await db.batch([
       db.update(users)
         .set({
-          creditBalance: sql`${users.creditBalance} + ${difference}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, userId)),
-      db.insert(creditTransactions).values({
-        userId,
-        amount: -actual,
-        type,
-        description,
-      }),
-    ]);
-  } else if (difference < 0) {
-    // Underestimate — charge additional from local cache, record actual usage
-    const additionalAmount = -difference;
-
-    await db.batch([
-      db.update(users)
-        .set({
-          creditBalance: sql`GREATEST(${users.creditBalance} - ${additionalAmount}, 0)`,
+          creditBalance: difference > 0
+            ? sql`${users.creditBalance} + ${difference}`
+            : sql`GREATEST(${users.creditBalance} + ${difference}, 0)`,
           updatedAt: new Date(),
         })
         .where(eq(users.id, userId)),

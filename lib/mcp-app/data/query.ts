@@ -281,7 +281,18 @@ function coerceRow(row: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, val] of Object.entries(row)) {
     if (typeof val === "string" && /^-?\d+(\.\d+)?$/.test(val)) {
-      out[key] = Number(val);
+      // For integers, only convert if within safe integer range to avoid
+      // losing precision on large numeric IDs (e.g. TikTok IDs > 2^53)
+      if (val.includes(".")) {
+        out[key] = Number(val);
+      } else {
+        const n = BigInt(val);
+        if (n >= BigInt(Number.MIN_SAFE_INTEGER) && n <= BigInt(Number.MAX_SAFE_INTEGER)) {
+          out[key] = Number(val);
+        } else {
+          out[key] = val;
+        }
+      }
     } else {
       out[key] = val;
     }

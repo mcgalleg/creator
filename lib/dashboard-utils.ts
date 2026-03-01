@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { tiktokAccounts } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { tiktokAccounts, syncJobs } from "@/lib/db/schema";
+import { eq, and, inArray } from "drizzle-orm";
 
 export type Period = "7d" | "30d" | "90d";
 
@@ -113,9 +113,84 @@ export async function withAccountAuth(
   return { userId, accountId, period };
 }
 
+interface RouteAuthResult {
+  userId: string;
+  accountId: number;
+}
+
 /**
  * Type guard to check if the result is an error response.
  */
-export function isAuthError(result: AccountAuthResult | NextResponse): result is NextResponse {
+export function isAuthError(result: AccountAuthResult | RouteAuthResult | NextResponse): result is NextResponse {
   return result instanceof NextResponse;
+}
+
+/**
+ * Shared auth + account ownership check for [accountId] route handlers.
+ * Reads accountId from URL path params (not query params).
+ * Returns validated data or an error NextResponse.
+ */
+export async function withRouteAuth(
+  params: Promise<{ accountId: string }>
+): Promise<RouteAuthResult | NextResponse> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { accountId: accountIdParam } = await params;
+  const accountId = parseInt(accountIdParam, 10);
+
+  if (isNaN(accountId)) {
+    return NextResponse.json({ error: "Invalid account ID" }, { status: 400 });
+  }
+
+  const [account] = await db
+    .select({ id: tiktokAccounts.id })
+    .from(tiktokAccounts)
+    .where(
+      and(
+        eq(tiktokAccounts.id, accountId),
+        eq(tiktokAccounts.userId, userId),
+        eq(tiktokAccounts.status, "active")
+      )
+    )
+    .limit(1);
+
+  if (!account) {
+    return NextResponse.json({ error: "Account not found" }, { status: 404 });
+  }
+
+  return { userId, accountId };
+}
+
+/**
+ * Check for an existing pending/running sync job for an account.
+ * Returns a 409 NextResponse if one exists, or null if clear.
+ */
+export async function assertNoRunningSync(accountId: number): Promise<NextResponse | null> {
+  const [runningJob] = await db
+    .select({ id: syncJobs.id, apifyRunId: syncJobs.apifyRunId })
+    .from(syncJobs)
+    .where(
+      and(
+        eq(syncJobs.accountId, accountId),
+        inArray(syncJobs.status, ["pending", "running"])
+      )
+    )
+    .limit(1);
+
+  if (runningJob) {
+    return NextResponse.json(
+      {
+        error: "A sync is already in progress for this account",
+        jobId: runningJob.id,
+        runId: runningJob.apifyRunId,
+      },
+      { status: 409 }
+    );
+  }
+
+  return null;
 }

@@ -13,6 +13,7 @@ import {
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { pipeJsonRender } from "@json-render/core";
 import { createSpecRepairTransform } from "@/lib/spec-repair";
+import { NextResponse } from "next/server";
 import { auth, hasFeature } from "@/lib/auth";
 import { checkAiTokens } from "@/lib/services/credit-service";
 import { ingestAiTokenEvent } from "@/lib/polar";
@@ -151,7 +152,7 @@ export async function POST(req: Request) {
     // Authenticate the user
     const { userId } = await auth();
     if (!userId) {
-      return new Response("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Rate limit
@@ -359,9 +360,9 @@ export async function POST(req: Request) {
     return createUIMessageStreamResponse({ stream });
   } catch (error) {
     console.error("Chat API error:", error);
-    return new Response(
-      JSON.stringify({ error: "Failed to process chat request" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+    return Response.json(
+      { error: "Failed to process chat request" },
+      { status: 500 }
     );
   }
 }

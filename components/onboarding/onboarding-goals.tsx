@@ -104,7 +104,7 @@ export function OnboardingGoals({
                   >
                     <Icon
                       className={`h-5 w-5 ${
-                        isSelected ? "text-primary" : "text-primary"
+                        isSelected ? "text-primary" : "text-muted-foreground"
                       }`}
                     />
                   </div>

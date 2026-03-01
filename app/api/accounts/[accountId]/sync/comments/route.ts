@@ -1,14 +1,11 @@
-import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { tiktokAccounts, syncJobs } from "@/lib/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
 import {
   startSync,
   calculateEstimate,
 } from "@/lib/services/sync-service";
 import type { SyncConfigSchema } from "@/lib/db/schema/sync-jobs";
 import { checkCredits } from "@/lib/services/credit-service";
+import { withRouteAuth, isAuthError, assertNoRunningSync } from "@/lib/dashboard-utils";
 
 interface RouteParams {
   params: Promise<{ accountId: string }>;
@@ -20,35 +17,9 @@ interface RouteParams {
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { accountId } = await params;
-    const accountIdNum = parseInt(accountId, 10);
-
-    if (isNaN(accountIdNum)) {
-      return NextResponse.json({ error: "Invalid account ID" }, { status: 400 });
-    }
-
-    // Verify ownership (active only)
-    const [account] = await db
-      .select()
-      .from(tiktokAccounts)
-      .where(
-        and(
-          eq(tiktokAccounts.id, accountIdNum),
-          eq(tiktokAccounts.userId, userId),
-          eq(tiktokAccounts.status, "active")
-        )
-      )
-      .limit(1);
-
-    if (!account) {
-      return NextResponse.json({ error: "Account not found" }, { status: 404 });
-    }
+    const authResult = await withRouteAuth(params);
+    if (isAuthError(authResult)) return authResult;
+    const { userId, accountId } = authResult;
 
     // Parse body for sync config
     const body = await request.json().catch(() => ({}));
@@ -78,28 +49,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Check if there's already a pending or running sync for this account
-    const [runningJob] = await db
-      .select()
-      .from(syncJobs)
-      .where(
-        and(
-          eq(syncJobs.accountId, accountIdNum),
-          inArray(syncJobs.status, ["pending", "running"])
-        )
-      )
-      .limit(1);
-
-    if (runningJob) {
-      return NextResponse.json(
-        {
-          error: "A sync is already in progress for this account",
-          jobId: runningJob.id,
-          runId: runningJob.apifyRunId,
-        },
-        { status: 409 }
-      );
-    }
+    // Check for existing running sync
+    const syncConflict = await assertNoRunningSync(accountId);
+    if (syncConflict) return syncConflict;
 
     // Build the unified sync config
     const syncConfig: SyncConfigSchema = {
@@ -123,7 +75,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Estimate credits using the shared estimation logic (queries actual comment counts from DB)
-    const costEstimate = await calculateEstimate("comments", syncConfig, accountIdNum);
+    const costEstimate = await calculateEstimate("comments", syncConfig, accountId);
 
     const creditsToCheck = costEstimate.credits;
 
@@ -143,7 +95,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Start the comment sync via unified pipeline
     const syncResult = await startSync({
-      accountId: accountIdNum,
+      accountId,
       userId,
       type: "comments",
       config: syncConfig,
