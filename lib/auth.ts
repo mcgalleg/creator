@@ -3,7 +3,7 @@ import {
   currentUser as clerkCurrentUser,
 } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
-import type { SubscriptionTier } from "@/lib/services/feature-service";
+import type { SubscriptionTier } from "@/lib/subscriptions";
 
 /**
  * Feature key constants and type, used by Clerk has() and bypass-mode fallback.
@@ -15,6 +15,20 @@ export const FEATURES = {
 } as const;
 
 export type FeatureKey = (typeof FEATURES)[keyof typeof FEATURES];
+
+/**
+ * Production safeguard — prevent auth bypass from running in production.
+ */
+function assertNotProductionBypass() {
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.BYPASS_AUTH === "true"
+  ) {
+    throw new Error(
+      "BYPASS_AUTH cannot be enabled in production. This is a security violation."
+    );
+  }
+}
 
 /**
  * Default feature access by tier. Used as fallback in BYPASS_AUTH mode
@@ -84,15 +98,7 @@ async function getTestUserId(): Promise<string> {
  * IMPORTANT: BYPASS_AUTH should NEVER be enabled in production.
  */
 export async function auth(): Promise<{ userId: string | null }> {
-  // Production safeguard - prevent bypass in production
-  if (
-    process.env.NODE_ENV === "production" &&
-    process.env.BYPASS_AUTH === "true"
-  ) {
-    throw new Error(
-      "BYPASS_AUTH cannot be enabled in production. This is a security violation."
-    );
-  }
+  assertNotProductionBypass();
 
   // Bypass auth in test mode
   if (process.env.BYPASS_AUTH === "true") {
@@ -117,15 +123,7 @@ export function isAuthBypassed(): boolean {
  * Returns mock user data when BYPASS_AUTH is enabled.
  */
 export async function currentUser() {
-  // Production safeguard
-  if (
-    process.env.NODE_ENV === "production" &&
-    process.env.BYPASS_AUTH === "true"
-  ) {
-    throw new Error(
-      "BYPASS_AUTH cannot be enabled in production. This is a security violation."
-    );
-  }
+  assertNotProductionBypass();
 
   // Return mock user in test mode
   if (process.env.BYPASS_AUTH === "true") {
@@ -144,6 +142,7 @@ export async function currentUser() {
  * This replaces the previous Clerk-based feature gating to support Polar billing.
  */
 export async function hasFeature(featureKey: FeatureKey): Promise<boolean> {
+  assertNotProductionBypass();
   const { getUserTier } = await import("@/lib/services/feature-service");
 
   let userId: string | null;

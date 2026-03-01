@@ -31,6 +31,12 @@ const getApifyClient = () => {
   return new ApifyClient({ token });
 };
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function cleanUsername(username: string): string {
+  return username.replace("@", "");
+}
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const SYNC_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
@@ -237,17 +243,17 @@ export function estimateCommentSyncCost(options: {
  */
 export async function validateUsername(username: string): Promise<ValidationResult> {
   const client = getApifyClient();
-  const cleanUsername = username.replace("@", "");
+  const cleaned = cleanUsername(username);
 
   try {
     // Run profile scraper and user scraper in parallel
     const [profileRun, userRun] = await Promise.all([
       client.actor("apidojo/tiktok-profile-scraper").call({
-        usernames: [cleanUsername],
+        usernames: [cleaned],
         maxItems: 1,
       }),
       client.actor("apidojo/tiktok-user-scraper").call({
-        startUrls: [`https://www.tiktok.com/@${cleanUsername}`],
+        startUrls: [`https://www.tiktok.com/@${cleaned}`],
         maxItems: 1,
         getFollowers: false,
         getFollowing: false,
@@ -300,31 +306,6 @@ export async function validateUsername(username: string): Promise<ValidationResu
       valid: false,
       error: error instanceof Error ? error.message : "Unknown error validating username",
     };
-  }
-}
-
-/**
- * Fetch user profile data from ApiDojo User Scraper
- */
-export async function fetchUserProfile(username: string): Promise<ApiDojoUserData | null> {
-  const client = getApifyClient();
-  const cleanUsername = username.replace("@", "");
-
-  try {
-    const run = await client.actor("apidojo/tiktok-user-scraper").call({
-      startUrls: [`https://www.tiktok.com/@${cleanUsername}`],
-      maxItems: 1,
-      getFollowers: false,
-      getFollowing: false,
-    });
-
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    if (items && items.length > 0) {
-      return items[0] as unknown as ApiDojoUserData;
-    }
-    return null;
-  } catch {
-    return null;
   }
 }
 
@@ -538,7 +519,7 @@ async function startPostActor(
   jobId: number
 ): Promise<string> {
   const actorInput: Record<string, unknown> = {
-    usernames: [username.replace("@", "")],
+    usernames: [cleanUsername(username)],
     maxItems: config.postsLimit ?? 50,
   };
 
@@ -685,7 +666,7 @@ export async function processSyncResults(jobId: number): Promise<ProcessedSyncRe
 
     if (!items || items.length === 0) {
       // No data returned — finalize with 0 credits (refund full hold)
-      await finalizeAndComplete(job, { postsCount: 0, commentsCount: 0, newPostsCount: 0, updatedPostsCount: 0, newCommentsCount: 0, updatedCommentsCount: 0 }, 0, false);
+      await finalizeAndComplete(job, { postsCount: 0, commentsCount: 0, newPostsCount: 0, updatedPostsCount: 0, newCommentsCount: 0, updatedCommentsCount: 0 }, 0);
       return { postsCount: 0, commentsCount: 0, newPostsCount: 0, updatedPostsCount: 0, newCommentsCount: 0, updatedCommentsCount: 0, creditsUsed: 0, profileUpdated: false };
     }
 
@@ -888,8 +869,8 @@ async function processPostResults(
   const newPostsCount = upsertedPosts.filter(p => !existingPostMap.has(p.tiktokId)).length;
   const updatedPostsCount = postsCount - newPostsCount;
 
-  const actualCredits = calculateActualCredits(postsCount, 0);
-  await finalizeAndComplete(job, { postsCount, commentsCount: 0, newPostsCount, updatedPostsCount, newCommentsCount: 0, updatedCommentsCount: 0 }, actualCredits, profileUpdated);
+  const actualCredits = calculateSyncCredits(postsCount, 0);
+  await finalizeAndComplete(job, { postsCount, commentsCount: 0, newPostsCount, updatedPostsCount, newCommentsCount: 0, updatedCommentsCount: 0 }, actualCredits);
 
   // Two-phase "full" sync: after posts complete, auto-trigger comment sync
   if (job.type === "full" && upsertedPosts.length > 0) {
@@ -1053,8 +1034,8 @@ async function processCommentResults(
     `);
   }
 
-  const actualCredits = calculateActualCredits(0, commentsCount);
-  await finalizeAndComplete(job, { postsCount: 0, commentsCount, newPostsCount: 0, updatedPostsCount: 0, newCommentsCount, updatedCommentsCount }, actualCredits, false);
+  const actualCredits = calculateSyncCredits(0, commentsCount);
+  await finalizeAndComplete(job, { postsCount: 0, commentsCount, newPostsCount: 0, updatedPostsCount: 0, newCommentsCount, updatedCommentsCount }, actualCredits);
 
   return { postsCount: 0, commentsCount, newPostsCount: 0, updatedPostsCount: 0, newCommentsCount, updatedCommentsCount, creditsUsed: actualCredits, profileUpdated: false };
 }
@@ -1074,8 +1055,7 @@ interface SyncCounts {
 async function finalizeAndComplete(
   job: typeof syncJobs.$inferSelect,
   counts: SyncCounts,
-  actualCredits: number,
-  profileUpdated: boolean
+  actualCredits: number
 ): Promise<void> {
   const held = job.creditsHeld ?? 0;
   const creditType = job.type === "comments" ? "sync_comments" as const : "sync_posts" as const;
@@ -1088,14 +1068,6 @@ async function finalizeAndComplete(
     creditType,
     `Synced ${counts.postsCount} posts, ${counts.commentsCount} comments for job ${job.id}`
   );
-
-  // Update account lastSyncedAt if profile was updated
-  if (profileUpdated) {
-    await db
-      .update(tiktokAccounts)
-      .set({ lastSyncedAt: new Date() })
-      .where(eq(tiktokAccounts.id, job.accountId));
-  }
 
   // Mark job complete
   await db
@@ -1114,13 +1086,6 @@ async function finalizeAndComplete(
     .where(eq(syncJobs.id, job.id));
 
   console.log(`[Sync Job ${job.id}] Completed: ${counts.postsCount} posts (${counts.newPostsCount} new, ${counts.updatedPostsCount} updated), ${counts.commentsCount} comments (${counts.newCommentsCount} new, ${counts.updatedCommentsCount} updated), ${actualCredits} credits used (${held} held)`);
-}
-
-/**
- * Calculate actual credits based on what was received
- */
-function calculateActualCredits(postsCount: number, commentsCount: number): number {
-  return calculateSyncCredits(postsCount, commentsCount);
 }
 
 // ─── Post Selection for Comment Sync ─────────────────────────────────────────
@@ -1566,34 +1531,3 @@ export async function cancelSyncJob(jobId: number): Promise<void> {
   await handleJobFailure(job, "Cancelled by user");
 }
 
-// ─── Maintenance ─────────────────────────────────────────────────────────────
-
-/**
- * Clean up stuck jobs: any job running longer than SYNC_TIMEOUT_MS
- * Can be called from a cron job or admin endpoint
- */
-export async function cleanupStuckJobs(): Promise<number> {
-  const cutoff = new Date(Date.now() - SYNC_TIMEOUT_MS);
-
-  const stuckJobs = await db
-    .select()
-    .from(syncJobs)
-    .where(
-      and(
-        inArray(syncJobs.status, ["pending", "running"]),
-        lte(syncJobs.createdAt, cutoff)
-      )
-    );
-
-  let cleaned = 0;
-  for (const job of stuckJobs) {
-    await handleJobTimeout(job);
-    cleaned++;
-  }
-
-  if (cleaned > 0) {
-    console.log(`[Cleanup] Cleaned up ${cleaned} stuck sync jobs`);
-  }
-
-  return cleaned;
-}

@@ -1,18 +1,10 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { gapClasses } from "./constants"
 
 export interface ColumnProps extends React.HTMLAttributes<HTMLDivElement> {
   gap?: "none" | "xs" | "sm" | "md" | "lg" | "xl"
   align?: "start" | "center" | "end" | "stretch"
-}
-
-const gapClasses = {
-  none: "",
-  xs: "gap-2",
-  sm: "gap-4",
-  md: "gap-6",
-  lg: "gap-8",
-  xl: "gap-10",
 }
 
 const alignClasses = {

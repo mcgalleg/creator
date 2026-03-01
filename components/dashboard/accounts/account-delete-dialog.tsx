@@ -44,7 +44,6 @@ export function AccountDeleteDialog({
           <AlertDialogAction
             onClick={onConfirm}
             disabled={isDeleting}
-            className=""
           >
             {isDeleting ? (
               <>

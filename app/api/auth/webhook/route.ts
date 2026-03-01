@@ -159,11 +159,12 @@ export async function POST(req: Request) {
           )
         );
 
-      for (const activeJob of activeJobs) {
-        try {
-          await cancelSyncJob(activeJob.id);
-        } catch (cancelError) {
-          console.error(`Failed to cancel sync job ${activeJob.id} during user deletion:`, cancelError);
+      const results = await Promise.allSettled(
+        activeJobs.map((job) => cancelSyncJob(job.id))
+      );
+      for (const [i, result] of results.entries()) {
+        if (result.status === "rejected") {
+          console.error(`Failed to cancel sync job ${activeJobs[i].id} during user deletion:`, result.reason);
         }
       }
 

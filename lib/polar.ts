@@ -57,22 +57,32 @@ export async function getPolarMeterBalances(externalCustomerId: string): Promise
   };
 }
 
-// Ingest an AI token usage event
-export async function ingestAiTokenEvent(
+// Shared helper for ingesting Polar meter events
+async function ingestPolarEvent(
+  name: string,
   externalCustomerId: string,
-  tokens: number,
+  value: number,
   metadata?: Record<string, unknown> & { externalId?: string }
 ) {
   const { externalId, ...rest } = metadata ?? {};
   const polar = getPolar();
   await polar.events.ingest({
     events: [{
-      name: "ai-tokens",
+      name,
       externalCustomerId,
       ...(externalId ? { externalId } : {}),
-      metadata: { tokens, ...rest },
+      metadata: { [name === "ai-tokens" ? "tokens" : "units"]: value, ...rest } as Record<string, string | number | boolean>,
     }],
   });
+}
+
+// Ingest an AI token usage event
+export async function ingestAiTokenEvent(
+  externalCustomerId: string,
+  tokens: number,
+  metadata?: Record<string, unknown> & { externalId?: string }
+) {
+  await ingestPolarEvent("ai-tokens", externalCustomerId, tokens, metadata);
 }
 
 // Ingest a sync credit usage event
@@ -81,14 +91,5 @@ export async function ingestSyncCreditEvent(
   units: number,
   metadata?: Record<string, unknown> & { externalId?: string }
 ) {
-  const { externalId, ...rest } = metadata ?? {};
-  const polar = getPolar();
-  await polar.events.ingest({
-    events: [{
-      name: "sync-credits",
-      externalCustomerId,
-      ...(externalId ? { externalId } : {}),
-      metadata: { units, ...rest },
-    }],
-  });
+  await ingestPolarEvent("sync-credits", externalCustomerId, units, metadata);
 }

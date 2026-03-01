@@ -1,7 +1,7 @@
 'use client';
 
 import { UserButton } from '@clerk/nextjs';
-import { Coins, LayoutDashboard, Settings, Sparkles, Plug, BookOpen, Menu } from 'lucide-react';
+import { Coins, LayoutDashboard, Loader2, Settings, Sparkles, Plug, BookOpen, Menu } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,6 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/s
 import { useCredits } from '@/hooks/use-credits';
 import { useSync } from '@/contexts/sync-context';
 import { AccentColorPicker } from '@/components/accent-color-picker';
-import { Loader2 } from 'lucide-react';
 import { TIER_SYNC_CREDITS, TIER_AI_TOKENS, type SubscriptionTier } from '@/lib/subscriptions';
 import { AstriqLogo } from '@/components/astriq-logo';
 

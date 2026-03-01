@@ -2,8 +2,6 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
-// Re-export SubscriptionTier from the single source of truth
-export type { SubscriptionTier } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/lib/subscriptions";
 
 /**

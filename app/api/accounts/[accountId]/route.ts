@@ -85,11 +85,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         )
       );
 
-    for (const activeJob of activeJobs) {
-      try {
-        await cancelSyncJob(activeJob.id);
-      } catch (cancelError) {
-        console.error(`Failed to cancel sync job ${activeJob.id} during account deletion:`, cancelError);
+    const results = await Promise.allSettled(
+      activeJobs.map((job) => cancelSyncJob(job.id))
+    );
+    for (const [i, result] of results.entries()) {
+      if (result.status === "rejected") {
+        console.error(`Failed to cancel sync job ${activeJobs[i].id} during account deletion:`, result.reason);
       }
     }
 

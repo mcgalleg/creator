@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight, Users, CheckCircle } from "lucide-react";
+import { formatNumber } from "@/components/dashboard/accounts/shared-utils";
 
 interface TikTokAccount {
   id: number;
@@ -23,16 +24,6 @@ interface TikTokAccount {
   avatarUrl: string | null;
   followerCount: number;
   isVerified: boolean;
-}
-
-function formatFollowerCount(count: number): string {
-  if (count >= 1000000) {
-    return `${(count / 1000000).toFixed(1)}M`;
-  }
-  if (count >= 1000) {
-    return `${(count / 1000).toFixed(1)}K`;
-  }
-  return count.toString();
 }
 
 export function ConnectedAccountsPreview() {
@@ -152,7 +143,7 @@ export function ConnectedAccountsPreview() {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {formatFollowerCount(account.followerCount)} followers
+                      {formatNumber(account.followerCount)} followers
                     </p>
                   </div>
                 </div>

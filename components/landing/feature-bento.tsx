@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
 import {
   MessageSquareText,
   Layout,
@@ -15,26 +14,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CanvasInteractiveMockup } from "./canvas-interactive-mockup";
-
-function useScrollAnimation() {
-  const [inView, setInView] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => setInView(entry.isIntersecting),
-      { threshold: 0.1 }
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
-  return { ref, inView };
-}
+import { AnimateOnScroll } from "./animate-on-scroll";
 
 function ChatMockup() {
   return (
@@ -289,9 +269,6 @@ const CARD_STYLES = `
 `;
 
 export function FeatureBento() {
-  const heading = useScrollAnimation();
-  const subtitle = useScrollAnimation();
-
   return (
     <section id="features" className="py-24 md:py-32 bg-background">
       <style>{CARD_STYLES}</style>
@@ -301,29 +278,17 @@ export function FeatureBento() {
           <Badge variant="secondary" className="mb-4">
             Features
           </Badge>
-          <div ref={heading.ref}>
-            <h2
-              className={`text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl mb-4 transition-all duration-700 ease-out ${
-                heading.inView
-                  ? "opacity-100 translate-y-0"
-                  : "opacity-0 translate-y-10"
-              }`}
-            >
+          <AnimateOnScroll>
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl mb-4">
               Everything you need to grow
             </h2>
-          </div>
-          <div ref={subtitle.ref}>
-            <p
-              className={`text-lg text-muted-foreground transition-all duration-700 ease-out delay-200 ${
-                subtitle.inView
-                  ? "opacity-100 translate-y-0"
-                  : "opacity-0 translate-y-10"
-              }`}
-            >
+          </AnimateOnScroll>
+          <AnimateOnScroll delay={200}>
+            <p className="text-lg text-muted-foreground">
               A complete toolkit for understanding your audience, crafting
               content, and making data-driven decisions.
             </p>
-          </div>
+          </AnimateOnScroll>
         </div>
 
         {/* Sticky scroll cards */}

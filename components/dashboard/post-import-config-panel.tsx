@@ -26,6 +26,7 @@ import {
   calculateCommentCredits,
   calculatePostCredits,
 } from "@/lib/credits";
+import { formatNumber } from "@/components/dashboard/accounts/shared-utils";
 
 export interface PostImportConfigPanelProps {
   accountUsername?: string;
@@ -145,12 +146,6 @@ export function PostImportConfigPanel({
   const insufficientCredits = estimate.totalCredits > userCreditBalance;
   const newBalance = userCreditBalance - estimate.totalCredits;
   const isEstimate = mode === "date_range";
-
-  const formatNumber = (num: number): string => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toString();
-  };
 
   return (
     <div className="space-y-4 sm:space-y-6">

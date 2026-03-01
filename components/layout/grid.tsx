@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { gapClasses } from "./constants"
 
 export interface GridProps extends React.HTMLAttributes<HTMLDivElement> {
   columns?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
@@ -22,15 +23,6 @@ const columnsClasses: Record<number, string> = {
   10: "grid-cols-3 @sm:grid-cols-5 @lg:grid-cols-10",
   11: "grid-cols-3 @sm:grid-cols-6 @lg:grid-cols-11",
   12: "grid-cols-3 @sm:grid-cols-6 @lg:grid-cols-12",
-}
-
-const gapClasses = {
-  none: "gap-0",
-  xs: "gap-2",
-  sm: "gap-4",
-  md: "gap-6",
-  lg: "gap-8",
-  xl: "gap-10",
 }
 
 function Grid({

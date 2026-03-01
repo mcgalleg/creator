@@ -6,16 +6,10 @@ import { cancelSubscription, endSubscription } from "@/lib/services/subscription
 import { compensateUpgradeCredits } from "@/lib/services/upgrade-credit-service";
 import { TIER_SYNC_CREDITS } from "@/lib/subscriptions";
 import type { SubscriptionTier } from "@/lib/subscriptions";
-
-function guard() {
-  if (process.env.NODE_ENV === "production" || process.env.BYPASS_AUTH !== "true") {
-    return NextResponse.json({ error: "Not available" }, { status: 404 });
-  }
-  return null;
-}
+import { testRouteGuard } from "@/lib/test-guard";
 
 export async function GET(request: NextRequest) {
-  const blocked = guard();
+  const blocked = testRouteGuard();
   if (blocked) return blocked;
 
   const userId = request.nextUrl.searchParams.get("userId");
@@ -44,7 +38,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const blocked = guard();
+  const blocked = testRouteGuard();
   if (blocked) return blocked;
 
   const body = await request.json();

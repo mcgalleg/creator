@@ -7,6 +7,16 @@ import { DrawingSelector } from "./drawing-selector";
 import { DrawingNameDialog } from "./drawing-name-dialog";
 import { ExcalidrawWrapper } from "./excalidraw-wrapper";
 import { Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function ExcalidrawView() {
   const {
@@ -30,6 +40,8 @@ export function ExcalidrawView() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "rename">("create");
   const [drawingToRename, setDrawingToRename] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [drawingToDelete, setDrawingToDelete] = useState<number | null>(null);
 
   const getDialogInitialName = () => {
     if (dialogMode === "rename" && drawingToRename !== null) {
@@ -51,18 +63,20 @@ export function ExcalidrawView() {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
-    const drawing = drawings.find((d) => d.id === id);
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${drawing?.name ?? "this drawing"}"? This action cannot be undone.`
-    );
+  const handleDelete = (id: number) => {
+    setDrawingToDelete(id);
+    setDeleteDialogOpen(true);
+  };
 
-    if (confirmed) {
-      try {
-        await deleteDrawing(id);
-      } catch (error) {
-        console.error("Failed to delete drawing:", error);
-      }
+  const handleConfirmDelete = async () => {
+    if (drawingToDelete === null) return;
+    try {
+      await deleteDrawing(drawingToDelete);
+    } catch (error) {
+      console.error("Failed to delete drawing:", error);
+    } finally {
+      setDeleteDialogOpen(false);
+      setDrawingToDelete(null);
     }
   };
 
@@ -135,6 +149,24 @@ export function ExcalidrawView() {
         onSave={handleDialogSave}
         mode={dialogMode}
       />
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Drawing</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &ldquo;{drawings.find((d) => d.id === drawingToDelete)?.name ?? "this drawing"}&rdquo;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,11 +1,6 @@
-import { Polar } from "@polar-sh/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-
-const polar = new Polar({
-  accessToken: process.env.POLAR_ACCESS_TOKEN!,
-  server: (process.env.POLAR_SERVER as "sandbox" | "production") ?? "sandbox",
-});
+import { getPolar } from "@/lib/polar";
 
 /**
  * Look up the customer's active free subscription so we can pass it as
@@ -16,6 +11,7 @@ async function findFreeSubscriptionId(
   externalCustomerId: string
 ): Promise<string | undefined> {
   try {
+    const polar = getPolar();
     const subs = await polar.subscriptions.list({
       externalCustomerId: [externalCustomerId],
       active: true,
@@ -59,6 +55,7 @@ export async function GET(req: NextRequest) {
     );
     successUrl.searchParams.set("checkoutId", "{CHECKOUT_ID}");
 
+    const polar = getPolar();
     const result = await polar.checkouts.create({
       products,
       successUrl: decodeURI(successUrl.toString()),

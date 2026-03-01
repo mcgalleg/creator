@@ -53,7 +53,7 @@ function renestPatch(
       // Top-level field takes precedence (it's what the LLM intended as the
       // element-level field). For `children` this means the repeat-template
       // children override any hardcoded children the LLM put inside value.
-      newValue[field] = patch[field as string];
+      newValue[field] = patch[field];
       modified = true;
     }
   }

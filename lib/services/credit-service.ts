@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
 import { users, creditTransactions } from "@/lib/db/schema";
 import { eq, desc, sql, and, gte } from "drizzle-orm";
-import { CREDIT_PRICING_DISPLAY } from "@/lib/credits";
 import { ingestSyncCreditEvent, getPolarMeterBalances } from "@/lib/polar";
 
 /**
@@ -400,9 +399,3 @@ export async function getCreditHistory(
   }>;
 }
 
-/**
- * Get credit pricing table for display in UI
- */
-export function getCreditPricing() {
-  return CREDIT_PRICING_DISPLAY;
-}

@@ -79,7 +79,8 @@ export async function POST(request: NextRequest) {
     const {
       username,
       importOption = "profile_only" as ImportOption,
-      // Legacy parameters for backwards compatibility
+      // TODO: Remove triggerSync/includeComments once frontend migrates to importOption
+      // (still used by account-connect-preview.tsx, onboarding-connect.tsx, workspace/accounts/page.tsx)
       triggerSync = false,
       postsLimit = 50,
       includeComments = false,

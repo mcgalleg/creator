@@ -148,19 +148,8 @@ export function useAnalyticsChat(options?: UseAnalyticsChatOptions) {
     prevDiagramsCountRef.current = currentCount;
   }, [diagramResults, onDiagramGenerated]);
 
-  /**
-   * Check if the chat is currently generating/streaming a response.
-   */
-  const isGenerating = useMemo(() => {
-    return status === 'streaming' || status === 'submitted';
-  }, [status]);
-
-  /**
-   * Check if the chat is in a loading state (submitted but not yet streaming).
-   */
-  const isLoading = useMemo(() => {
-    return status === 'submitted';
-  }, [status]);
+  const isGenerating = status === 'streaming' || status === 'submitted';
+  const isLoading = status === 'submitted';
 
   /**
    * Check if there are any pending tool calls (tools with input but no output yet).

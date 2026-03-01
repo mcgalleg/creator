@@ -2,29 +2,6 @@ import { db } from "@/lib/db";
 import { tiktokAccounts } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 
-export async function fetchAccounts(userId: string) {
-  const accounts = await db
-    .select({
-      id: tiktokAccounts.id,
-      username: tiktokAccounts.username,
-      displayName: tiktokAccounts.displayName,
-      followerCount: tiktokAccounts.followerCount,
-      lastSyncedAt: tiktokAccounts.lastSyncedAt,
-    })
-    .from(tiktokAccounts)
-    .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")));
-
-  return {
-    accounts: accounts.map((a) => ({
-      id: a.id.toString(),
-      username: a.username,
-      displayName: a.displayName,
-      followerCount: a.followerCount ?? 0,
-      lastSyncedAt: a.lastSyncedAt?.toISOString() ?? null,
-    })),
-  };
-}
-
 /** Helper: get account IDs for a user, optionally filtered */
 export async function getUserAccountIds(
   userId: string,

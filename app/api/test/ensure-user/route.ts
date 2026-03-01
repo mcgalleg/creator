@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
+import { testRouteGuard } from "@/lib/test-guard";
 
 export async function POST(request: NextRequest) {
-  if (process.env.NODE_ENV === "production" || process.env.BYPASS_AUTH !== "true") {
-    return NextResponse.json({ error: "Not available" }, { status: 404 });
-  }
+  const blocked = testRouteGuard();
+  if (blocked) return blocked;
 
   const { userId, email, name } = await request.json();
 

@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { posts, comments } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
+import { testRouteGuard } from "@/lib/test-guard";
 
 export async function GET(request: NextRequest) {
-  // Guard: only available in non-production with BYPASS_AUTH
-  if (process.env.NODE_ENV === "production" || process.env.BYPASS_AUTH !== "true") {
-    return NextResponse.json({ error: "Not available" }, { status: 404 });
-  }
+  const blocked = testRouteGuard();
+  if (blocked) return blocked;
 
   const accountId = request.nextUrl.searchParams.get("accountId");
 

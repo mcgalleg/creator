@@ -1,8 +1,9 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { getUserCredits, getCreditPricing, syncCreditBalance, getCarryover } from "@/lib/services/credit-service";
+import { getUserCredits, syncCreditBalance, getCarryover } from "@/lib/services/credit-service";
 import { ensureUserExists } from "@/lib/services/user-service";
 import { getPolarMeterBalances } from "@/lib/polar";
+import { CREDIT_PRICING_DISPLAY } from "@/lib/credits";
 
 export async function GET() {
   try {
@@ -14,7 +15,7 @@ export async function GET() {
 
     await ensureUserExists(userId);
 
-    const pricing = getCreditPricing();
+    const pricing = CREDIT_PRICING_DISPLAY;
 
     // Primary: read from Polar (source of truth) + carryover from DB
     try {

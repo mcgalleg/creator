@@ -4,6 +4,10 @@ import { eq } from "drizzle-orm";
 import type { SubscriptionTier } from "@/lib/subscriptions";
 import { DATA_PURGE_DAYS } from "@/lib/subscriptions";
 
+function calculatePurgeDate(from: Date): Date {
+  return new Date(from.getTime() + DATA_PURGE_DAYS * 24 * 60 * 60 * 1000);
+}
+
 /**
  * Provision a new subscription: set tier and timestamps.
  * Credit allocation is handled by Polar Meter Credits Benefits — not hard-set here.
@@ -43,7 +47,7 @@ export async function cancelSubscription(
   periodEnd?: Date
 ): Promise<void> {
   const expiresAt = periodEnd ?? new Date();
-  const purgeAt = new Date(expiresAt.getTime() + DATA_PURGE_DAYS * 24 * 60 * 60 * 1000);
+  const purgeAt = calculatePurgeDate(expiresAt);
 
   const [result] = await db.update(users)
     .set({
@@ -67,7 +71,7 @@ export async function cancelSubscription(
  */
 export async function endSubscription(userId: string): Promise<void> {
   const now = new Date();
-  const purgeAt = new Date(now.getTime() + DATA_PURGE_DAYS * 24 * 60 * 60 * 1000);
+  const purgeAt = calculatePurgeDate(now);
 
   const [result] = await db.update(users)
     .set({

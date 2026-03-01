@@ -86,10 +86,6 @@ export async function GET(request: NextRequest) {
     // Calculate cost estimates for different import options
     const profile = validation.profile;
 
-    // Profile only: FREE - just stores reference, no additional Apify call needed
-    // (validateUsername already fetched the profile data)
-    const profileOnlyCost = 0;
-
     // Profile + Posts: Use estimateSyncCost for 50 posts
     const postsEstimate = estimateSyncCost({
       postsLimit: 50,
@@ -124,7 +120,7 @@ export async function GET(request: NextRequest) {
         profileCategory: profile.profileCategory,
       },
       costEstimates: {
-        profileOnly: profileOnlyCost,
+        profileOnly: 0, // FREE - just stores reference, no additional Apify call
         profilePosts: postsEstimate.credits,
         profilePostsComments: profilePostsCommentsCost,
       },
