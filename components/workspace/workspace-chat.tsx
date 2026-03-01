@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useSyncExternalStore, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AlertCircle, Sparkles, ArrowRight, X, Plus } from 'lucide-react';
 import Link from 'next/link';
@@ -20,6 +20,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+
+// -- localStorage-backed connector state via useSyncExternalStore ----------
+const connectorSubs = new Set<() => void>();
+function subscribeConnectors(cb: () => void) {
+  connectorSubs.add(cb);
+  return () => { connectorSubs.delete(cb); };
+}
+function getConnectorsSnapshot() {
+  return localStorage.getItem(CONNECTORS_STORAGE_KEY) ?? '[]';
+}
+function getConnectorsServerSnapshot() {
+  return '[]';
+}
+function notifyConnectors() {
+  connectorSubs.forEach((cb) => cb());
+}
 
 interface WorkspaceChatProps {
   accounts: Array<{ id: number; username: string; avatarUrl: string | null }>;
@@ -60,31 +76,28 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
   const isSingleAccount = accounts.length === 1;
   const noAccountSelected = accounts.length > 1 && selectedAccountIds.length === 0;
 
-  // Connector state — hydrate from localStorage in initializer
-  const [enabledConnectors, setEnabledConnectors] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return [];
+  // Connector state — synced with localStorage, SSR-safe
+  const connectorsJson = useSyncExternalStore(
+    subscribeConnectors,
+    getConnectorsSnapshot,
+    getConnectorsServerSnapshot,
+  );
+  const enabledConnectors = useMemo(() => {
     try {
-      const stored = localStorage.getItem(CONNECTORS_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed;
-      }
+      const parsed = JSON.parse(connectorsJson);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
-      // Ignore parse errors
+      return [];
     }
-    return [];
-  });
-
-  // Persist to localStorage on change
-  useEffect(() => {
-    localStorage.setItem(CONNECTORS_STORAGE_KEY, JSON.stringify(enabledConnectors));
-  }, [enabledConnectors]);
+  }, [connectorsJson]);
 
   const handleConnectorToggle = useCallback((id: string, enabled: boolean) => {
-    setEnabledConnectors((prev) =>
-      enabled ? [...prev, id] : prev.filter((c) => c !== id)
-    );
-  }, []);
+    const next = enabled
+      ? [...enabledConnectors, id]
+      : enabledConnectors.filter((c) => c !== id);
+    localStorage.setItem(CONNECTORS_STORAGE_KEY, JSON.stringify(next));
+    notifyConnectors();
+  }, [enabledConnectors]);
 
   const [isArtifactRendering, setIsArtifactRendering] = useState(false);
 
