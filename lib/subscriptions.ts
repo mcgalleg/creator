@@ -9,7 +9,11 @@ export type SubscriptionTier = "free" | "basic" | "pro" | "agency" | "mcp";
 function requiredEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
+    // During static page generation (next build), NEXT_PUBLIC_* vars may be
+    // missing. Return empty string so pages can prerender; the values are only
+    // needed at runtime for Polar API calls, where a missing var will surface
+    // as an obvious error.
+    return "";
   }
   return value;
 }
