@@ -9,9 +9,11 @@ import { MessageList } from '@/components/chat/message-list';
 import { WorkspaceChatInput } from './workspace-chat-input';
 import { WorkspaceEmptyState } from './workspace-empty-state';
 import { WorkspaceSyncBanner } from './workspace-sync-banner';
+import { ConnectorPopover } from './connector-popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSyncOptional } from '@/contexts/sync-context';
 import { useCredits } from '@/hooks/use-credits';
+import { CONNECTORS_STORAGE_KEY } from '@/lib/connectors';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,6 +60,32 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
   const isSingleAccount = accounts.length === 1;
   const noAccountSelected = accounts.length > 1 && selectedAccountIds.length === 0;
 
+  // Connector state — hydrate from localStorage in initializer
+  const [enabledConnectors, setEnabledConnectors] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = localStorage.getItem(CONNECTORS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {
+      // Ignore parse errors
+    }
+    return [];
+  });
+
+  // Persist to localStorage on change
+  useEffect(() => {
+    localStorage.setItem(CONNECTORS_STORAGE_KEY, JSON.stringify(enabledConnectors));
+  }, [enabledConnectors]);
+
+  const handleConnectorToggle = useCallback((id: string, enabled: boolean) => {
+    setEnabledConnectors((prev) =>
+      enabled ? [...prev, id] : prev.filter((c) => c !== id)
+    );
+  }, []);
+
   const [isArtifactRendering, setIsArtifactRendering] = useState(false);
 
   const {
@@ -69,6 +97,7 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
     insufficientCredits,
   } = useAnalyticsChat({
     selectedAccountIds,
+    enabledConnectors,
   });
 
   const isBusy = isGenerating || isArtifactRendering;
@@ -120,25 +149,128 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
     submitMessage(prompt);
   }, [noAccountSelected, submitMessage]);
 
+  const toolbarContent = (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <ConnectorPopover
+        enabledConnectors={enabledConnectors}
+        onToggle={handleConnectorToggle}
+      />
+      {accounts.length > 0 && (
+        <>
+        {selectedAccountIds.map((id) => {
+          const acct = accounts.find((a) => a.id === id);
+          if (!acct) return null;
+          return (
+            <span
+              key={id}
+              className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-sm"
+            >
+              {acct.avatarUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={acct.avatarUrl} alt={acct.username} className="h-4.5 w-4.5 rounded-full" />
+              )}
+              <span className="truncate max-w-[120px]">@{acct.username}</span>
+              {!isSingleAccount && (
+                <button
+                  type="button"
+                  onClick={() => removeAccount(id)}
+                  className="rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
+                  aria-label={`Remove @${acct.username}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </span>
+          );
+        })}
+        {!isSingleAccount && unselectedAccounts.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-full border border-dashed px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted/50 transition-colors"
+              >
+                <Plus className="h-3 w-3" />
+                Add
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {unselectedAccounts.map((account) => (
+                <DropdownMenuItem key={account.id} onSelect={() => addAccount(account.id)}>
+                  <div className="flex items-center gap-2">
+                    {account.avatarUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={account.avatarUrl} alt={account.username} className="h-4 w-4 rounded-full" />
+                    )}
+                    <span>@{account.username}</span>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        </>
+      )}
+    </div>
+  );
+
+  const inputElement = (
+    <div className="space-y-3">
+      {tokensExhausted && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm">
+          <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
+          <span className="flex-1 text-muted-foreground">
+            You&apos;re out of AI tokens.{' '}
+            <Link href="/pricing" className="font-medium text-primary hover:underline">
+              Subscribe for 1M/month
+              <ArrowRight className="inline ml-0.5 h-3 w-3" />
+            </Link>
+          </span>
+        </div>
+      )}
+      <WorkspaceChatInput
+        value={input}
+        onChange={setInput}
+        onSubmit={handleSubmit}
+        isLoading={isLoading || isBusy}
+        disabled={tokensExhausted || noAccountSelected}
+        placeholder={noAccountSelected ? 'Select an account to start chatting' : undefined}
+        toolbar={toolbarContent}
+      />
+    </div>
+  );
+
+  const hasMessages = messages.length > 0;
+
+  // Empty state: centered layout with input inline (like Claude AI new chat)
+  if (!hasMessages) {
+    return (
+      <div className="flex flex-col h-full">
+        <WorkspaceSyncBanner />
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <WorkspaceEmptyState onSuggestionClick={handleSuggestionClick} goals={goals}>
+            {inputElement}
+          </WorkspaceEmptyState>
+        </div>
+      </div>
+    );
+  }
+
+  // Active chat: floating input over scrollable messages
   return (
-    <div className="flex flex-col h-full">
-      {/* Scrollable messages area */}
+    <div className="relative h-full">
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto"
+        className="h-full overflow-y-auto"
       >
-        <div className="mx-auto max-w-3xl px-4 py-6">
+        <div className="mx-auto max-w-3xl px-4 py-6 pb-48">
           <WorkspaceSyncBanner />
-          {messages.length === 0 ? (
-            <WorkspaceEmptyState onSuggestionClick={handleSuggestionClick} goals={goals} />
-          ) : (
-            <MessageList
-              messages={messages}
-              isStreaming={isGenerating}
-              onBusyChange={setIsArtifactRendering}
-            />
-          )}
+          <MessageList
+            messages={messages}
+            isStreaming={isGenerating}
+            onBusyChange={setIsArtifactRendering}
+          />
 
           {/* Loading skeleton while generating or rendering artifacts */}
           {isBusy && (
@@ -162,89 +294,13 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
         </div>
       </div>
 
-      {/* Fixed bottom input area */}
-      <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto max-w-3xl px-4 py-4 space-y-3">
-          {/* AI tokens depleted prompt */}
-          {tokensExhausted && (
-            <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm">
-              <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
-              <span className="flex-1 text-muted-foreground">
-                You&apos;re out of AI tokens.{' '}
-                <Link href="/pricing" className="font-medium text-primary hover:underline">
-                  Subscribe for 1M/month
-                  <ArrowRight className="inline ml-0.5 h-3 w-3" />
-                </Link>
-              </span>
-            </div>
-          )}
-
-          <WorkspaceChatInput
-            value={input}
-            onChange={setInput}
-            onSubmit={handleSubmit}
-            isLoading={isLoading || isBusy}
-            disabled={tokensExhausted || noAccountSelected}
-            placeholder={noAccountSelected ? 'Select an account to start chatting' : undefined}
-            toolbar={
-              accounts.length > 0 ? (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {selectedAccountIds.map((id) => {
-                    const acct = accounts.find((a) => a.id === id);
-                    if (!acct) return null;
-                    return (
-                      <span
-                        key={id}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-sm"
-                      >
-                        {acct.avatarUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={acct.avatarUrl} alt={acct.username} className="h-4.5 w-4.5 rounded-full" />
-                        )}
-                        <span className="truncate max-w-[120px]">@{acct.username}</span>
-                        {!isSingleAccount && (
-                          <button
-                            type="button"
-                            onClick={() => removeAccount(id)}
-                            className="rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
-                            aria-label={`Remove @${acct.username}`}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
-                      </span>
-                    );
-                  })}
-                  {!isSingleAccount && unselectedAccounts.length > 0 && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 rounded-full border border-dashed px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted/50 transition-colors"
-                        >
-                          <Plus className="h-3 w-3" />
-                          Add
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        {unselectedAccounts.map((account) => (
-                          <DropdownMenuItem key={account.id} onSelect={() => addAccount(account.id)}>
-                            <div className="flex items-center gap-2">
-                              {account.avatarUrl && (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={account.avatarUrl} alt={account.username} className="h-4 w-4 rounded-full" />
-                              )}
-                              <span>@{account.username}</span>
-                            </div>
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-              ) : undefined
-            }
-          />
+      {/* Floating input with gradient fade — no hard divider */}
+      <div className="absolute bottom-0 inset-x-0 pointer-events-none">
+        <div className="h-20 bg-gradient-to-t from-background to-transparent" />
+        <div className="bg-background pointer-events-auto pb-4">
+          <div className="mx-auto max-w-3xl px-4">
+            {inputElement}
+          </div>
         </div>
       </div>
     </div>

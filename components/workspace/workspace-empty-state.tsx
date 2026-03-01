@@ -7,12 +7,13 @@ import { getPersonalizedSuggestions } from '@/lib/prompt-catalog';
 interface WorkspaceEmptyStateProps {
   onSuggestionClick: (prompt: string) => void;
   goals?: string[];
+  children?: React.ReactNode;
 }
 
-export function WorkspaceEmptyState({ onSuggestionClick, goals = [] }: WorkspaceEmptyStateProps) {
+export function WorkspaceEmptyState({ onSuggestionClick, goals = [], children }: WorkspaceEmptyStateProps) {
   const suggestions = getPersonalizedSuggestions(goals);
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+    <div className="flex flex-col items-center justify-center text-center px-4 w-full">
       <div className="mb-6">
         <AstriqLogo variant="icon" size="lg" />
       </div>
@@ -22,6 +23,7 @@ export function WorkspaceEmptyState({ onSuggestionClick, goals = [] }: Workspace
       <p className="text-muted-foreground mb-8 max-w-md">
         Ask about your TikTok analytics, get content ideas, or generate visual reports.
       </p>
+      {children && <div className="w-full max-w-3xl mb-6">{children}</div>}
       <div className="flex flex-wrap items-center justify-center gap-2 max-w-xl">
         {suggestions.map((chip) => (
           <button

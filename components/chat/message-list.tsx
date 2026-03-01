@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import DOMPurify from 'dompurify';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useJsonRenderMessage, Renderer, JSONUIProvider, type DataPart } from '@json-render/react';
 import { isToolUIPart } from 'ai';
 import { registry } from '@/lib/registry';
 import type { UIMessage } from 'ai';
 import { cn } from '@/lib/utils';
 import { MarkdownRenderer } from './markdown-renderer';
+import { McpAppRenderer } from './mcp-app-renderer';
 import { useArtifactCopy } from '@/hooks/use-artifact-copy';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -16,28 +16,35 @@ import { Copy, Check, Download, Image } from 'lucide-react';
 interface MessageListProps {
   messages: UIMessage[];
   isStreaming: boolean;
-  /** Called when async artifact rendering (e.g. Excalidraw diagrams) starts/finishes */
+  /** Called when async artifact rendering starts/finishes */
   onBusyChange?: (busy: boolean) => void;
 }
 
 /**
  * Displays the list of chat messages with progressive spec rendering.
+ *
+ * When the stream ends on a message that contains a spec, the JSONUIProvider
+ * remounts (key change) causing a full re-render. `onBusyChange` bridges
+ * that gap so the parent keeps its loading indicator active until the
+ * browser has actually painted the final artifact.
  */
 export function MessageList({ messages, isStreaming, onBusyChange }: MessageListProps) {
-  const busyCountRef = useRef(0);
-  const reportedBusyRef = useRef(false);
+  const wasStreamingRef = useRef(isStreaming);
 
-  const onDiagramLoadingChange = useCallback(
-    (loading: boolean) => {
-      busyCountRef.current += loading ? 1 : -1;
-      const busy = busyCountRef.current > 0;
-      if (busy !== reportedBusyRef.current) {
-        reportedBusyRef.current = busy;
-        onBusyChange?.(busy);
-      }
-    },
-    [onBusyChange]
-  );
+  useEffect(() => {
+    // Detect the streaming → done transition
+    if (wasStreamingRef.current && !isStreaming && onBusyChange) {
+      // The spec JSONUIProvider is about to remount — signal busy until paint
+      onBusyChange(true);
+      const rafId = requestAnimationFrame(() => {
+        // Double-rAF: first rAF runs before paint, second runs after paint
+        requestAnimationFrame(() => onBusyChange(false));
+      });
+      wasStreamingRef.current = false;
+      return () => cancelAnimationFrame(rafId);
+    }
+    wasStreamingRef.current = isStreaming;
+  }, [isStreaming, onBusyChange]);
 
   return (
     <div className="space-y-4">
@@ -46,45 +53,48 @@ export function MessageList({ messages, isStreaming, onBusyChange }: MessageList
           key={message.id}
           message={message}
           isStreaming={isStreaming && i === messages.length - 1}
-          onDiagramLoadingChange={onDiagramLoadingChange}
         />
       ))}
     </div>
   );
 }
 
+/** Metadata attached by the chat route when an MCP tool has a UI resource */
+interface McpAppUiMeta {
+  serverUrl: string;
+  resourceUri: string;
+}
+
 function MessageBubble({
   message,
   isStreaming,
-  onDiagramLoadingChange,
 }: {
   message: UIMessage;
   isStreaming: boolean;
-  onDiagramLoadingChange?: (loading: boolean) => void;
 }) {
   const { spec, text, hasSpec } = useJsonRenderMessage(message.parts as DataPart[]);
   const { ref: captureRef, copyAsImage, downloadAsPng, copyAsText, isCopying } = useArtifactCopy();
 
-  // Extract diagram from tool parts (createDiagram stays tool-based)
-  let diagramElements: unknown[] | null = null;
+  // Extract MCP App UI metadata from tool results
+  let mcpAppUi: McpAppUiMeta | null = null;
+  let mcpToolInput: Record<string, unknown> = {};
+  let mcpToolResult: unknown = null;
   if (message.role === 'assistant') {
     for (const part of message.parts) {
       if (!isToolUIPart(part)) continue;
-      if (
-        part.type === 'tool-createDiagram' &&
-        part.state === 'output-available' &&
-        part.output
-      ) {
-        const output = part.output as { elements?: unknown[] };
-        if (output.elements) {
-          diagramElements = output.elements;
+      if (part.state === 'output-available' && part.output) {
+        const output = part.output as Record<string, unknown>;
+        if (output._mcpAppUi) {
+          mcpAppUi = output._mcpAppUi as McpAppUiMeta;
+          mcpToolInput = (part.input ?? {}) as Record<string, unknown>;
+          mcpToolResult = output;
         }
       }
     }
   }
 
   const isUser = message.role === 'user';
-  const hasRichContent = hasSpec || !!diagramElements;
+  const hasRichContent = hasSpec || !!mcpAppUi;
   const showActions = !isUser && !isStreaming;
 
   return (
@@ -105,9 +115,14 @@ function MessageBubble({
           )
         )}
 
-        {diagramElements && (
-          <div ref={!hasSpec ? captureRef : undefined} className="w-full mt-3">
-            <DiagramPreview elements={diagramElements} onLoadingChange={onDiagramLoadingChange} />
+        {mcpAppUi && (
+          <div className="w-full mt-3">
+            <McpAppRenderer
+              serverUrl={mcpAppUi.serverUrl}
+              resourceUri={mcpAppUi.resourceUri}
+              toolInput={mcpToolInput}
+              toolResult={mcpToolResult}
+            />
           </div>
         )}
 
@@ -203,79 +218,3 @@ function ActionBar({
   );
 }
 
-/**
- * Lightweight static SVG preview of Excalidraw diagram elements.
- */
-function DiagramPreview({
-  elements,
-  onLoadingChange,
-}: {
-  elements: unknown[];
-  onLoadingChange?: (loading: boolean) => void;
-}) {
-  const [svgHtml, setSvgHtml] = useState<string | null>(null);
-  const reportedRef = useRef(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    // Signal loading started
-    if (!reportedRef.current) {
-      reportedRef.current = true;
-      onLoadingChange?.(true);
-    }
-
-    async function generateSvg() {
-      try {
-        const { loadExcalidraw } = await import('@/lib/excalidraw-loader');
-        const { exportToSvg, convertToExcalidrawElements } = await loadExcalidraw();
-
-        // Filter out non-drawable entries like cameraUpdate before converting
-        const drawableElements = elements.filter(
-          (el): el is Record<string, unknown> =>
-            typeof el === "object" && el !== null && (el as Record<string, unknown>).type !== "cameraUpdate"
-        );
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const converted = convertToExcalidrawElements(drawableElements as any);
-
-        const svg = await exportToSvg({
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          elements: converted as any,
-          appState: { exportWithDarkMode: false, exportBackground: false },
-          files: null,
-        });
-
-        if (!cancelled) {
-          setSvgHtml(DOMPurify.sanitize(svg.outerHTML, { USE_PROFILES: { svg: true } }));
-          onLoadingChange?.(false);
-        }
-      } catch (err) {
-        console.error('Failed to generate Excalidraw SVG preview:', err);
-        if (!cancelled) onLoadingChange?.(false);
-      }
-    }
-
-    if (elements.length > 0) generateSvg();
-    return () => {
-      cancelled = true;
-      // If we're unmounting while still loading, signal done
-      if (reportedRef.current && !svgHtml) onLoadingChange?.(false);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elements]);
-
-  if (!svgHtml) {
-    return (
-      <div className="flex items-center justify-center min-h-[120px] text-sm text-muted-foreground">
-        Loading diagram...
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="pointer-events-none [&_svg]:max-w-full [&_svg]:h-auto"
-      dangerouslySetInnerHTML={{ __html: svgHtml }}
-    />
-  );
-}

@@ -1,10 +1,4 @@
 export {
-  DrawingBridgeProvider,
-  useDrawingBridge,
-  useDrawingBridgeOptional,
-  type DrawingBridgeData,
-} from './drawing-bridge-context';
-export {
   FeatureAccessProvider,
   useHasFeature,
   useHasFeatureOptional,

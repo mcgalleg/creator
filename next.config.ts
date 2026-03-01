@@ -14,15 +14,21 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
-    return [{
-      source: "/(.*)",
-      headers: [
-        { key: "X-Frame-Options", value: "DENY" },
-        { key: "X-Content-Type-Options", value: "nosniff" },
-        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' *.clerk.accounts.dev; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tiktokcdn.com *.tiktokcdn-us.com *.tiktokcdn-eu.com *.clerk.com https://img.clerk.com; connect-src 'self' *.clerk.accounts.dev *.clerk.com https://clerk-telemetry.com https://*.clerk-telemetry.com *.polar.sh vitals.vercel-insights.com https://esm.sh; font-src 'self' https://esm.sh; frame-src 'self' *.clerk.accounts.dev https://challenges.cloudflare.com; worker-src 'self' blob:" },
-      ],
-    }];
+    const securityHeaders = [
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' *.clerk.accounts.dev; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tiktokcdn.com *.tiktokcdn-us.com *.tiktokcdn-eu.com *.clerk.com https://img.clerk.com; connect-src 'self' *.clerk.accounts.dev *.clerk.com https://clerk-telemetry.com https://*.clerk-telemetry.com *.polar.sh vitals.vercel-insights.com https://esm.sh; font-src 'self' https://esm.sh; frame-src 'self' blob: *.clerk.accounts.dev https://challenges.cloudflare.com; worker-src 'self' blob:" },
+    ];
+    return [
+      {
+        // Apply security headers to all routes EXCEPT the MCP App render
+        // endpoint, which serves third-party HTML that needs to load CDN
+        // scripts (esm.sh) without our CSP blocking them.
+        source: "/((?!api/connectors/render).*)",
+        headers: securityHeaders,
+      },
+    ];
   },
   async redirects() {
     return [

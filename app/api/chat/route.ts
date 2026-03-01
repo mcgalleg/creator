@@ -1,6 +1,7 @@
 import {
   streamText,
   tool,
+  jsonSchema,
   UIMessage,
   convertToModelMessages,
   stepCountIs,
@@ -9,6 +10,7 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   type ModelMessage,
+  type Tool,
 } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { pipeJsonRender } from "@json-render/core";
@@ -23,10 +25,12 @@ import { creditTransactions } from "@/lib/db/schema/credits";
 import { tiktokAccounts } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getAnalyticsSchema, executeReadQuery } from "@/lib/mcp-app/data";
-import { createDiagramTool } from "@/lib/ai-tools/excalidraw-tools";
 import { addCacheControlToMessages, ANTHROPIC_CACHE_CONTROL } from "@/lib/ai-tools/prompt-cache";
 import { getAnalyticsChatPrompt } from "@/lib/catalog";
 import { chatLimiter } from "@/lib/rate-limit";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { getConnectorById } from "@/lib/connectors";
 
 // =============================================================================
 // Message sanitization — fix malformed tool_use inputs in conversation history
@@ -124,7 +128,6 @@ ${CATALOG_PROMPT}
 
 ## Output Routing
 - For analytics, data, KPIs, charts, and tables: ALWAYS use the \`\`\`spec JSONL format above.
-- The createDiagram tool is ONLY for hand-drawn spatial diagrams — NOT for data visualization.
 
 ## Analytics Context
 - Wrap the overall response in a Stack (direction: vertical).
@@ -147,7 +150,13 @@ ${CATALOG_PROMPT}
 
 export async function POST(req: Request) {
   try {
-    const { messages, selectedAccountIds }: { messages: UIMessage[]; selectedAccountIds?: number[] } = await req.json();
+    const { messages, selectedAccountIds, enabledConnectors }: {
+      messages: UIMessage[];
+      selectedAccountIds?: number[];
+      enabledConnectors?: string[];
+    } = await req.json();
+
+    console.log(`[chat] Request body: enabledConnectors=${JSON.stringify(enabledConnectors)}, selectedAccountIds=${JSON.stringify(selectedAccountIds)}`);
 
     // Authenticate the user
     const { userId } = await auth();
@@ -168,13 +177,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if user has AI tokens before proceeding
-    const tokenCheck = await checkAiTokens(userId, 1);
-    if (!tokenCheck.sufficient) {
-      return Response.json(
-        { error: "Insufficient AI tokens", balance: tokenCheck.balance, required: 1 },
-        { status: 402 }
-      );
+    // Check if user has AI tokens before proceeding (skip in bypass mode)
+    if (process.env.BYPASS_AUTH !== "true") {
+      const tokenCheck = await checkAiTokens(userId, 1);
+      if (!tokenCheck.sufficient) {
+        return Response.json(
+          { error: "Insufficient AI tokens", balance: tokenCheck.balance, required: 1 },
+          { status: 402 }
+        );
+      }
     }
 
     // Get the user's connected TikTok accounts for context
@@ -220,6 +231,140 @@ export async function POST(req: Request) {
       await convertToModelMessages(messages)
     );
 
+    // -------------------------------------------------------------------------
+    // MCP connector setup — create clients for enabled connectors
+    // -------------------------------------------------------------------------
+    const mcpClients: Client[] = [];
+    const mcpTools: Record<string, Tool> = {};
+
+    if (enabledConnectors?.length) {
+      console.log(`[chat] Enabled connectors: ${enabledConnectors.join(", ")}`);
+      for (const connectorId of enabledConnectors) {
+        const connector = getConnectorById(connectorId);
+        if (!connector) {
+          console.warn(`[chat] Connector "${connectorId}" not found in registry`);
+          continue;
+        }
+
+        // Validate feature access server-side
+        if (connector.requiredFeature) {
+          const hasAccess = await hasFeature(connector.requiredFeature);
+          if (!hasAccess) {
+            console.warn(`[chat] User lacks feature "${connector.requiredFeature}" for connector "${connectorId}"`);
+            continue;
+          }
+        }
+
+        try {
+          const transport = new StreamableHTTPClientTransport(
+            new URL(connector.mcpServerUrl)
+          );
+          const mcpClient = new Client({
+            name: "creator",
+            version: "1.0.0",
+          });
+          await mcpClient.connect(transport);
+          mcpClients.push(mcpClient);
+
+          const { tools: remoteTools } = await mcpClient.listTools();
+          const toolNames: string[] = [];
+          for (const remoteTool of remoteTools) {
+            // Extract UI resource URI from tool metadata (MCP Apps protocol)
+            const uiMeta = remoteTool._meta?.ui as
+              | { resourceUri?: string }
+              | undefined;
+            const resourceUri = uiMeta?.resourceUri;
+
+            toolNames.push(remoteTool.name);
+            mcpTools[remoteTool.name] = tool({
+              description: remoteTool.description ?? remoteTool.name,
+              inputSchema: jsonSchema(remoteTool.inputSchema),
+              execute: async (input) => {
+                const callResult = await mcpClient.callTool({
+                  name: remoteTool.name,
+                  arguments: input as Record<string, unknown>,
+                });
+
+                // Parse the text content from the MCP result
+                const contentArray = Array.isArray(callResult.content)
+                  ? (callResult.content as Array<{ type: string; text?: string }>)
+                  : [];
+                const textContent = contentArray
+                  .filter((c) => c.type === "text")
+                  .map((c) => c.text)
+                  .join("\n");
+
+                let result: Record<string, unknown> = {};
+                try {
+                  result = textContent ? JSON.parse(textContent) : {};
+                } catch {
+                  result = { text: textContent };
+                }
+
+                // Attach MCP App UI metadata so the client can render it
+                if (resourceUri) {
+                  result._mcpAppUi = {
+                    serverUrl: connector.mcpServerUrl,
+                    resourceUri,
+                  };
+                }
+
+                return result;
+              },
+            });
+          }
+
+          console.log(`[chat] Loaded ${toolNames.length} tools from "${connectorId}": ${toolNames.join(", ")}`);
+        } catch (err) {
+          console.error(
+            `[chat] Failed to connect to MCP server for connector "${connectorId}":`,
+            err
+          );
+        }
+      }
+    }
+
+    // Build messages with optional drawing-mode override
+    const mcpToolNames = Object.keys(mcpTools);
+    const hasDrawingTools = mcpToolNames.some(
+      (name) => name === "create_view" || name === "read_me"
+    );
+    console.log(`[chat] MCP tools loaded: [${mcpToolNames.join(", ")}], hasDrawingTools=${hasDrawingTools}`);
+
+    // Detect drawing intent from the last user message
+    let drawingOverride = "";
+    if (hasDrawingTools) {
+      const lastUserMsg = [...modelMessages]
+        .reverse()
+        .find((m) => m.role === "user");
+      const lastUserText =
+        lastUserMsg && Array.isArray(lastUserMsg.content)
+          ? lastUserMsg.content
+              .filter((p): p is { type: "text"; text: string } => p.type === "text")
+              .map((p) => p.text)
+              .join(" ")
+          : typeof lastUserMsg?.content === "string"
+            ? lastUserMsg.content
+            : "";
+
+      console.log(`[chat] Last user text: "${lastUserText.substring(0, 100)}"`);
+      const drawingPattern =
+        /\b(draw|drawing|diagram|sketch|flowchart|wireframe|mind\s*map|whiteboard|canvas|excalidraw|visualiz(e|ation))\b/i;
+      const matched = drawingPattern.test(lastUserText);
+      console.log(`[chat] Drawing pattern matched: ${matched}`);
+      if (matched) {
+        drawingOverride = [
+          "CRITICAL ROUTING OVERRIDE: The user is requesting a drawing/diagram.",
+          "You MUST use the Excalidraw tools to fulfill this request:",
+          "1. Call read_me first to learn the Excalidraw element format",
+          "2. Query any data you need with query_data (1-2 calls max)",
+          "3. Call create_view with Excalidraw elements to render the drawing",
+          "Do NOT use ```spec JSONL format for this request. Do NOT render cards, tables, or charts.",
+          "The user explicitly wants an interactive Excalidraw canvas drawing.",
+        ].join("\n");
+      }
+    }
+
     const allMessages: ModelMessage[] = [
       {
         role: "system",
@@ -230,8 +375,50 @@ export async function POST(req: Request) {
         role: "system",
         content: accountContext,
       },
+      ...(drawingOverride
+        ? [{ role: "system" as const, content: drawingOverride }]
+        : []),
       ...modelMessages,
     ];
+
+    // -------------------------------------------------------------------------
+    // Build tools — local analytics + MCP connector tools
+    // -------------------------------------------------------------------------
+    const allTools: Record<string, Tool> = {
+      describe_tables: tool({
+        description:
+          "Returns the full database schema with detailed column types and relationships. Use this to discover exact column names and types before writing queries.",
+        inputSchema: z.object({}),
+        execute: async () => {
+          return getAnalyticsSchema(userId, selectedAccountIds);
+        },
+      }),
+
+      query_data: tool({
+        description:
+          "Execute a read-only PostgreSQL SELECT query against the analytics database. Data is automatically scoped to the current user's TikTok accounts — no account filters needed. Only SELECT queries are allowed. WITH (CTE) queries are supported. Max 500 rows returned.",
+        inputSchema: z.object({
+          sql: z.string().describe("A PostgreSQL SELECT query"),
+        }),
+        execute: async ({ sql }: { sql: string }) => {
+          try {
+            return await executeReadQuery(userId, sql, selectedAccountIds);
+          } catch (err) {
+            return {
+              error:
+                err instanceof Error ? err.message : "Query execution failed",
+              columns: [],
+              rows: [],
+              rowCount: 0,
+              truncated: false,
+            };
+          }
+        },
+      }),
+
+      // Merge in remote MCP tools
+      ...mcpTools,
+    };
 
     const result = streamText({
       model,
@@ -252,7 +439,9 @@ export async function POST(req: Request) {
             const parsed = JSON.parse(s);
             const obj = Array.isArray(parsed) ? parsed[0] : parsed;
             if (typeof obj === "object" && obj !== null) return obj;
-          } catch { /* not valid JSON */ }
+          } catch {
+            /* not valid JSON */
+          }
           return null;
         };
 
@@ -262,7 +451,10 @@ export async function POST(req: Request) {
             : JSON.stringify(toolCall.input);
 
         // Strip trailing non-JSON characters (model sometimes appends period, etc.)
-        const lastBrace = Math.max(raw.lastIndexOf("}"), raw.lastIndexOf("]"));
+        const lastBrace = Math.max(
+          raw.lastIndexOf("}"),
+          raw.lastIndexOf("]")
+        );
         if (lastBrace > 0) raw = raw.substring(0, lastBrace + 1);
 
         // Attempt 1: direct parse
@@ -291,6 +483,15 @@ export async function POST(req: Request) {
         return null;
       },
       onFinish: async ({ totalUsage }) => {
+        // Close MCP clients
+        for (const client of mcpClients) {
+          try {
+            await client.close();
+          } catch {
+            // Ignore close errors
+          }
+        }
+
         const totalTokens = totalUsage.totalTokens ?? 0;
         if (totalTokens > 0) {
           // Await Polar ingestion so the meter is more likely to be updated
@@ -299,7 +500,9 @@ export async function POST(req: Request) {
             ingestAiTokenEvent(userId, totalTokens, {
               inputTokens: totalUsage.inputTokens ?? 0,
               outputTokens: totalUsage.outputTokens ?? 0,
-            }).catch((err) => console.error("Polar AI token ingestion failed:", err)),
+            }).catch((err) =>
+              console.error("Polar AI token ingestion failed:", err)
+            ),
             db.insert(creditTransactions).values({
               userId,
               amount: -totalTokens,
@@ -309,57 +512,24 @@ export async function POST(req: Request) {
           ]);
         }
       },
-      tools: {
-        describe_tables: tool({
-          description:
-            "Returns the full database schema with detailed column types and relationships. Use this to discover exact column names and types before writing queries.",
-          inputSchema: z.object({}),
-          execute: async () => {
-            return getAnalyticsSchema(userId, selectedAccountIds);
-          },
-        }),
-
-        query_data: tool({
-          description:
-            "Execute a read-only PostgreSQL SELECT query against the analytics database. Data is automatically scoped to the current user's TikTok accounts — no account filters needed. Only SELECT queries are allowed. WITH (CTE) queries are supported. Max 500 rows returned.",
-          inputSchema: z.object({
-            sql: z.string().describe("A PostgreSQL SELECT query"),
-          }),
-          execute: async ({ sql }) => {
-            try {
-              return await executeReadQuery(userId, sql, selectedAccountIds);
-            } catch (err) {
-              return {
-                error: err instanceof Error ? err.message : "Query execution failed",
-                columns: [],
-                rows: [],
-                rowCount: 0,
-                truncated: false,
-              };
-            }
-          },
-        }),
-
-        createDiagram: {
-          ...createDiagramTool,
-          // Cache breakpoint on the last tool caches all tool definitions
-          providerOptions: ANTHROPIC_CACHE_CONTROL,
-        },
-      },
+      tools: allTools,
     });
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
         writer.merge(
           pipeJsonRender(
-            result.toUIMessageStream().pipeThrough(createSpecRepairTransform())
-          ),
+            result
+              .toUIMessageStream()
+              .pipeThrough(createSpecRepairTransform())
+          )
         );
       },
     });
     return createUIMessageStreamResponse({ stream });
   } catch (error) {
     console.error("Chat API error:", error);
+
     return Response.json(
       { error: "Failed to process chat request" },
       { status: 500 }

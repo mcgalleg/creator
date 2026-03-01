@@ -127,7 +127,14 @@ export function createSpecRepairTransform(): TransformStream {
       controller
     ) {
       // Only intercept text-delta chunks; pass everything else through.
+      // Flush any buffered text first so it isn't silently held across
+      // chunk-type boundaries (e.g. a tool-call arriving mid-line).
       if (chunk.type !== "text-delta" || typeof chunk.delta !== "string") {
+        if (lineBuffer) {
+          controller.enqueue({ type: "text-delta", delta: lineBuffer });
+          lineBuffer = "";
+          inFence = false;
+        }
         controller.enqueue(chunk);
         return;
       }

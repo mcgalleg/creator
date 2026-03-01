@@ -101,7 +101,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     }
   }, [accounts, selectedAccountId]);
 
-  // Subscriber pattern (same as DrawingBridgeProvider)
+  // Subscriber pattern for sync completion callbacks
   const subscribersRef = useRef<Set<SyncCompletedCallback>>(new Set());
 
   // Track previous active-job counts per account for completion detection
