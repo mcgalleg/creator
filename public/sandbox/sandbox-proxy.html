@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>MCP Sandbox Proxy</title>
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+  iframe { border: 0; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<script>
+(function () {
+  'use strict';
+
+  // Must be running inside an iframe
+  if (window === window.top) return;
+
+  var SANDBOX_READY = 'ui/notifications/sandbox-proxy-ready';
+  var RESOURCE_READY = 'ui/notifications/sandbox-resource-ready';
+  var host = window.parent;
+  var inner = null; // inner iframe contentWindow
+
+  // Build CSP meta tag from McpUiResourceCsp object
+  function buildCspString(csp) {
+    if (!csp) return null;
+    var directives = [
+      "default-src 'none'",
+      "script-src 'unsafe-inline'"
+    ];
+
+    var connectSrc = ["'none'"];
+    var imgSrc = ["'self'", 'data:'];
+    var styleSrc = ["'self'", "'unsafe-inline'"];
+    var fontSrc = ["'self'"];
+    var mediaSrc = ["'self'", 'data:'];
+    var frameSrc = ["'none'"];
+
+    if (csp.connectDomains && csp.connectDomains.length) {
+      connectSrc = csp.connectDomains.slice();
+    }
+    if (csp.resourceDomains && csp.resourceDomains.length) {
+      var rd = csp.resourceDomains;
+      imgSrc = ["'self'", 'data:'].concat(rd);
+      styleSrc = ["'self'", "'unsafe-inline'"].concat(rd);
+      fontSrc = ["'self'"].concat(rd);
+      mediaSrc = ["'self'", 'data:'].concat(rd);
+      // Also allow scripts from resource domains
+      directives[1] = "'unsafe-inline' " + rd.join(' ');
+    }
+    if (csp.frameDomains && csp.frameDomains.length) {
+      frameSrc = csp.frameDomains.slice();
+    }
+
+    directives[1] = 'script-src ' + directives[1];
+    directives[0] = "default-src 'none'";
+    directives.push('connect-src ' + connectSrc.join(' '));
+    directives.push('img-src ' + imgSrc.join(' '));
+    directives.push('style-src ' + styleSrc.join(' '));
+    directives.push('font-src ' + fontSrc.join(' '));
+    directives.push('media-src ' + mediaSrc.join(' '));
+    directives.push('frame-src ' + frameSrc.join(' '));
+
+    if (csp.baseUriDomains && csp.baseUriDomains.length) {
+      directives.push('base-uri ' + csp.baseUriDomains.join(' '));
+    } else {
+      directives.push("base-uri 'none'");
+    }
+
+    return directives.join('; ');
+  }
+
+  // Default restrictive CSP when none provided
+  var DEFAULT_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' data:; connect-src 'none'; font-src 'self'; base-uri 'none'";
+
+  function handleResourceReady(params) {
+    var html = params.html;
+    var sandbox = params.sandbox || '';
+    var csp = params.csp;
+    var permissions = params.permissions;
+
+    // Clean up existing inner iframe (handles host reconnect / React Strict Mode)
+    if (inner) {
+      var oldIframe = document.querySelector('iframe');
+      if (oldIframe) oldIframe.remove();
+      inner = null;
+    }
+
+    // Create inner iframe
+    var iframe = document.createElement('iframe');
+    var sandboxVal = 'allow-scripts allow-same-origin';
+    if (sandbox) sandboxVal += ' ' + sandbox;
+    iframe.setAttribute('sandbox', sandboxVal);
+
+    // Build allow attribute from permissions
+    if (permissions) {
+      var allows = [];
+      if (permissions.camera) allows.push('camera');
+      if (permissions.microphone) allows.push('microphone');
+      if (permissions.geolocation) allows.push('geolocation');
+      if (permissions.clipboardWrite) allows.push('clipboard-write');
+      if (allows.length) iframe.setAttribute('allow', allows.join('; '));
+    }
+
+    document.body.appendChild(iframe);
+    inner = iframe.contentWindow;
+
+    // Write HTML into inner iframe. Only inject a CSP meta tag when the
+    // server explicitly provides CSP metadata. Without server-provided CSP,
+    // the sandbox iframe attribute already provides the security boundary.
+    var cspString = csp ? buildCspString(csp) : null;
+    var doc = iframe.contentDocument;
+    doc.open();
+    if (cspString) {
+      doc.write('<meta http-equiv="Content-Security-Policy" content="' + cspString.replace(/"/g, '&quot;') + '">');
+    }
+    doc.write(html);
+    doc.close();
+
+    // Relay messages from inner iframe to host
+    window.addEventListener('message', function (event) {
+      if (event.source !== inner) return;
+      var data = event.data;
+      if (!data || typeof data !== 'object') return;
+      // Don't relay sandbox-specific methods
+      if (data.method === SANDBOX_READY || data.method === RESOURCE_READY) return;
+      host.postMessage(data, '*');
+    });
+  }
+
+  // Listen for messages from host
+  window.addEventListener('message', function (event) {
+    if (event.source !== host) return;
+    var data = event.data;
+    if (!data || typeof data !== 'object') return;
+
+    // Probe from host — re-send sandbox-proxy-ready (handles React Strict Mode remount)
+    if (data.method === 'ui/notifications/sandbox-proxy-probe') {
+      host.postMessage({ jsonrpc: '2.0', method: SANDBOX_READY, params: {} }, '*');
+      return;
+    }
+
+    // Resource ready from host — load HTML into inner iframe
+    if (data.method === RESOURCE_READY && data.params) {
+      handleResourceReady(data.params);
+      return;
+    }
+
+    // Don't relay sandbox-specific methods to inner
+    if (data.method === SANDBOX_READY || data.method === RESOURCE_READY) return;
+
+    // Relay all other messages to inner iframe
+    if (inner) {
+      inner.postMessage(data, '*');
+    }
+  });
+
+  // Signal readiness to host
+  host.postMessage({ jsonrpc: '2.0', method: SANDBOX_READY, params: {} }, '*');
+})();
+</script>
+</body>
+</html>

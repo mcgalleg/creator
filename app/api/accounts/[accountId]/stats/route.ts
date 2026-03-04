@@ -25,34 +25,34 @@ export async function GET(
     if (isAuthError(authResult)) return authResult;
     const { accountId } = authResult;
 
-    // Get account metadata for totalPosts and lastSyncedAt
-    const [account] = await db
-      .select({
-        videoCount: tiktokAccounts.videoCount,
-        lastSyncedAt: tiktokAccounts.lastSyncedAt,
-      })
-      .from(tiktokAccounts)
-      .where(eq(tiktokAccounts.id, accountId))
-      .limit(1);
-
-    // Get count of synced posts
-    const [postStats] = await db
-      .select({
-        syncedPosts: count(posts.id),
-        // Sum of comment counts from TikTok (not our synced comments)
-        estimatedComments: sql<number>`COALESCE(SUM(${posts.comments}), 0)::int`,
-      })
-      .from(posts)
-      .where(eq(posts.accountId, accountId));
-
-    // Get count of synced comments
-    const [commentStats] = await db
-      .select({
-        syncedComments: count(comments.id),
-      })
-      .from(comments)
-      .innerJoin(posts, eq(comments.postId, posts.id))
-      .where(eq(posts.accountId, accountId));
+    const [
+      [account],
+      [postStats],
+      [commentStats],
+    ] = await Promise.all([
+      db
+        .select({
+          videoCount: tiktokAccounts.videoCount,
+          lastSyncedAt: tiktokAccounts.lastSyncedAt,
+        })
+        .from(tiktokAccounts)
+        .where(eq(tiktokAccounts.id, accountId))
+        .limit(1),
+      db
+        .select({
+          syncedPosts: count(posts.id),
+          estimatedComments: sql<number>`COALESCE(SUM(${posts.comments}), 0)::int`,
+        })
+        .from(posts)
+        .where(eq(posts.accountId, accountId)),
+      db
+        .select({
+          syncedComments: count(comments.id),
+        })
+        .from(comments)
+        .innerJoin(posts, eq(comments.postId, posts.id))
+        .where(eq(posts.accountId, accountId)),
+    ]);
 
     const stats: AccountStats = {
       syncedPosts: postStats?.syncedPosts ?? 0,

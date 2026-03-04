@@ -14,7 +14,8 @@
     "test:e2e:headed": "npx playwright test --headed",
     "mcp-app:dev": "npm --prefix mcp-app run dev",
     "mcp-app:build": "npm --prefix mcp-app run build",
-    "mcp-app:local": "npm --prefix mcp-app run build && npm run dev"
+    "mcp-app:local": "npm --prefix mcp-app run build && npm run dev",
+    "dev:sandbox": "npx serve public/sandbox -l 3001 --cors --single"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.29",
@@ -30,7 +31,7 @@
     "@json-render/core": "^0.8.0",
     "@json-render/react": "^0.8.0",
     "@json-render/shadcn": "^0.10.0",
-    "@modelcontextprotocol/ext-apps": "^1.0.1",
+    "@modelcontextprotocol/ext-apps": "^1.1.2",
     "@modelcontextprotocol/sdk": "^1.25.2",
     "@neondatabase/serverless": "^1.0.2",
     "@polar-sh/nextjs": "^0.9.3",

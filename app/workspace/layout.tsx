@@ -31,33 +31,34 @@ export default async function WorkspaceRootLayout({
     await ensureUserExists(userId);
   }
 
-  // Fetch user's TikTok accounts, onboarding status, and subscription tier
-  const rawAccounts = userId
-    ? await db
-        .select({
-          id: tiktokAccounts.id,
-          username: tiktokAccounts.username,
-          avatarUrl: tiktokAccounts.avatarUrl,
-        })
-        .from(tiktokAccounts)
-        .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")))
-    : [];
+  // Fetch user's TikTok accounts, onboarding status, and subscription tier in parallel
+  const [rawAccounts, userRecord] = await Promise.all([
+    userId
+      ? db
+          .select({
+            id: tiktokAccounts.id,
+            username: tiktokAccounts.username,
+            avatarUrl: tiktokAccounts.avatarUrl,
+          })
+          .from(tiktokAccounts)
+          .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")))
+      : Promise.resolve([]),
+    userId
+      ? db
+          .select({
+            onboardingCompletedAt: users.onboardingCompletedAt,
+            subscriptionTier: users.subscriptionTier,
+            goals: users.goals,
+          })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1)
+      : Promise.resolve([]),
+  ]);
   const accounts = rawAccounts.map((a) => ({
     ...a,
     avatarUrl: proxyImageUrl(a.avatarUrl),
   }));
-
-  const userRecord = userId
-    ? await db
-        .select({
-          onboardingCompletedAt: users.onboardingCompletedAt,
-          subscriptionTier: users.subscriptionTier,
-          goals: users.goals,
-        })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1)
-    : [];
 
   const onboardingCompletedAt = userRecord[0]?.onboardingCompletedAt ?? null;
   const subscriptionTier = userRecord[0]?.subscriptionTier ?? "free";

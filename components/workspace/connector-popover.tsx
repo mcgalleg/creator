@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Blocks } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
@@ -54,6 +55,28 @@ function ConnectorRow({
 
 export function ConnectorPopover({ enabledConnectors, onToggle }: ConnectorPopoverProps) {
   const enabledCount = enabledConnectors.length;
+  // Radix generates dynamic aria-controls IDs that differ between SSR and
+  // client, causing hydration mismatches. Defer the Popover mount to avoid this.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) {
+    // Render a static placeholder that matches the trigger's visual appearance
+    return (
+      <button
+        type="button"
+        className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-sm text-muted-foreground hover:bg-muted/80 transition-colors"
+      >
+        <Blocks className="h-3 w-3" />
+        Connectors
+        {enabledCount > 0 && (
+          <span className="inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] leading-none h-4 min-w-4 px-1">
+            {enabledCount}
+          </span>
+        )}
+      </button>
+    );
+  }
 
   return (
     <Popover>

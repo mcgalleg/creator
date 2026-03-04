@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Users, ArrowRight } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,26 +14,35 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SubscriptionManager } from "@/components/settings/subscription-manager";
-import { McpConnectionSetup } from "@/components/settings/mcp-configuration";
-import { CreditBalanceTab } from "@/components/settings/credit-balance-tab";
-import { TransactionHistoryTab } from "@/components/settings/transaction-history-tab";
-import { GoalsTab } from "@/components/settings/goals-tab";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { SubscriptionTier } from "@/lib/subscriptions";
+
+const TabSkeleton = () => <Skeleton className="h-48 w-full" />;
+const CreditBalanceTab = dynamic(() => import("./credit-balance-tab").then(m => ({ default: m.CreditBalanceTab })), { loading: TabSkeleton });
+const TransactionHistoryTab = dynamic(() => import("./transaction-history-tab").then(m => ({ default: m.TransactionHistoryTab })), { loading: TabSkeleton });
+const GoalsTab = dynamic(() => import("./goals-tab").then(m => ({ default: m.GoalsTab })), { loading: TabSkeleton });
+const SubscriptionManager = dynamic(() => import("./subscription-manager").then(m => ({ default: m.SubscriptionManager })), { loading: TabSkeleton });
+const McpConnectionSetup = dynamic(() => import("./mcp-configuration").then(m => ({ default: m.McpConnectionSetup })), { loading: TabSkeleton });
 
 const VALID_TABS = ["plan", "goals", "credits", "transactions"] as const;
 type SettingsTab = (typeof VALID_TABS)[number];
 
-function SettingsTabsInner({ tier, goals }: { tier: SubscriptionTier; goals: string[] }) {
-  const searchParams = useSearchParams();
-  const router = useRouter();
+interface SettingsTabsProps {
+  tier: SubscriptionTier;
+  goals: string[];
+  tab?: string;
+}
 
-  const rawTab = searchParams.get("tab");
-  const activeTab: SettingsTab = VALID_TABS.includes(rawTab as SettingsTab)
-    ? (rawTab as SettingsTab)
-    : "plan";
+function toValidTab(value: string | undefined): SettingsTab {
+  return VALID_TABS.includes(value as SettingsTab) ? (value as SettingsTab) : "plan";
+}
+
+function SettingsTabsInner({ tier, goals, tab }: SettingsTabsProps) {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() => toValidTab(tab));
 
   const handleTabChange = (value: string) => {
+    setActiveTab(value as SettingsTab);
     const url = new URL(window.location.href);
     if (value === "plan") {
       url.searchParams.delete("tab");
@@ -109,10 +119,6 @@ function SettingsTabsInner({ tier, goals }: { tier: SubscriptionTier; goals: str
   );
 }
 
-export function SettingsTabs({ tier, goals }: { tier: SubscriptionTier; goals: string[] }) {
-  return (
-    <Suspense>
-      <SettingsTabsInner tier={tier} goals={goals} />
-    </Suspense>
-  );
+export function SettingsTabs({ tier, goals, tab }: SettingsTabsProps) {
+  return <SettingsTabsInner tier={tier} goals={goals} tab={tab} />;
 }

@@ -8,6 +8,7 @@ import type { UIMessage } from 'ai';
 import { cn } from '@/lib/utils';
 import { MarkdownRenderer } from './markdown-renderer';
 import { McpAppRenderer } from './mcp-app-renderer';
+import { CONNECTOR_REGISTRY } from '@/lib/connectors';
 import { useArtifactCopy } from '@/hooks/use-artifact-copy';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -18,6 +19,10 @@ interface MessageListProps {
   isStreaming: boolean;
   /** Called when async artifact rendering starts/finishes */
   onBusyChange?: (busy: boolean) => void;
+  /** Called when an MCP App sends a message to inject into chat */
+  onAppMessage?: (text: string) => void;
+  /** Called when an MCP App updates model context */
+  onUpdateModelContext?: (ctx: { content?: unknown[]; structuredContent?: Record<string, unknown> }) => void;
 }
 
 /**
@@ -28,7 +33,7 @@ interface MessageListProps {
  * that gap so the parent keeps its loading indicator active until the
  * browser has actually painted the final artifact.
  */
-export function MessageList({ messages, isStreaming, onBusyChange }: MessageListProps) {
+export function MessageList({ messages, isStreaming, onBusyChange, onAppMessage, onUpdateModelContext }: MessageListProps) {
   const wasStreamingRef = useRef(isStreaming);
 
   useEffect(() => {
@@ -53,6 +58,8 @@ export function MessageList({ messages, isStreaming, onBusyChange }: MessageList
           key={message.id}
           message={message}
           isStreaming={isStreaming && i === messages.length - 1}
+          onAppMessage={onAppMessage}
+          onUpdateModelContext={onUpdateModelContext}
         />
       ))}
     </div>
@@ -68,9 +75,13 @@ interface McpAppUiMeta {
 function MessageBubble({
   message,
   isStreaming,
+  onAppMessage,
+  onUpdateModelContext,
 }: {
   message: UIMessage;
   isStreaming: boolean;
+  onAppMessage?: (text: string) => void;
+  onUpdateModelContext?: (ctx: { content?: unknown[]; structuredContent?: Record<string, unknown> }) => void;
 }) {
   const { spec, text, hasSpec } = useJsonRenderMessage(message.parts as DataPart[]);
   const { ref: captureRef, copyAsImage, downloadAsPng, copyAsText, isCopying } = useArtifactCopy();
@@ -122,6 +133,10 @@ function MessageBubble({
               resourceUri={mcpAppUi.resourceUri}
               toolInput={mcpToolInput}
               toolResult={mcpToolResult}
+              sandboxPermissions={CONNECTOR_REGISTRY.find((c) => c.mcpServerUrl === mcpAppUi.serverUrl)?.sandboxPermissions}
+              onMessage={onAppMessage}
+              onUpdateModelContext={onUpdateModelContext}
+              isStreamActive={isStreaming}
             />
           </div>
         )}
@@ -177,7 +192,7 @@ function ActionBar({
   }, [onCopyText]);
 
   return (
-    <div className="absolute top-2 right-2 flex items-center gap-0.5 rounded-md bg-background/80 border shadow-sm backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
+    <div className="absolute top-2 right-2 flex items-center gap-0.5 rounded-md bg-background/80 border shadow-sm backdrop-blur-sm opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity">
       {text && (
         <Tooltip>
           <TooltipTrigger asChild>

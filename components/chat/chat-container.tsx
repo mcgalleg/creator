@@ -30,6 +30,7 @@ export function ChatContainer() {
     isLoading,
     isGenerating,
     error,
+    updateModelContext,
   } = useAnalyticsChat({
     selectedAccountIds: syncContext?.selectedAccountId ? [syncContext.selectedAccountId] : [],
   });
@@ -104,6 +105,8 @@ export function ChatContainer() {
             messages={messages}
             isStreaming={isGenerating}
             onBusyChange={setIsArtifactRendering}
+            onAppMessage={submitMessage}
+            onUpdateModelContext={updateModelContext}
           />
         )}
 

@@ -12,12 +12,19 @@ export const metadata = {
   description: "Manage your account settings and preferences",
 };
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { userId } = await auth();
 
   if (!userId && !isAuthBypassed()) {
     redirect("/sign-in");
   }
+
+  const params = await searchParams;
+  const tab = typeof params.tab === "string" ? params.tab : undefined;
 
   // Fetch subscription tier and goals
   const userRecord = userId
@@ -49,7 +56,7 @@ export default async function SettingsPage() {
 
         <Separator />
 
-        <SettingsTabs tier={tier} goals={goals} />
+        <SettingsTabs tier={tier} goals={goals} tab={tab} />
       </div>
     </div>
   );

@@ -46,6 +46,16 @@ const {
 /** Shared tick styling for cartesian axes — ensures text is always visible. */
 const AXIS_TICK = { fontSize: 12, fill: "currentColor" };
 
+/** Abbreviate large numbers for Y-axis readability: 1500 → "1.5K", 2300000 → "2.3M" */
+function compactNumber(value: number | string): string {
+  const n = typeof value === "string" ? Number(value) : value;
+  if (Number.isNaN(n)) return String(value);
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000) return `${+(n / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${+(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
 const CHART_COLORS = [
   "var(--chart-1)", "var(--chart-2)", "var(--chart-3)",
   "var(--chart-4)", "var(--chart-5)",
@@ -140,7 +150,7 @@ export const { registry } = defineRegistry(catalog, {
           <RAreaChart data={data} accessibilityLayer>
             <CartesianGrid vertical={false} />
             <XAxis dataKey={xKey} tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
-            <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
+            <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} tickFormatter={compactNumber} />
             {tooltip !== false && (
               <ChartTooltip content={<ChartTooltipContent />} />
             )}
@@ -195,12 +205,12 @@ export const { registry } = defineRegistry(catalog, {
                   tick={AXIS_TICK}
                   width={120}
                 />
-                <XAxis type="number" tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
+                <XAxis type="number" tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} tickFormatter={compactNumber} />
               </>
             ) : (
               <>
                 <XAxis dataKey={xKey} tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
-                <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
+                <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} tickFormatter={compactNumber} />
               </>
             )}
             {tooltip !== false && (
@@ -236,7 +246,7 @@ export const { registry } = defineRegistry(catalog, {
           <RLineChart data={data} accessibilityLayer>
             <CartesianGrid vertical={false} />
             <XAxis dataKey={xKey} tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
-            <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} />
+            <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={AXIS_TICK} tickFormatter={compactNumber} />
             {tooltip !== false && (
               <ChartTooltip content={<ChartTooltipContent />} />
             )}

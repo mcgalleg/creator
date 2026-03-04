@@ -108,6 +108,7 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
     isGenerating,
     error,
     insufficientCredits,
+    updateModelContext,
   } = useAnalyticsChat({
     selectedAccountIds,
     enabledConnectors,
@@ -283,6 +284,8 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
             messages={messages}
             isStreaming={isGenerating}
             onBusyChange={setIsArtifactRendering}
+            onAppMessage={submitMessage}
+            onUpdateModelContext={updateModelContext}
           />
 
           {/* Loading skeleton while generating or rendering artifacts */}

@@ -2,14 +2,13 @@ import { auth } from "@/lib/auth";
 import { isRegisteredServerUrl } from "@/lib/connectors";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { McpUiResourceCsp, McpUiResourcePermissions } from "@modelcontextprotocol/ext-apps/app-bridge";
 
 /**
  * GET /api/connectors/render?serverUrl=...&resourceUri=...
  *
- * Serves the MCP App HTML directly as text/html so the iframe
- * gets its own document context with NO inherited CSP from the
- * parent page. This is critical because MCP Apps like Excalidraw
- * load scripts from CDNs (esm.sh) that the parent CSP blocks.
+ * Returns JSON metadata for the sandbox proxy to render:
+ * { html: string, csp?: McpUiResourceCsp, permissions?: McpUiResourcePermissions }
  */
 export async function GET(req: Request) {
   try {
@@ -39,7 +38,15 @@ export async function GET(req: Request) {
       await mcpClient.connect(transport);
       const response = await mcpClient.readResource({ uri: resourceUri });
 
-      const htmlContent = response.contents
+      // Extract metadata from the first content item
+      const firstContent = response.contents?.[0] as
+        | { text?: string; mimeType?: string; _meta?: { ui?: { csp?: McpUiResourceCsp; permissions?: McpUiResourcePermissions } } }
+        | undefined;
+
+      const csp = firstContent?._meta?.ui?.csp;
+      const permissions = firstContent?._meta?.ui?.permissions;
+
+      let htmlContent = response.contents
         ?.filter(
           (c) => c.mimeType?.startsWith("text/html") || !c.mimeType
         )
@@ -49,10 +56,24 @@ export async function GET(req: Request) {
         })
         .join("");
 
-      return new Response(htmlContent || "", {
-        status: 200,
+      // Inject a zoom-to-fit script for Excalidraw apps
+      if (htmlContent && serverUrl.includes("excalidraw")) {
+        const zoomScript = `<script>(function(){var i=false;['pointerdown','wheel'].forEach(function(e){document.addEventListener(e,function(){i=true},{once:true,capture:true})});function z(){if(i)return;var m=/Mac|iPhone|iPad/.test(navigator.platform);document.dispatchEvent(new KeyboardEvent('keydown',{key:'1',code:'Digit1',ctrlKey:!m,metaKey:m,shiftKey:true,bubbles:true}))}setTimeout(z,4000);setTimeout(z,6000)})()</script>`;
+        if (htmlContent.includes("</body>")) {
+          htmlContent = htmlContent.replace("</body>", zoomScript + "</body>");
+        } else if (htmlContent.includes("</html>")) {
+          htmlContent = htmlContent.replace("</html>", zoomScript + "</html>");
+        } else {
+          htmlContent += zoomScript;
+        }
+      }
+
+      return Response.json({
+        html: htmlContent || "",
+        ...(csp ? { csp } : {}),
+        ...(permissions ? { permissions } : {}),
+      }, {
         headers: {
-          "Content-Type": "text/html; charset=utf-8",
           "Cache-Control": "private, max-age=300",
         },
       });

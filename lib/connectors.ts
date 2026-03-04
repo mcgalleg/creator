@@ -11,6 +11,8 @@ export interface ConnectorDefinition {
   defaultEnabled: boolean;
   /** Instructions injected into the system prompt when this connector is active */
   systemPromptHint?: string;
+  /** Extra sandbox permissions for this connector's iframe (e.g. "allow-popups allow-popups-to-escape-sandbox") */
+  sandboxPermissions?: string;
 }
 
 export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
@@ -22,6 +24,7 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     mcpServerUrl: "https://mcp.excalidraw.com/mcp",
     requiredFeature: "canvas",
     defaultEnabled: false,
+    sandboxPermissions: 'allow-popups allow-popups-to-escape-sandbox allow-forms',
     systemPromptHint: `You have access to Excalidraw drawing tools. When the user asks you to create a drawing, diagram, sketch, flowchart, mind map, wireframe, or any hand-drawn visual — use the Excalidraw tools instead of rendering data cards or charts. Excalidraw is ideal for:
 - Architecture diagrams, flowcharts, and process flows
 - Quadrant/matrix layouts and comparisons

@@ -2,84 +2,36 @@
 
 export type SubscriptionTier = "free" | "basic" | "pro" | "agency" | "mcp";
 
-// Polar product ID mappings (monthly)
-// Lazy-validated: env vars are read at module load (inlined by Next.js for
-// NEXT_PUBLIC_*), but validated on first access so missing vars surface a
-// clear error instead of silent undefined.
-function requiredEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    // During static page generation (next build), NEXT_PUBLIC_* vars may be
-    // missing. Return empty string so pages can prerender; the values are only
-    // needed at runtime for Polar API calls, where a missing var will surface
-    // as an obvious error.
-    return "";
-  }
-  return value;
-}
+// IMPORTANT: NEXT_PUBLIC_* env vars MUST be accessed as static string literals
+// (e.g. process.env.NEXT_PUBLIC_FOO) for Next.js to inline them into client
+// bundles. Dynamic access like process.env[name] returns undefined in the browser.
+export const POLAR_PRODUCTS: Record<SubscriptionTier, string> = {
+  free: process.env.NEXT_PUBLIC_POLAR_PRODUCT_FREE ?? "",
+  basic: process.env.NEXT_PUBLIC_POLAR_PRODUCT_BASIC ?? "",
+  pro: process.env.NEXT_PUBLIC_POLAR_PRODUCT_PRO ?? "",
+  agency: process.env.NEXT_PUBLIC_POLAR_PRODUCT_AGENCY ?? "",
+  mcp: process.env.NEXT_PUBLIC_POLAR_PRODUCT_MCP ?? "",
+};
 
-function lazyEnvObject<T extends Record<string, string>>(
-  mapping: Record<keyof T, string>
-): T {
-  let cached: T | null = null;
-  return new Proxy({} as T, {
-    get(_target, prop: string) {
-      if (!cached) {
-        cached = Object.fromEntries(
-          Object.entries(mapping).map(([key, envName]) => [key, requiredEnv(envName)])
-        ) as T;
-      }
-      return cached[prop as keyof T];
-    },
-    ownKeys() {
-      if (!cached) {
-        cached = Object.fromEntries(
-          Object.entries(mapping).map(([key, envName]) => [key, requiredEnv(envName)])
-        ) as T;
-      }
-      return Object.keys(cached);
-    },
-    getOwnPropertyDescriptor(_target, prop: string) {
-      if (!cached) {
-        cached = Object.fromEntries(
-          Object.entries(mapping).map(([key, envName]) => [key, requiredEnv(envName)])
-        ) as T;
-      }
-      if (prop in cached) {
-        return { configurable: true, enumerable: true, value: cached[prop as keyof T] };
-      }
-      return undefined;
-    },
-  });
-}
+export const POLAR_ANNUAL_PRODUCTS: Record<string, string> = {
+  basic: process.env.NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_BASIC ?? "",
+  pro: process.env.NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_PRO ?? "",
+  agency: process.env.NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_AGENCY ?? "",
+};
 
-export const POLAR_PRODUCTS = lazyEnvObject<Record<SubscriptionTier, string>>({
-  free: "NEXT_PUBLIC_POLAR_PRODUCT_FREE",
-  basic: "NEXT_PUBLIC_POLAR_PRODUCT_BASIC",
-  pro: "NEXT_PUBLIC_POLAR_PRODUCT_PRO",
-  agency: "NEXT_PUBLIC_POLAR_PRODUCT_AGENCY",
-  mcp: "NEXT_PUBLIC_POLAR_PRODUCT_MCP",
-});
+export const POLAR_CREDIT_PRODUCTS: Record<string, string> = {
+  starter: process.env.NEXT_PUBLIC_POLAR_PRODUCT_CREDIT_STARTER ?? "",
+  value: process.env.NEXT_PUBLIC_POLAR_PRODUCT_CREDIT_VALUE ?? "",
+  power: process.env.NEXT_PUBLIC_POLAR_PRODUCT_CREDIT_POWER ?? "",
+  bulk: process.env.NEXT_PUBLIC_POLAR_PRODUCT_CREDIT_BULK ?? "",
+};
 
-export const POLAR_ANNUAL_PRODUCTS = lazyEnvObject<Record<string, string>>({
-  basic: "NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_BASIC",
-  pro: "NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_PRO",
-  agency: "NEXT_PUBLIC_POLAR_ANNUAL_PRODUCT_AGENCY",
-});
-
-export const POLAR_CREDIT_PRODUCTS: Record<string, string> = lazyEnvObject<Record<string, string>>({
-  starter: "NEXT_PUBLIC_POLAR_PRODUCT_CREDIT_STARTER",
-  value: "NEXT_PUBLIC_POLAR_PRODUCT_CREDIT_VALUE",
-  power: "NEXT_PUBLIC_POLAR_PRODUCT_CREDIT_POWER",
-  bulk: "NEXT_PUBLIC_POLAR_PRODUCT_CREDIT_BULK",
-});
-
-export const POLAR_AI_TOKEN_PRODUCTS: Record<string, string> = lazyEnvObject<Record<string, string>>({
-  ai_starter: "NEXT_PUBLIC_POLAR_PRODUCT_AI_TOKEN_STARTER",
-  ai_value: "NEXT_PUBLIC_POLAR_PRODUCT_AI_TOKEN_VALUE",
-  ai_power: "NEXT_PUBLIC_POLAR_PRODUCT_AI_TOKEN_POWER",
-  ai_bulk: "NEXT_PUBLIC_POLAR_PRODUCT_AI_TOKEN_BULK",
-});
+export const POLAR_AI_TOKEN_PRODUCTS: Record<string, string> = {
+  ai_starter: process.env.NEXT_PUBLIC_POLAR_PRODUCT_AI_TOKEN_STARTER ?? "",
+  ai_value: process.env.NEXT_PUBLIC_POLAR_PRODUCT_AI_TOKEN_VALUE ?? "",
+  ai_power: process.env.NEXT_PUBLIC_POLAR_PRODUCT_AI_TOKEN_POWER ?? "",
+  ai_bulk: process.env.NEXT_PUBLIC_POLAR_PRODUCT_AI_TOKEN_BULK ?? "",
+};
 
 // Monthly AI token allocations per tier
 export const TIER_AI_TOKENS = {

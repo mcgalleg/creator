@@ -36,6 +36,13 @@ export function useAnalyticsChat(options?: UseAnalyticsChatOptions) {
   const connectorsKey = enabledConnectors?.slice().sort().join(',') ?? '';
   const prevAccountIdsKeyRef = useRef(accountIdsKey);
 
+  // Model context from MCP Apps (ui/update-model-context)
+  const modelContextRef = useRef<{ content?: unknown[]; structuredContent?: Record<string, unknown> } | null>(null);
+
+  const updateModelContext = useCallback((ctx: { content?: unknown[]; structuredContent?: Record<string, unknown> } | null) => {
+    modelContextRef.current = ctx;
+  }, []);
+
   // Keep refs for values used inside transport closure so it always reads latest
   const selectedAccountIdsRef = useRef(selectedAccountIds);
   selectedAccountIdsRef.current = selectedAccountIds;
@@ -53,6 +60,7 @@ export function useAnalyticsChat(options?: UseAnalyticsChatOptions) {
             messages,
             selectedAccountIds: selectedAccountIdsRef.current?.length ? selectedAccountIdsRef.current : undefined,
             enabledConnectors: enabledConnectorsRef.current?.length ? enabledConnectorsRef.current : undefined,
+            modelContext: modelContextRef.current ?? undefined,
           },
         }),
       }),
@@ -181,6 +189,7 @@ export function useAnalyticsChat(options?: UseAnalyticsChatOptions) {
     clearChat,
     setMessages,
     regenerate,
+    updateModelContext,
 
     // Utilities
     getMessageText,

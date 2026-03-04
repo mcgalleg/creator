@@ -31,6 +31,7 @@ import { chatLimiter } from "@/lib/rate-limit";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { getConnectorById } from "@/lib/connectors";
+import { getToolUiResourceUri } from "@modelcontextprotocol/ext-apps/app-bridge";
 
 // =============================================================================
 // Message sanitization — fix malformed tool_use inputs in conversation history
@@ -150,10 +151,11 @@ ${CATALOG_PROMPT}
 
 export async function POST(req: Request) {
   try {
-    const { messages, selectedAccountIds, enabledConnectors }: {
+    const { messages, selectedAccountIds, enabledConnectors, modelContext }: {
       messages: UIMessage[];
       selectedAccountIds?: number[];
       enabledConnectors?: string[];
+      modelContext?: { content?: Array<{ type: string; text?: string }>; structuredContent?: Record<string, unknown> };
     } = await req.json();
 
     console.log(`[chat] Request body: enabledConnectors=${JSON.stringify(enabledConnectors)}, selectedAccountIds=${JSON.stringify(selectedAccountIds)}`);
@@ -168,8 +170,15 @@ export async function POST(req: Request) {
     const { limited } = chatLimiter.check(userId);
     if (limited) return Response.json({ error: "Rate limit exceeded" }, { status: 429 });
 
-    // Check feature access via DB tier lookup
-    const canChat = await hasFeature("analytics_assistant");
+    // Check feature access and AI token balance in parallel
+    const MIN_TOKENS_TO_START_CHAT = 1_000;
+    const [canChat, tokenCheck] = await Promise.all([
+      hasFeature("analytics_assistant"),
+      process.env.BYPASS_AUTH !== "true"
+        ? checkAiTokens(userId, MIN_TOKENS_TO_START_CHAT)
+        : Promise.resolve({ sufficient: true, balance: Infinity }),
+    ]);
+
     if (!canChat) {
       return Response.json(
         { error: "Feature not available on your plan" },
@@ -177,15 +186,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if user has AI tokens before proceeding (skip in bypass mode)
-    if (process.env.BYPASS_AUTH !== "true") {
-      const tokenCheck = await checkAiTokens(userId, 1);
-      if (!tokenCheck.sufficient) {
-        return Response.json(
-          { error: "Insufficient AI tokens", balance: tokenCheck.balance, required: 1 },
-          { status: 402 }
-        );
-      }
+    if (!tokenCheck.sufficient) {
+      return Response.json(
+        { error: "Insufficient AI tokens", balance: tokenCheck.balance, required: MIN_TOKENS_TO_START_CHAT },
+        { status: 402 }
+      );
     }
 
     // Get the user's connected TikTok accounts for context
@@ -239,23 +244,24 @@ export async function POST(req: Request) {
 
     if (enabledConnectors?.length) {
       console.log(`[chat] Enabled connectors: ${enabledConnectors.join(", ")}`);
-      for (const connectorId of enabledConnectors) {
-        const connector = getConnectorById(connectorId);
-        if (!connector) {
-          console.warn(`[chat] Connector "${connectorId}" not found in registry`);
-          continue;
-        }
 
-        // Validate feature access server-side
-        if (connector.requiredFeature) {
-          const hasAccess = await hasFeature(connector.requiredFeature);
-          if (!hasAccess) {
-            console.warn(`[chat] User lacks feature "${connector.requiredFeature}" for connector "${connectorId}"`);
-            continue;
+      const results = await Promise.allSettled(
+        enabledConnectors.map(async (connectorId) => {
+          const connector = getConnectorById(connectorId);
+          if (!connector) {
+            console.warn(`[chat] Connector "${connectorId}" not found in registry`);
+            return null;
           }
-        }
 
-        try {
+          // Validate feature access server-side
+          if (connector.requiredFeature) {
+            const hasAccess = await hasFeature(connector.requiredFeature);
+            if (!hasAccess) {
+              console.warn(`[chat] User lacks feature "${connector.requiredFeature}" for connector "${connectorId}"`);
+              return null;
+            }
+          }
+
           const transport = new StreamableHTTPClientTransport(
             new URL(connector.mcpServerUrl)
           );
@@ -264,63 +270,66 @@ export async function POST(req: Request) {
             version: "1.0.0",
           });
           await mcpClient.connect(transport);
-          mcpClients.push(mcpClient);
 
           const { tools: remoteTools } = await mcpClient.listTools();
-          const toolNames: string[] = [];
-          for (const remoteTool of remoteTools) {
-            // Extract UI resource URI from tool metadata (MCP Apps protocol)
-            const uiMeta = remoteTool._meta?.ui as
-              | { resourceUri?: string }
-              | undefined;
-            const resourceUri = uiMeta?.resourceUri;
+          return { connectorId, connector, mcpClient, remoteTools };
+        })
+      );
 
-            toolNames.push(remoteTool.name);
-            mcpTools[remoteTool.name] = tool({
-              description: remoteTool.description ?? remoteTool.name,
-              inputSchema: jsonSchema(remoteTool.inputSchema),
-              execute: async (input) => {
-                const callResult = await mcpClient.callTool({
-                  name: remoteTool.name,
-                  arguments: input as Record<string, unknown>,
-                });
-
-                // Parse the text content from the MCP result
-                const contentArray = Array.isArray(callResult.content)
-                  ? (callResult.content as Array<{ type: string; text?: string }>)
-                  : [];
-                const textContent = contentArray
-                  .filter((c) => c.type === "text")
-                  .map((c) => c.text)
-                  .join("\n");
-
-                let result: Record<string, unknown> = {};
-                try {
-                  result = textContent ? JSON.parse(textContent) : {};
-                } catch {
-                  result = { text: textContent };
-                }
-
-                // Attach MCP App UI metadata so the client can render it
-                if (resourceUri) {
-                  result._mcpAppUi = {
-                    serverUrl: connector.mcpServerUrl,
-                    resourceUri,
-                  };
-                }
-
-                return result;
-              },
-            });
-          }
-
-          console.log(`[chat] Loaded ${toolNames.length} tools from "${connectorId}": ${toolNames.join(", ")}`);
-        } catch (err) {
-          console.error(
-            `[chat] Failed to connect to MCP server for connector "${connectorId}":`,
-            err
-          );
+      for (const result of results) {
+        if (result.status === "rejected") {
+          console.error("[chat] Failed to connect to MCP server:", result.reason);
+          continue;
         }
+        const value = result.value;
+        if (!value) continue;
+
+        const { connectorId, connector, mcpClient, remoteTools } = value;
+        mcpClients.push(mcpClient);
+
+        const toolNames: string[] = [];
+        for (const remoteTool of remoteTools) {
+          const resourceUri = getToolUiResourceUri(remoteTool);
+
+          toolNames.push(remoteTool.name);
+          mcpTools[remoteTool.name] = tool({
+            description: remoteTool.description ?? remoteTool.name,
+            inputSchema: jsonSchema(remoteTool.inputSchema),
+            execute: async (input) => {
+              const callResult = await mcpClient.callTool({
+                name: remoteTool.name,
+                arguments: input as Record<string, unknown>,
+              });
+
+              const contentArray = Array.isArray(callResult.content)
+                ? (callResult.content as Array<{ type: string; text?: string }>)
+                : [];
+              const textContent = contentArray
+                .filter((c) => c.type === "text")
+                .map((c) => c.text)
+                .join("\n");
+
+              let result: Record<string, unknown> = {};
+              try {
+                result = textContent ? JSON.parse(textContent) : {};
+              } catch {
+                result = { text: textContent };
+              }
+
+              if (resourceUri && !callResult.isError) {
+                result._mcpAppUi = {
+                  serverUrl: connector.mcpServerUrl,
+                  resourceUri,
+                };
+                result._mcpToolResult = callResult;
+              }
+
+              return result;
+            },
+          });
+        }
+
+        console.log(`[chat] Loaded ${toolNames.length} tools from "${connectorId}": ${toolNames.join(", ")}`);
       }
     }
 
@@ -365,6 +374,23 @@ export async function POST(req: Request) {
       }
     }
 
+    // Build optional model context from MCP App
+    let modelContextMessage: ModelMessage | null = null;
+    if (modelContext?.content || modelContext?.structuredContent) {
+      const contextText = modelContext.structuredContent
+        ? JSON.stringify(modelContext.structuredContent)
+        : modelContext.content
+            ?.filter((c) => c.type === 'text')
+            .map((c) => c.text)
+            .join('\n') ?? '';
+      if (contextText) {
+        modelContextMessage = {
+          role: 'system',
+          content: `[App Context]\n${contextText}`,
+        };
+      }
+    }
+
     const allMessages: ModelMessage[] = [
       {
         role: "system",
@@ -378,6 +404,7 @@ export async function POST(req: Request) {
       ...(drawingOverride
         ? [{ role: "system" as const, content: drawingOverride }]
         : []),
+      ...(modelContextMessage ? [modelContextMessage] : []),
       ...modelMessages,
     ];
 

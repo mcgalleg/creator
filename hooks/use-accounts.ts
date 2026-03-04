@@ -2,7 +2,7 @@
 
 // Internal hook — consumed by SyncProvider only. Import useSync() from contexts instead.
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 
 export interface TikTokAccount {
   id: number;
@@ -354,15 +354,18 @@ export function useAccounts(): UseAccountsReturn {
   }, [fetchAccounts]);
 
   // After accounts load, fetch sync data for each account
+  const accountIdKey = useMemo(
+    () => accounts.map((a) => a.id).join(","),
+    [accounts]
+  );
+
   useEffect(() => {
     if (accounts.length === 0) return;
 
     accounts.forEach((account) => {
       fetchSyncData(account.id);
     });
-    // Only run when accounts array identity changes (after fetch)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accounts.length > 0 && accounts.map((a) => a.id).join(",")]);
+  }, [accountIdKey, fetchSyncData]);
 
   // Cleanup all polling intervals on unmount
   useEffect(() => {
