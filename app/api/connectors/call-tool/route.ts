@@ -1,7 +1,6 @@
 import { auth } from "@/lib/auth";
 import { isRegisteredServerUrl } from "@/lib/connectors";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { withClient } from "@/lib/mcp-client-pool";
 import { NextResponse } from "next/server";
 
 /**
@@ -37,28 +36,16 @@ export async function POST(req: Request) {
 
     console.log(`[connectors/call-tool] Calling tool "${toolName}" on ${serverUrl}`, JSON.stringify(toolArgs).substring(0, 200));
 
-    const transport = new StreamableHTTPClientTransport(new URL(serverUrl));
-    const mcpClient = new Client({ name: "creator", version: "1.0.0" });
-
-    try {
-      await mcpClient.connect(transport);
-      console.log(`[connectors/call-tool] Connected, session=${transport.sessionId}`);
-
-      const result = await mcpClient.callTool(
+    const result = await withClient(serverUrl, async (mcpClient) => {
+      return mcpClient.callTool(
         { name: toolName, arguments: toolArgs ?? {} },
         undefined,
         { timeout: 120_000 },
       );
-      console.log(`[connectors/call-tool] Tool "${toolName}" returned, isError=${result.isError}`);
+    });
 
-      return NextResponse.json(result);
-    } finally {
-      try {
-        await mcpClient.close();
-      } catch {
-        // Ignore close errors
-      }
-    }
+    console.log(`[connectors/call-tool] Tool "${toolName}" returned, isError=${result.isError}`);
+    return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[connectors/call-tool] Error:", message, error);

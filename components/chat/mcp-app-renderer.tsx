@@ -39,6 +39,7 @@ export function McpAppRenderer({
   const bridgeRef = useRef<AppBridge | null>(null);
   const [iframeHeight, setIframeHeight] = useState(400);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const isFullscreenRef = useRef(false);
   const { resolvedTheme } = useTheme();
 
   // Keep stable refs for values used in the bridge callbacks
@@ -95,7 +96,9 @@ export function McpAppRenderer({
     const pendingTimers: ReturnType<typeof setTimeout>[] = [];
     toolResultSentRef.current = false;
 
-    // Intercept raw postMessages to handle link opening SYNCHRONOUSLY.
+    // Pre-opened window for export_to_excalidraw. Opened early (close to
+    // the user gesture) so popup blockers allow it, then navigated once
+    // the MCP server returns the shareable URL.
     let preOpenedWindow: Window | null = null;
     const openedUrls = new Set<string>();
     const rawMessageHandler = (event: MessageEvent) => {
@@ -109,24 +112,29 @@ export function McpAppRenderer({
       }
 
       // Pre-open a blank tab when export_to_excalidraw is called.
-      const isExportCall =
-        (data.method === 'tools/call' && data.params?.name === 'export_to_excalidraw') ||
-        (data.method && data.params?.name === 'export_to_excalidraw');
-      if (isExportCall) {
+      // This runs close to the user's click so popup blockers allow it.
+      if (data.method === 'tools/call' && data.params?.name === 'export_to_excalidraw') {
         console.log('[McpAppRenderer] Pre-opening window for export');
         preOpenedWindow = window.open('about:blank', '_blank');
       }
 
+      // Intercept ui/open-link: navigate the pre-opened window if
+      // available, otherwise open a new tab. Skip if already opened
+      // (e.g. by oncalltool navigating the pre-opened window).
       if (data.method === 'ui/open-link' && data.params?.url) {
         const url = data.params.url as string;
-        console.log('[McpAppRenderer] Intercepted open-link:', url, 'preOpened:', !!preOpenedWindow);
-        if (preOpenedWindow && !preOpenedWindow.closed) {
+        if (openedUrls.has(url)) {
+          console.log('[McpAppRenderer] Skipping already-opened link:', url);
+        } else if (preOpenedWindow && !preOpenedWindow.closed) {
+          console.log('[McpAppRenderer] Navigating pre-opened window to:', url);
           preOpenedWindow.location.href = url;
           preOpenedWindow = null;
+          openedUrls.add(url);
         } else {
+          console.log('[McpAppRenderer] Opening link:', url);
           window.open(url, '_blank', 'noopener,noreferrer');
+          openedUrls.add(url);
         }
-        openedUrls.add(url);
       }
     };
     window.addEventListener('message', rawMessageHandler);
@@ -191,7 +199,7 @@ export function McpAppRenderer({
 
     bridge.onsizechange = ({ width, height }) => {
       console.log('[McpAppRenderer] Size change:', { width, height });
-      if (height != null) {
+      if (height != null && !isFullscreenRef.current) {
         setIframeHeight(Math.min(height, 800));
       }
     };
@@ -208,10 +216,12 @@ export function McpAppRenderer({
     bridge.onrequestdisplaymode = async ({ mode }) => {
       console.log('[McpAppRenderer] Display mode requested:', mode);
       if (mode === 'fullscreen') {
+        isFullscreenRef.current = true;
         setIsFullscreen(true);
         bridge.setHostContext({ displayMode: 'fullscreen' });
         return { mode: 'fullscreen' as const };
       }
+      isFullscreenRef.current = false;
       setIsFullscreen(false);
       bridge.setHostContext({ displayMode: 'inline' });
       return { mode: 'inline' as const };
@@ -298,23 +308,27 @@ export function McpAppRenderer({
       try {
         const result = await proxyMcpRequest('tools/call', params as Record<string, unknown>);
 
-        // Navigate the pre-opened window for export results
-        if (preOpenedWindow && !preOpenedWindow.closed) {
-          if (result.isError) {
-            console.error('[McpAppRenderer] Tool returned error, closing pre-opened window');
-            preOpenedWindow.close();
-            preOpenedWindow = null;
-          } else if (params.name === 'export_to_excalidraw') {
-            const url = result.content
-              ?.find((c: { type: string; text?: string }) => c.type === 'text' && c.text?.startsWith('http'))
-              ?.text;
-            if (url) {
+        // For export_to_excalidraw, navigate the pre-opened window and
+        // mark the URL as opened so the subsequent ui/open-link from the
+        // App doesn't open a duplicate tab.
+        if (params.name === 'export_to_excalidraw' && !result.isError) {
+          const url = result.content
+            ?.find((c: { type: string; text?: string }) => c.type === 'text' && c.text?.startsWith('http'))
+            ?.text;
+          if (url) {
+            if (preOpenedWindow && !preOpenedWindow.closed) {
               console.log('[McpAppRenderer] Navigating pre-opened window to:', url);
               preOpenedWindow.location.href = url;
               preOpenedWindow = null;
-              openedUrls.add(url);
             }
+            openedUrls.add(url);
           }
+        }
+
+        // Close pre-opened window on error
+        if (result.isError && preOpenedWindow && !preOpenedWindow.closed) {
+          preOpenedWindow.close();
+          preOpenedWindow = null;
         }
 
         return result;
@@ -355,15 +369,15 @@ export function McpAppRenderer({
     bridge.oninitialized = () => {
       console.log('[McpAppRenderer] Bridge initialized! Sending tool data...');
 
-      // Defer to let React re-render and register handlers, then retry
+      // Defer to let the App's React component register ontoolinput/
+      // ontoolresult handlers (they mount in a useEffect after connect).
+      // Single send with a small delay is sufficient — the previous
+      // duplicate send at 500ms caused Excalidraw to re-render from
+      // scratch, blocking the main thread for several seconds.
       pendingTimers.push(setTimeout(() => {
         console.log('[McpAppRenderer] Sending tool data (deferred)');
         sendToolData();
-      }, 0));
-      pendingTimers.push(setTimeout(() => {
-        console.log('[McpAppRenderer] Sending tool data (retry)');
-        sendToolData();
-      }, 500));
+      }, 50));
     };
 
     // Listen for iframe load
@@ -415,6 +429,7 @@ export function McpAppRenderer({
     if (!isFullscreen) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        isFullscreenRef.current = false;
         setIsFullscreen(false);
         bridgeRef.current?.setHostContext({ displayMode: 'inline' });
       }
@@ -442,6 +457,7 @@ export function McpAppRenderer({
       {isFullscreen && (
         <button
           onClick={() => {
+            isFullscreenRef.current = false;
             setIsFullscreen(false);
             bridgeRef.current?.setHostContext({ displayMode: 'inline' });
           }}

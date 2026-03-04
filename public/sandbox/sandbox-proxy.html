@@ -20,6 +20,7 @@
   var RESOURCE_READY = 'ui/notifications/sandbox-resource-ready';
   var host = window.parent;
   var inner = null; // inner iframe contentWindow
+  var innerRelayHandler = null; // tracked so we can remove on re-init
 
   // Build CSP meta tag from McpUiResourceCsp object
   function buildCspString(csp) {
@@ -117,15 +118,20 @@
     doc.write(html);
     doc.close();
 
+    // Remove previous relay handler to prevent duplicate relays on re-init
+    if (innerRelayHandler) {
+      window.removeEventListener('message', innerRelayHandler);
+    }
     // Relay messages from inner iframe to host
-    window.addEventListener('message', function (event) {
+    innerRelayHandler = function (event) {
       if (event.source !== inner) return;
       var data = event.data;
       if (!data || typeof data !== 'object') return;
       // Don't relay sandbox-specific methods
       if (data.method === SANDBOX_READY || data.method === RESOURCE_READY) return;
       host.postMessage(data, '*');
-    });
+    };
+    window.addEventListener('message', innerRelayHandler);
   }
 
   // Listen for messages from host

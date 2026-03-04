@@ -1,7 +1,6 @@
 import { auth } from "@/lib/auth";
 import { isRegisteredServerUrl } from "@/lib/connectors";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { withClient } from "@/lib/mcp-client-pool";
 import { NextResponse } from "next/server";
 
 /**
@@ -56,53 +55,35 @@ export async function POST(req: Request) {
       );
     }
 
-    const transport = new StreamableHTTPClientTransport(new URL(serverUrl));
-    const mcpClient = new Client({ name: "creator", version: "1.0.0" });
+    console.log(`[connectors/mcp-proxy] ${method}`, method === 'tools/call' ? params.name : '');
 
-    try {
-      await mcpClient.connect(transport);
-
-      console.log(`[connectors/mcp-proxy] ${method}`, method === 'tools/call' ? params.name : '');
-
-      let result;
+    const result = await withClient(serverUrl, async (mcpClient) => {
       switch (method as AllowedMethod) {
         case "tools/call":
-          result = await mcpClient.callTool(
+          return mcpClient.callTool(
             { name: params.name, arguments: params.arguments ?? {} },
             undefined,
             { timeout: 120_000 }
           );
-          break;
         case "tools/list":
-          result = await mcpClient.listTools(params, { timeout: 30_000 });
-          break;
+          return mcpClient.listTools(params, { timeout: 30_000 });
         case "resources/list":
-          result = await mcpClient.listResources(params, { timeout: 30_000 });
-          break;
+          return mcpClient.listResources(params, { timeout: 30_000 });
         case "resources/read":
-          result = await mcpClient.readResource(
+          return mcpClient.readResource(
             { uri: params.uri },
             { timeout: 30_000 }
           );
-          break;
         case "resources/templates/list":
-          result = await mcpClient.listResourceTemplates(params, {
+          return mcpClient.listResourceTemplates(params, {
             timeout: 30_000,
           });
-          break;
         case "prompts/list":
-          result = await mcpClient.listPrompts(params, { timeout: 30_000 });
-          break;
+          return mcpClient.listPrompts(params, { timeout: 30_000 });
       }
+    });
 
-      return NextResponse.json(result);
-    } finally {
-      try {
-        await mcpClient.close();
-      } catch {
-        // Ignore close errors
-      }
-    }
+    return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[connectors/mcp-proxy] Error:", message);
