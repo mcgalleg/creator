@@ -1,7 +1,6 @@
 import {
   streamText,
   tool,
-  jsonSchema,
   UIMessage,
   convertToModelMessages,
   stepCountIs,
@@ -28,10 +27,7 @@ import { getAnalyticsSchema, executeReadQuery } from "@/lib/mcp-app/data";
 import { addCacheControlToMessages, ANTHROPIC_CACHE_CONTROL } from "@/lib/ai-tools/prompt-cache";
 import { getAnalyticsChatPrompt } from "@/lib/catalog";
 import { chatLimiter } from "@/lib/rate-limit";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { getConnectorById } from "@/lib/connectors";
-import { getToolUiResourceUri } from "@modelcontextprotocol/ext-apps/app-bridge";
+import { buildMcpToolsForConnectors } from "@/lib/mcp-tools";
 
 // =============================================================================
 // Message sanitization — fix malformed tool_use inputs in conversation history
@@ -239,99 +235,8 @@ export async function POST(req: Request) {
     // -------------------------------------------------------------------------
     // MCP connector setup — create clients for enabled connectors
     // -------------------------------------------------------------------------
-    const mcpClients: Client[] = [];
-    const mcpTools: Record<string, Tool> = {};
-
-    if (enabledConnectors?.length) {
-      console.log(`[chat] Enabled connectors: ${enabledConnectors.join(", ")}`);
-
-      const results = await Promise.allSettled(
-        enabledConnectors.map(async (connectorId) => {
-          const connector = getConnectorById(connectorId);
-          if (!connector) {
-            console.warn(`[chat] Connector "${connectorId}" not found in registry`);
-            return null;
-          }
-
-          // Validate feature access server-side
-          if (connector.requiredFeature) {
-            const hasAccess = await hasFeature(connector.requiredFeature);
-            if (!hasAccess) {
-              console.warn(`[chat] User lacks feature "${connector.requiredFeature}" for connector "${connectorId}"`);
-              return null;
-            }
-          }
-
-          const transport = new StreamableHTTPClientTransport(
-            new URL(connector.mcpServerUrl)
-          );
-          const mcpClient = new Client({
-            name: "creator",
-            version: "1.0.0",
-          });
-          await mcpClient.connect(transport);
-
-          const { tools: remoteTools } = await mcpClient.listTools();
-          return { connectorId, connector, mcpClient, remoteTools };
-        })
-      );
-
-      for (const result of results) {
-        if (result.status === "rejected") {
-          console.error("[chat] Failed to connect to MCP server:", result.reason);
-          continue;
-        }
-        const value = result.value;
-        if (!value) continue;
-
-        const { connectorId, connector, mcpClient, remoteTools } = value;
-        mcpClients.push(mcpClient);
-
-        const toolNames: string[] = [];
-        for (const remoteTool of remoteTools) {
-          const resourceUri = getToolUiResourceUri(remoteTool);
-
-          toolNames.push(remoteTool.name);
-          mcpTools[remoteTool.name] = tool({
-            description: remoteTool.description ?? remoteTool.name,
-            inputSchema: jsonSchema(remoteTool.inputSchema),
-            execute: async (input) => {
-              const callResult = await mcpClient.callTool({
-                name: remoteTool.name,
-                arguments: input as Record<string, unknown>,
-              });
-
-              const contentArray = Array.isArray(callResult.content)
-                ? (callResult.content as Array<{ type: string; text?: string }>)
-                : [];
-              const textContent = contentArray
-                .filter((c) => c.type === "text")
-                .map((c) => c.text)
-                .join("\n");
-
-              let result: Record<string, unknown> = {};
-              try {
-                result = textContent ? JSON.parse(textContent) : {};
-              } catch {
-                result = { text: textContent };
-              }
-
-              if (resourceUri && !callResult.isError) {
-                result._mcpAppUi = {
-                  serverUrl: connector.mcpServerUrl,
-                  resourceUri,
-                };
-                result._mcpToolResult = callResult;
-              }
-
-              return result;
-            },
-          });
-        }
-
-        console.log(`[chat] Loaded ${toolNames.length} tools from "${connectorId}": ${toolNames.join(", ")}`);
-      }
-    }
+    const { tools: mcpTools, clients: mcpClients, systemHints } =
+      await buildMcpToolsForConnectors(userId, enabledConnectors ?? []);
 
     // Build messages with optional drawing-mode override
     const mcpToolNames = Object.keys(mcpTools);
@@ -401,6 +306,7 @@ export async function POST(req: Request) {
         role: "system",
         content: accountContext,
       },
+      ...systemHints.map((hint) => ({ role: "system" as const, content: hint })),
       ...(drawingOverride
         ? [{ role: "system" as const, content: drawingOverride }]
         : []),
@@ -510,14 +416,15 @@ export async function POST(req: Request) {
         return null;
       },
       onFinish: async ({ totalUsage }) => {
-        // Close MCP clients
-        for (const client of mcpClients) {
-          try {
-            await client.close();
-          } catch {
-            // Ignore close errors
-          }
-        }
+        // Close MCP clients (with timeout so a stuck client doesn't block)
+        await Promise.allSettled(
+          mcpClients.map((client) =>
+            Promise.race([
+              client.close(),
+              new Promise((resolve) => setTimeout(resolve, 3_000)),
+            ])
+          )
+        );
 
         const totalTokens = totalUsage.totalTokens ?? 0;
         if (totalTokens > 0) {

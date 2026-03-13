@@ -1,7 +1,6 @@
 import { Nav } from "@/components/landing/nav";
 import { Hero } from "@/components/landing/hero";
 import { FeatureBento } from "@/components/landing/feature-bento";
-import { Showcase } from "@/components/landing/showcase";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { SampleQuestions } from "@/components/landing/interactive-queries";
 import { PricingPreview } from "@/components/landing/pricing-preview";
@@ -16,7 +15,6 @@ export default function Home() {
       <main className="flex-1">
         <Hero />
         <FeatureBento />
-        <Showcase />
         <HowItWorks />
         <SampleQuestions />
         <PricingPreview />

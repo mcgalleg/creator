@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useSyncExternalStore, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AlertCircle, Sparkles, ArrowRight, X, Plus } from 'lucide-react';
 import Link from 'next/link';
+import useSWR from 'swr';
 import { useAnalyticsChat } from '@/hooks/use-analytics-chat';
 import { MessageList } from '@/components/chat/message-list';
 import { WorkspaceChatInput } from './workspace-chat-input';
@@ -13,7 +14,6 @@ import { ConnectorPopover } from './connector-popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSyncOptional } from '@/contexts/sync-context';
 import { useCredits } from '@/hooks/use-credits';
-import { CONNECTORS_STORAGE_KEY } from '@/lib/connectors';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,21 +21,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-// -- localStorage-backed connector state via useSyncExternalStore ----------
-const connectorSubs = new Set<() => void>();
-function subscribeConnectors(cb: () => void) {
-  connectorSubs.add(cb);
-  return () => { connectorSubs.delete(cb); };
-}
-function getConnectorsSnapshot() {
-  return localStorage.getItem(CONNECTORS_STORAGE_KEY) ?? '[]';
-}
-function getConnectorsServerSnapshot() {
-  return '[]';
-}
-function notifyConnectors() {
-  connectorSubs.forEach((cb) => cb());
-}
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+const emptySubscribe = () => () => {};
+const returnTrue = () => true;
+const returnFalse = () => false;
 
 interface WorkspaceChatProps {
   accounts: Array<{ id: number; username: string; avatarUrl: string | null }>;
@@ -44,10 +34,9 @@ interface WorkspaceChatProps {
 
 /**
  * Primary workspace view — centered, full-width AI chat interface.
- * Replaces the old split-pane ChatPanel + ViewTabs layout.
  * Uses RAF-debounced scroll with near-bottom detection for smooth streaming.
  */
-export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
+export function WorkspaceChat({ accounts: serverAccounts, goals }: WorkspaceChatProps) {
   const [input, setInput] = useState('');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -57,12 +46,57 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
   const { aiTokens } = useCredits();
   const searchParams = useSearchParams();
 
+  // Prefer live accounts from SyncContext (updates without page refresh),
+  // fall back to server-rendered props for initial load.
+  const liveAccounts = syncContext?.accounts;
+  const accounts = liveAccounts && liveAccounts.length > 0
+    ? liveAccounts.map((a) => ({ id: a.id, username: a.username, avatarUrl: a.avatarUrl }))
+    : serverAccounts;
+
   // Account selection: auto-select for single account, empty for multi
+  const STORAGE_KEY = 'astriq:selectedAccountIds';
   const [selectedAccountIds, setSelectedAccountIds] = useState<number[]>(() => {
     if (syncContext?.selectedAccountId) return [syncContext.selectedAccountId];
-    if (accounts.length === 1) return [accounts[0].id];
+    if (serverAccounts.length === 1) return [serverAccounts[0].id];
     return [];
   });
+
+  // Restore persisted selection from localStorage after hydration
+  const hasRestoredRef = useRef(false);
+  useEffect(() => {
+    if (hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as number[];
+        const valid = parsed.filter((id) =>
+          accounts.some((a) => a.id === id)
+        );
+        if (valid.length > 0) {
+          setSelectedAccountIds(valid);
+        }
+      }
+    } catch {}
+  }, [accounts]);
+
+  // Persist selection to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedAccountIds));
+    } catch {}
+  }, [selectedAccountIds]);
+
+  // Auto-select newly added accounts so users see them immediately
+  const prevAccountIdsRef = useRef(new Set(accounts.map((a) => a.id)));
+  useEffect(() => {
+    const currentIds = new Set(accounts.map((a) => a.id));
+    const newIds = [...currentIds].filter((id) => !prevAccountIdsRef.current.has(id));
+    if (newIds.length > 0) {
+      setSelectedAccountIds((prev) => [...prev, ...newIds.filter((id) => !prev.includes(id))]);
+    }
+    prevAccountIdsRef.current = currentIds;
+  }, [accounts]);
 
   const addAccount = useCallback((id: number) => {
     setSelectedAccountIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
@@ -76,28 +110,34 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
   const isSingleAccount = accounts.length === 1;
   const noAccountSelected = accounts.length > 1 && selectedAccountIds.length === 0;
 
-  // Connector state — synced with localStorage, SSR-safe
-  const connectorsJson = useSyncExternalStore(
-    subscribeConnectors,
-    getConnectorsSnapshot,
-    getConnectorsServerSnapshot,
-  );
-  const enabledConnectors = useMemo(() => {
-    try {
-      const parsed = JSON.parse(connectorsJson);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }, [connectorsJson]);
+  // Defer Radix components to avoid hydration mismatch from dynamic IDs
+  const isMounted = useSyncExternalStore(emptySubscribe, returnTrue, returnFalse);
 
-  const handleConnectorToggle = useCallback((id: string, enabled: boolean) => {
+  // Connector state — fetched from API via SWR
+  const { data: enabledConnectors = [], mutate: mutateConnectors } = useSWR<string[]>(
+    '/api/connectors/me',
+    fetcher,
+  );
+
+  const handleConnectorToggle = useCallback(async (id: string, enabled: boolean) => {
+    // Optimistic update
     const next = enabled
       ? [...enabledConnectors, id]
       : enabledConnectors.filter((c) => c !== id);
-    localStorage.setItem(CONNECTORS_STORAGE_KEY, JSON.stringify(next));
-    notifyConnectors();
-  }, [enabledConnectors]);
+    mutateConnectors(next, false);
+
+    try {
+      await fetch('/api/connectors/me/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectorId: id, enabled }),
+      });
+      mutateConnectors();
+    } catch {
+      // Revert on error
+      mutateConnectors();
+    }
+  }, [enabledConnectors, mutateConnectors]);
 
   const [isArtifactRendering, setIsArtifactRendering] = useState(false);
 
@@ -198,30 +238,40 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
           );
         })}
         {!isSingleAccount && unselectedAccounts.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 rounded-full border border-dashed px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted/50 transition-colors"
-              >
-                <Plus className="h-3 w-3" />
-                Add
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {unselectedAccounts.map((account) => (
-                <DropdownMenuItem key={account.id} onSelect={() => addAccount(account.id)}>
-                  <div className="flex items-center gap-2">
-                    {account.avatarUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={account.avatarUrl} alt={account.username} className="h-4 w-4 rounded-full" />
-                    )}
-                    <span>@{account.username}</span>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          isMounted ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                  Add
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {unselectedAccounts.map((account) => (
+                  <DropdownMenuItem key={account.id} onSelect={() => addAccount(account.id)}>
+                    <div className="flex items-center gap-2">
+                      {account.avatarUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={account.avatarUrl} alt={account.username} className="h-4 w-4 rounded-full" />
+                      )}
+                      <span>@{account.username}</span>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
+            >
+              <Plus className="h-3 w-3" />
+              Add
+            </button>
+          )
         )}
         </>
       )}
@@ -230,18 +280,6 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
 
   const inputElement = (
     <div className="space-y-3">
-      {tokensExhausted && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm">
-          <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
-          <span className="flex-1 text-muted-foreground">
-            You&apos;re out of AI tokens.{' '}
-            <Link href="/pricing" className="font-medium text-primary hover:underline">
-              Subscribe for 1M/month
-              <ArrowRight className="inline ml-0.5 h-3 w-3" />
-            </Link>
-          </span>
-        </div>
-      )}
       <WorkspaceChatInput
         value={input}
         onChange={setInput}
@@ -302,10 +340,37 @@ export function WorkspaceChat({ accounts, goals }: WorkspaceChatProps) {
 
           {/* Error display */}
           {error && (
-            <div className="flex items-center gap-2 text-destructive text-sm mt-4 p-3 bg-destructive/10 rounded-lg">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>Error: {error.message}</span>
-            </div>
+            insufficientCredits ? (
+              <div className="mt-4 rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-orange-500/5 p-5 text-sm">
+                <div className="space-y-1.5">
+                    <p className="font-medium text-foreground">You&apos;ve used all your AI tokens <span className="text-base">😊</span></p>
+                    <p className="text-muted-foreground">
+                      Recharge to keep the insights flowing — pick up a token pack or upgrade your plan for monthly tokens.
+                    </p>
+                    <div className="flex items-center gap-3 pt-2">
+                      <Link
+                        href="/pricing#ai-tokens"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Get more tokens
+                      </Link>
+                      <Link
+                        href="/pricing"
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        View plans
+                        <ArrowRight className="inline ml-0.5 h-3 w-3" />
+                      </Link>
+                    </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-destructive text-sm mt-4 p-3 bg-destructive/10 rounded-lg">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>Error: {error.message}</span>
+              </div>
+            )
           )}
         </div>
       </div>

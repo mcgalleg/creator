@@ -7,8 +7,12 @@
  * allowing automated testing with BYPASS_AUTH=true.
  */
 
+import { config } from "dotenv";
+config({ path: ".env.local" });
+
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
+import { userConnectors } from "@/lib/db/schema/connectors";
 import { TEST_USER_ID } from "@/lib/auth";
 
 async function seedTestUser() {
@@ -36,11 +40,26 @@ async function seedTestUser() {
         },
       });
 
+    // Enable Excalidraw connector for the test user
+    await db
+      .insert(userConnectors)
+      .values({
+        userId: TEST_USER_ID,
+        connectorId: "excalidraw",
+        enabled: true,
+        connectedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [userConnectors.userId, userConnectors.connectorId],
+        set: { enabled: true, updatedAt: new Date() },
+      });
+
     console.log(`Test user seeded successfully (ID: ${TEST_USER_ID})`);
     console.log("   Email: test@example.com");
     console.log("   Credits: 1000");
     console.log("   Tier: pro");
     console.log("   Goals: Performance Overview, Content Strategy, Growth & Trends");
+    console.log("   Connectors: excalidraw (enabled)");
   } catch (error) {
     console.error("Failed to seed test user:", error);
     process.exit(1);

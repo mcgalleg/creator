@@ -66,9 +66,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.redirect(result.url);
   } catch (error) {
-    console.error("Checkout error:", error);
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error("Checkout error:", detail, error);
     return Response.json(
-      { error: "Failed to create checkout session" },
+      { error: "Failed to create checkout session", detail },
       { status: 500 }
     );
   }

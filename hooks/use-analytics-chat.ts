@@ -90,7 +90,11 @@ export function useAnalyticsChat(options?: UseAnalyticsChatOptions) {
       );
     },
     onError: (error) => {
-      if (error.message?.includes('402') || (error as { status?: number }).status === 402) {
+      if (
+        error.message?.includes('402') ||
+        error.message?.includes('Insufficient AI tokens') ||
+        (error as { status?: number }).status === 402
+      ) {
         setInsufficientCredits(true);
       }
     },

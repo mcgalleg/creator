@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { isRegisteredServerUrl } from "@/lib/connectors";
+import { isRegisteredServerUrl } from "@/lib/services/connector-service";
 import { withClient } from "@/lib/mcp-client-pool";
 import { NextResponse } from "next/server";
 
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!isRegisteredServerUrl(serverUrl)) {
+    if (!(await isRegisteredServerUrl(serverUrl))) {
       return NextResponse.json(
         { error: "Unregistered MCP server URL" },
         { status: 403 }

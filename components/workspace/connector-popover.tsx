@@ -4,13 +4,27 @@ import { useState, useEffect } from 'react';
 import { Blocks } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
-import { CONNECTOR_REGISTRY, type ConnectorDefinition } from '@/lib/connectors';
 import { useHasFeatureOptional } from '@/contexts/feature-context';
+import useSWR from 'swr';
+import type { FeatureKey } from '@/lib/auth';
+
+interface CatalogConnector {
+  id: string;
+  name: string;
+  description: string;
+  iconUrl: string | null;
+  mcpServerUrl: string;
+  requiredFeature: string | null;
+  requiresAuth: boolean;
+  category: string;
+}
 
 interface ConnectorPopoverProps {
   enabledConnectors: string[];
   onToggle: (id: string, enabled: boolean) => void;
 }
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 /**
  * Individual connector row that checks its own feature gate.
@@ -21,25 +35,28 @@ function ConnectorRow({
   enabled,
   onToggle,
 }: {
-  connector: ConnectorDefinition;
+  connector: CatalogConnector;
   enabled: boolean;
   onToggle: (id: string, enabled: boolean) => void;
 }) {
   const hasAccess = useHasFeatureOptional(
-    connector.requiredFeature ?? ("analytics_assistant" as const)
+    (connector.requiredFeature ?? "analytics_assistant") as FeatureKey
   );
 
   // If the connector has a required feature and the user doesn't have it, hide it
   if (connector.requiredFeature && !hasAccess) return null;
-
-  const Icon = connector.icon;
 
   return (
     <label
       htmlFor={`connector-${connector.id}`}
       className="flex items-center gap-3 rounded-md p-2 hover:bg-muted/50 cursor-pointer transition-colors"
     >
-      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+      {connector.iconUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={connector.iconUrl} alt="" className="h-4 w-4 shrink-0" />
+      ) : (
+        <Blocks className="h-4 w-4 shrink-0 text-muted-foreground" />
+      )}
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium">{connector.name}</div>
         <div className="text-xs text-muted-foreground">{connector.description}</div>
@@ -48,6 +65,7 @@ function ConnectorRow({
         id={`connector-${connector.id}`}
         checked={enabled}
         onCheckedChange={(checked) => onToggle(connector.id, checked)}
+        disabled={connector.requiresAuth && !enabled}
       />
     </label>
   );
@@ -55,6 +73,8 @@ function ConnectorRow({
 
 export function ConnectorPopover({ enabledConnectors, onToggle }: ConnectorPopoverProps) {
   const enabledCount = enabledConnectors.length;
+  const { data: catalog = [] } = useSWR<CatalogConnector[]>('/api/connectors', fetcher);
+
   // Radix generates dynamic aria-controls IDs that differ between SSR and
   // client, causing hydration mismatches. Defer the Popover mount to avoid this.
   const [mounted, setMounted] = useState(false);
@@ -96,14 +116,18 @@ export function ConnectorPopover({ enabledConnectors, onToggle }: ConnectorPopov
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-2">
         <div className="space-y-1">
-          {CONNECTOR_REGISTRY.map((connector) => (
-            <ConnectorRow
-              key={connector.id}
-              connector={connector}
-              enabled={enabledConnectors.includes(connector.id)}
-              onToggle={onToggle}
-            />
-          ))}
+          {catalog.length === 0 ? (
+            <div className="p-2 text-sm text-muted-foreground">No connectors available</div>
+          ) : (
+            catalog.map((connector) => (
+              <ConnectorRow
+                key={connector.id}
+                connector={connector}
+                enabled={enabledConnectors.includes(connector.id)}
+                onToggle={onToggle}
+              />
+            ))
+          )}
         </div>
       </PopoverContent>
     </Popover>

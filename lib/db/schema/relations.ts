@@ -9,6 +9,7 @@ import { syncJobs } from "./sync-jobs";
 import { drawings } from "./drawings";
 import { dashboardLayouts } from "./dashboard-layouts";
 import { userFeatureOverrides } from "./feature-flags";
+import { connectors, userConnectors } from "./connectors";
 
 // Users relations
 export const usersRelations = relations(users, ({ many }) => ({
@@ -18,6 +19,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   drawings: many(drawings),
   dashboardLayouts: many(dashboardLayouts),
   featureOverrides: many(userFeatureOverrides),
+  userConnectors: many(userConnectors),
 }));
 
 // TikTok accounts relations
@@ -97,5 +99,22 @@ export const userFeatureOverridesRelations = relations(userFeatureOverrides, ({ 
   user: one(users, {
     fields: [userFeatureOverrides.userId],
     references: [users.id],
+  }),
+}));
+
+// Connectors relations
+export const connectorsRelations = relations(connectors, ({ many }) => ({
+  userConnectors: many(userConnectors),
+}));
+
+// User connectors relations
+export const userConnectorsRelations = relations(userConnectors, ({ one }) => ({
+  user: one(users, {
+    fields: [userConnectors.userId],
+    references: [users.id],
+  }),
+  connector: one(connectors, {
+    fields: [userConnectors.connectorId],
+    references: [connectors.id],
   }),
 }));

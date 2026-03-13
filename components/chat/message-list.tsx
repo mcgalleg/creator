@@ -8,7 +8,9 @@ import type { UIMessage } from 'ai';
 import { cn } from '@/lib/utils';
 import { MarkdownRenderer } from './markdown-renderer';
 import { McpAppRenderer } from './mcp-app-renderer';
-import { CONNECTOR_REGISTRY } from '@/lib/connectors';
+import useSWR from 'swr';
+
+const connectorFetcher = (url: string) => fetch(url).then((r) => r.json());
 import { useArtifactCopy } from '@/hooks/use-artifact-copy';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -34,19 +36,18 @@ interface MessageListProps {
  * browser has actually painted the final artifact.
  */
 export function MessageList({ messages, isStreaming, onBusyChange, onAppMessage, onUpdateModelContext }: MessageListProps) {
+  const { data: connectorCatalog } = useSWR<Array<{ mcpServerUrl: string; sandboxPermissions: string | null }>>('/api/connectors', connectorFetcher);
   const wasStreamingRef = useRef(isStreaming);
 
   useEffect(() => {
-    // Detect the streaming → done transition
+    // Detect the streaming → done transition.
+    // The JSONUIProvider key is now stable (message.id), so no remount happens.
+    // Just signal a brief busy period for one paint cycle.
     if (wasStreamingRef.current && !isStreaming && onBusyChange) {
-      // The spec JSONUIProvider is about to remount — signal busy until paint
       onBusyChange(true);
-      const rafId = requestAnimationFrame(() => {
-        // Double-rAF: first rAF runs before paint, second runs after paint
-        requestAnimationFrame(() => onBusyChange(false));
-      });
+      const rafId = requestAnimationFrame(() => onBusyChange(false));
       wasStreamingRef.current = false;
-      return () => cancelAnimationFrame(rafId);
+      return () => { cancelAnimationFrame(rafId); onBusyChange(false); };
     }
     wasStreamingRef.current = isStreaming;
   }, [isStreaming, onBusyChange]);
@@ -60,6 +61,7 @@ export function MessageList({ messages, isStreaming, onBusyChange, onAppMessage,
           isStreaming={isStreaming && i === messages.length - 1}
           onAppMessage={onAppMessage}
           onUpdateModelContext={onUpdateModelContext}
+          connectorCatalog={connectorCatalog}
         />
       ))}
     </div>
@@ -77,11 +79,13 @@ function MessageBubble({
   isStreaming,
   onAppMessage,
   onUpdateModelContext,
+  connectorCatalog,
 }: {
   message: UIMessage;
   isStreaming: boolean;
   onAppMessage?: (text: string) => void;
   onUpdateModelContext?: (ctx: { content?: unknown[]; structuredContent?: Record<string, unknown> }) => void;
+  connectorCatalog?: Array<{ mcpServerUrl: string; sandboxPermissions: string | null }>;
 }) {
   const { spec, text, hasSpec } = useJsonRenderMessage(message.parts as DataPart[]);
   const { ref: captureRef, copyAsImage, downloadAsPng, copyAsText, isCopying } = useArtifactCopy();
@@ -133,7 +137,7 @@ function MessageBubble({
               resourceUri={mcpAppUi.resourceUri}
               toolInput={mcpToolInput}
               toolResult={mcpToolResult}
-              sandboxPermissions={CONNECTOR_REGISTRY.find((c) => c.mcpServerUrl === mcpAppUi.serverUrl)?.sandboxPermissions}
+              sandboxPermissions={connectorCatalog?.find((c) => c.mcpServerUrl === mcpAppUi.serverUrl)?.sandboxPermissions ?? undefined}
               onMessage={onAppMessage}
               onUpdateModelContext={onUpdateModelContext}
               isStreamActive={isStreaming}
@@ -144,7 +148,7 @@ function MessageBubble({
         {hasSpec && (
           <div ref={captureRef} className="w-full min-w-0 overflow-x-auto mt-3">
             <JSONUIProvider
-              key={isStreaming ? 'streaming' : 'done'}
+              key={message.id}
               registry={registry}
               initialState={spec!.state ?? {}}
             >

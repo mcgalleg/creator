@@ -29,17 +29,26 @@ function cleanup() {
 }
 
 /** Get or create a cached MCP client for the given server URL. */
-export async function getClient(serverUrl: string): Promise<Client> {
+export async function getClient(
+  serverUrl: string,
+  opts?: { headers?: Record<string, string> },
+): Promise<Client> {
   cleanup();
 
-  const existing = pool.get(serverUrl);
-  if (existing) {
-    existing.lastUsed = Date.now();
-    if (existing.connecting) await existing.connecting;
-    return existing.client;
+  // Skip pool for auth-bearing requests (unique per-user tokens)
+  if (!opts?.headers) {
+    const existing = pool.get(serverUrl);
+    if (existing) {
+      existing.lastUsed = Date.now();
+      if (existing.connecting) await existing.connecting;
+      return existing.client;
+    }
   }
 
-  const transport = new StreamableHTTPClientTransport(new URL(serverUrl));
+  const transport = new StreamableHTTPClientTransport(
+    new URL(serverUrl),
+    opts?.headers ? { requestInit: { headers: opts.headers } } : undefined,
+  );
   const client = new Client({ name: "creator", version: "1.0.0" });
   const entry: PoolEntry = { client, lastUsed: Date.now(), connecting: null };
 

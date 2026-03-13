@@ -44,11 +44,11 @@ export function Hero() {
       </div>
       <div className="container relative mx-auto max-w-4xl px-4 text-center">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-          Ask a question, decode your TikTok
+          Stop Guessing. Start Growing.
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-          Astriq turns your TikTok data into charts, insights, and content
-          ideas — just by asking. No dashboards to learn.
+          Ask Astriq anything about your content, audience, or growth — and
+          get actionable answers instantly.
         </p>
         <HeroPrompt />
       </div>

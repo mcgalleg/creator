@@ -9,8 +9,10 @@ import { AstriqLogo } from "@/components/astriq-logo";
 
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const onScroll = () => setScrolled(window.scrollY > 0);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -52,7 +54,7 @@ export function Nav() {
           >
             Docs
           </Link>
-          <AccentColorPicker />
+          {mounted && <AccentColorPicker />}
           <SignedOut>
             <SignInButton mode="modal">
               <Button variant="ghost" size="sm">

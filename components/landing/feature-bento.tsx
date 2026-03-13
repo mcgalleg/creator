@@ -11,6 +11,7 @@ import {
   Sparkles,
   Plug,
   Send,
+  TrendingUp,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CanvasInteractiveMockup } from "./canvas-interactive-mockup";
@@ -249,6 +250,16 @@ const MORE_FEATURES = [
     icon: Sparkles,
     title: "Streaming UI",
     desc: "Watch charts and insights render in real time",
+  },
+  {
+    icon: Users,
+    title: "Account Comparison",
+    desc: "Compare performance across multiple TikTok accounts side by side",
+  },
+  {
+    icon: TrendingUp,
+    title: "Best Time to Post",
+    desc: "AI-driven insights on the optimal days and times to publish for maximum reach",
   },
 ];
 

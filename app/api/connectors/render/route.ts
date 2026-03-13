@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { isRegisteredServerUrl } from "@/lib/connectors";
+import { isRegisteredServerUrl } from "@/lib/services/connector-service";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { McpUiResourceCsp, McpUiResourcePermissions } from "@modelcontextprotocol/ext-apps/app-bridge";
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
       });
     }
 
-    if (!isRegisteredServerUrl(serverUrl)) {
+    if (!(await isRegisteredServerUrl(serverUrl))) {
       return new Response("Unregistered MCP server URL", { status: 403 });
     }
 

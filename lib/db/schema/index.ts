@@ -10,6 +10,7 @@ export * from "./sync-jobs";
 export * from "./drawings";
 export * from "./dashboard-layouts";
 export * from "./feature-flags";
+export * from "./connectors";
 
 // Export all relations
 export * from "./relations";

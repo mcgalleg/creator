@@ -1,7 +1,7 @@
 'use client';
 
 import { UserButton } from '@clerk/nextjs';
-import { Coins, LayoutDashboard, Loader2, Settings, Sparkles, Plug, BookOpen, Menu } from 'lucide-react';
+import { Coins, LayoutDashboard, Loader2, Settings, Sparkles, Plug, BookOpen, Menu, Blocks } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
@@ -116,6 +116,13 @@ export function CompactHeader({ subscriptionTier = "free" }: CompactHeaderProps)
           </Button>
 
           <Button variant="ghost" size="icon-sm" asChild className="min-h-[32px] min-w-[32px]">
+            <Link href="/workspace/connectors">
+              <Blocks className="h-4 w-4" />
+              <span className="sr-only">Connectors</span>
+            </Link>
+          </Button>
+
+          <Button variant="ghost" size="icon-sm" asChild className="min-h-[32px] min-w-[32px]">
             <Link href="/workspace/settings">
               <Settings className="h-4 w-4" />
               <span className="sr-only">Settings</span>
@@ -149,6 +156,14 @@ export function CompactHeader({ subscriptionTier = "free" }: CompactHeaderProps)
               >
                 <BookOpen className="h-4 w-4" />
                 Documentation
+              </Link>
+              <Link
+                href="/workspace/connectors"
+                onClick={() => setSheetOpen(false)}
+                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
+              >
+                <Blocks className="h-4 w-4" />
+                Connectors
               </Link>
               <Link
                 href="/workspace/settings"

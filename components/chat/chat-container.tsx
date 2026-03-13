@@ -6,7 +6,7 @@ import { ChatInput } from './chat-input';
 import { MessageList } from './message-list';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, MessageSquare } from 'lucide-react';
+import { AlertCircle, ArrowRight, MessageSquare, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useSyncOptional } from '@/contexts/sync-context';
 
@@ -30,6 +30,7 @@ export function ChatContainer() {
     isLoading,
     isGenerating,
     error,
+    insufficientCredits,
     updateModelContext,
   } = useAnalyticsChat({
     selectedAccountIds: syncContext?.selectedAccountId ? [syncContext.selectedAccountId] : [],
@@ -124,10 +125,37 @@ export function ChatContainer() {
 
         {/* Error display */}
         {error && (
-          <div className="flex items-center gap-2 text-destructive text-sm mt-4 p-3 bg-destructive/10 rounded-lg">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            <span>Error: {error.message}</span>
-          </div>
+          insufficientCredits ? (
+            <div className="mt-4 rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-orange-500/5 p-5 text-sm">
+                <div className="space-y-1.5">
+                  <p className="font-medium text-foreground">You&apos;ve used all your AI tokens <span className="text-base">😊</span></p>
+                  <p className="text-muted-foreground">
+                    Recharge to keep the insights flowing — pick up a token pack or upgrade your plan for monthly tokens.
+                  </p>
+                  <div className="flex items-center gap-3 pt-2">
+                    <Link
+                      href="/pricing#ai-tokens"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Get more tokens
+                    </Link>
+                    <Link
+                      href="/pricing"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      View plans
+                      <ArrowRight className="inline ml-0.5 h-3 w-3" />
+                    </Link>
+                  </div>
+                </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-destructive text-sm mt-4 p-3 bg-destructive/10 rounded-lg">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>Error: {error.message}</span>
+            </div>
+          )
         )}
 
         {/* Scroll anchor */}
