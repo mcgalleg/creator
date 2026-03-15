@@ -45,6 +45,11 @@
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
       "computedHash": "3462ec83f862abb2d532953df33a4dbf87f4616849da5d4b5cc7c13601aaf997"
+    },
+    "visual-explainer": {
+      "source": "nicobailon/visual-explainer",
+      "sourceType": "github",
+      "computedHash": "1b1145b8d5c36e71d97de15a30fef50ccbb9e6df493282f621b540f02121fc07"
     }
   }
 }

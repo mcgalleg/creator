@@ -1,6 +1,7 @@
 'use client';
 
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 
 interface MarkdownRendererProps {
@@ -12,10 +13,13 @@ interface MarkdownRendererProps {
  * Renders markdown content with proper styling for the chat interface.
  * Handles headings, bold, lists, and other common markdown elements.
  */
-export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
+import { memo } from 'react';
+
+export const MarkdownRenderer = memo(function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
   return (
     <div className={cn('markdown-content text-base', className)}>
       <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
         components={{
           // Headings
           h1: ({ children }) => (
@@ -87,6 +91,23 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
           hr: () => (
             <hr className="border-border my-4" />
           ),
+          // Tables
+          table: ({ children }) => (
+            <div className="my-2 overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm">{children}</table>
+            </div>
+          ),
+          thead: ({ children }) => (
+            <thead className="bg-muted/50 border-b border-border">{children}</thead>
+          ),
+          tbody: ({ children }) => <tbody className="divide-y divide-border">{children}</tbody>,
+          tr: ({ children }) => <tr className="hover:bg-muted/30 transition-colors">{children}</tr>,
+          th: ({ children }) => (
+            <th className="px-3 py-2 text-left font-semibold text-muted-foreground">{children}</th>
+          ),
+          td: ({ children }) => (
+            <td className="px-3 py-2">{children}</td>
+          ),
           // Links
           a: ({ href, children }) => (
             <a
@@ -104,4 +125,4 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
       </ReactMarkdown>
     </div>
   );
-}
+});

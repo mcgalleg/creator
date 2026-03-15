@@ -123,6 +123,7 @@ export async function getAnalyticsSchema(userId: string, selectedAccountIds?: nu
     instructions:
       "Write standard PostgreSQL SELECT queries. " +
       "Data is automatically scoped to the current user's accounts — do not add account_id filters. " +
+      "Only use column names listed in the schema below — do not guess column names. " +
       "IMPORTANT: Always qualify column references with the table name (e.g., posts.likes, posts.comments) to avoid ambiguity with the data scoping layer. " +
       "Engagement rate: (posts.likes + posts.comments + posts.shares)::numeric / NULLIF(posts.plays, 0) * 100 — use ::numeric to prevent integer division truncation. " +
       "The hashtags column is text[] — use unnest(posts.hashtags) to expand for per-hashtag analysis. " +
@@ -130,14 +131,24 @@ export async function getAnalyticsSchema(userId: string, selectedAccountIds?: nu
       "Join comments to posts via comments.post_id = posts.id. " +
       "Join post_collaborators via post_collaborators.post_id = posts.id. " +
       "Use account_metrics_history for follower/following count snapshots over time. " +
-      "Use comments grouped by author_username for fan/audience analysis (top fans, super fans, repeat commenters).",
+      "Use comments grouped by author_username for fan/audience analysis (top fans, super fans, repeat commenters). " +
+      "Comment Analysis: Comments have pre-computed sentiment fields (sentiment, sentiment_category, sentiment_score). " +
+      "For sentiment overview use GROUP BY sentiment (returns 3 rows). For thematic breakdown use GROUP BY sentiment_category, sentiment. " +
+      "For specific examples use the search_comments tool with a natural language query (use the sentiment filter to narrow by classification). " +
+      "NEVER SELECT all comment text — always aggregate with GROUP BY or use search_comments. " +
+      "Pattern: first query the distribution, then use search_comments for illustrative examples.",
     tables: ANALYTICS_SCHEMA,
     notes: [
+      "Only reference columns that appear in the schema above — do not guess column names",
       "Always qualify column references with the table name (e.g., posts.likes, posts.comments) to avoid ambiguity",
       "hashtags is a PostgreSQL text[] column — use unnest(posts.hashtags) to expand into rows for per-hashtag queries",
       "Engagement rate: (posts.likes + posts.comments + posts.shares)::numeric / NULLIF(posts.plays, 0) * 100",
       "posted_at, duration, song_title, song_artist can be NULL",
       "account_metrics_history contains periodic snapshots — use recorded_at for time-series analysis of follower growth",
+      "Comments have pre-computed sentiment fields: sentiment, sentiment_category, sentiment_score",
+      "NEVER SELECT all comment text — always aggregate with GROUP BY or use search_comments",
+      "If a query fails with a column error, re-check the schema above before retrying",
+      "Maximum 500 rows returned per query — for time-series use DATE_TRUNC('week') or DATE_TRUNC('month'), not 'day', to avoid truncation",
     ],
   };
 }

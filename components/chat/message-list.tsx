@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useDeferredValue, useRef, useState } from 'react';
 import { useJsonRenderMessage, Renderer, JSONUIProvider, type DataPart } from '@json-render/react';
 import { isToolUIPart } from 'ai';
 import { registry } from '@/lib/registry';
@@ -87,7 +87,11 @@ function MessageBubble({
   onUpdateModelContext?: (ctx: { content?: unknown[]; structuredContent?: Record<string, unknown> }) => void;
   connectorCatalog?: Array<{ mcpServerUrl: string; sandboxPermissions: string | null }>;
 }) {
-  const { spec, text, hasSpec } = useJsonRenderMessage(message.parts as DataPart[]);
+  const { spec: rawSpec, text, hasSpec } = useJsonRenderMessage(message.parts as DataPart[]);
+  // Defer spec updates during streaming so React can batch rapid patches
+  // instead of synchronously re-rendering the entire element tree on every
+  // single data-spec chunk (~70 patches). This keeps the main thread responsive.
+  const spec = useDeferredValue(rawSpec);
   const { ref: captureRef, copyAsImage, downloadAsPng, copyAsText, isCopying } = useArtifactCopy();
 
   // Extract MCP App UI metadata from tool results
@@ -145,14 +149,14 @@ function MessageBubble({
           </div>
         )}
 
-        {hasSpec && (
+        {hasSpec && spec && (
           <div ref={captureRef} className="w-full min-w-0 overflow-x-auto mt-3">
             <JSONUIProvider
               key={message.id}
               registry={registry}
-              initialState={spec!.state ?? {}}
+              initialState={spec.state ?? {}}
             >
-              <Renderer spec={spec!} registry={registry} loading={isStreaming} />
+              <Renderer spec={spec} registry={registry} loading={isStreaming} />
             </JSONUIProvider>
           </div>
         )}

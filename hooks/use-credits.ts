@@ -68,4 +68,27 @@ export function invalidateCredits() {
   mutate(CREDITS_KEY);
 }
 
+/**
+ * Optimistically deduct AI tokens from the cached balance.
+ * Gives immediate UI feedback before Polar's eventually-consistent
+ * meter balance catches up. A background revalidation follows to
+ * reconcile with the real balance.
+ */
+export function deductAiTokens(tokensUsed: number) {
+  mutate(
+    CREDITS_KEY,
+    (current: CreditsData | undefined) => {
+      if (!current) return current;
+      return {
+        ...current,
+        aiTokens:
+          current.aiTokens != null
+            ? Math.max(0, current.aiTokens - tokensUsed)
+            : null,
+      };
+    },
+    { revalidate: false }
+  );
+}
+
 export { CreditsContext, useCreditsInternal };

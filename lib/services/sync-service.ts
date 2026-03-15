@@ -913,9 +913,9 @@ async function enrichNewComments(postIds: number[]): Promise<void> {
       AND text IS NOT NULL
       AND text != ''
     ORDER BY id
-  `) as unknown as { id: number; text: string }[];
+  `);
 
-  const rows = Array.isArray(unclassified) ? unclassified : [];
+  const rows = (Array.isArray(unclassified) ? unclassified : (unclassified as Record<string, unknown>).rows ?? []) as { id: number; text: string }[];
   if (rows.length === 0) return;
 
   const BATCH_SIZE = 200;

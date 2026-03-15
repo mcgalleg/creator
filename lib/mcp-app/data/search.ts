@@ -18,6 +18,7 @@ type SearchResponse = {
   results: SearchResult[];
   count: number;
   query: string;
+  error?: string;
 };
 
 /**
@@ -29,9 +30,14 @@ export async function searchComments(
   query: string,
   options?: {
     limit?: number;
+    sentiment?: "supportive" | "neutral" | "unsupportive";
     selectedAccountIds?: number[];
   }
 ): Promise<SearchResponse> {
+  if (!query || typeof query !== "string" || query.trim().length === 0) {
+    return { results: [], count: 0, query: "", error: "A search query is required. Provide a natural language description of the comments to find." };
+  }
+
   const limit = Math.min(options?.limit ?? 30, 50);
 
   const accountIds = await getUserAccountIds(
@@ -49,6 +55,11 @@ export async function searchComments(
 
   const ids = accountIds.join(", ");
 
+  // Optional sentiment filter — validated enum so safe to interpolate
+  const sentimentClause = options?.sentiment
+    ? `AND c.sentiment = '${options.sentiment}'`
+    : "";
+
   const result = await db.execute(sql.raw(`
     WITH scoped_comments AS NOT MATERIALIZED (
       SELECT * FROM comments
@@ -61,6 +72,7 @@ export async function searchComments(
     FROM scoped_comments c
     JOIN posts p ON c.post_id = p.id
     WHERE c.text_embedding IS NOT NULL
+      ${sentimentClause}
     ORDER BY c.text_embedding <=> '${embeddingStr}'::vector
     LIMIT ${limit}
   `));

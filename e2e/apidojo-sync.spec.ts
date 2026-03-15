@@ -302,6 +302,16 @@ test.describe.serial("ApiDojo sync pipeline", () => {
       (c: { authorRegion: string | null }) => c.authorRegion
     );
     expect(hasLanguage || hasRegion).toBeTruthy();
+
+    // Sentiment classification + embeddings should be populated by enrichment
+    for (const comment of dbComments) {
+      expect(comment.sentiment).toBeTruthy();
+      expect(["supportive", "neutral", "unsupportive"]).toContain(comment.sentiment);
+      expect(comment.sentimentCategory).toBeTruthy();
+      expect(comment.sentimentScore).toBeGreaterThanOrEqual(0);
+      expect(comment.sentimentScore).toBeLessThanOrEqual(1);
+      expect(comment.textEmbedding).toBeTruthy();
+    }
   });
 
   // ─── Test 5: Full sync triggers two-phase (posts then auto-comments) ────

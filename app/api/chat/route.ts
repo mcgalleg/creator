@@ -105,39 +105,25 @@ const SYSTEM_PROMPT = `You are a TikTok analytics assistant.
 
 ## Database
 
-### Tables (quick reference)
-
+You have access to a TikTok analytics database with these tables:
 tiktok_accounts, posts, comments, account_metrics_history, post_collaborators
 
 ### Query Strategy
-- For simple queries on posts and comments: use the quick reference and query notes below to write SQL directly.
-- For aggregations over account_metrics_history, post_collaborators, or any query involving window functions or complex CTEs: call describe_tables FIRST to check data volume and column constraints before writing the query.
-- When a query fails, call describe_tables before retrying to verify the schema.
-
-### Query Notes
-- IMPORTANT: Always qualify column references with the table name (e.g., posts.likes, posts.comments, posts.shares) to avoid ambiguity with the data scoping layer
-- Engagement rate: (posts.likes + posts.comments + posts.shares)::numeric / NULLIF(posts.plays, 0) * 100 — the ::numeric cast prevents integer division truncation
-- posts.hashtags is text[] — use unnest(posts.hashtags) to expand
-- Join comments table via comments.post_id = posts.id
-- Nullable columns: posts.posted_at, posts.duration, posts.song_title, posts.song_artist
-
-### Comment Analysis Strategy
-- Comments have pre-computed sentiment: sentiment ('supportive'|'neutral'|'unsupportive'), sentiment_category, sentiment_score
-- For sentiment overview: GROUP BY sentiment (returns 3 rows)
-- For thematic breakdown: GROUP BY sentiment_category, sentiment
-- For specific examples: use search_comments tool with natural language query
-- NEVER SELECT all comment text — always aggregate or use search_comments
-- Pattern: first query distribution, then search_comments for illustrative examples
+- ALWAYS call describe_tables as your FIRST tool call before writing any SQL query via query_data.
+- describe_tables returns the full schema, column types, query formulas, and best practices. You need this information to write correct SQL.
+- Do NOT guess column names — always verify against the schema returned by describe_tables.
+- When a query fails, call describe_tables again to re-verify the schema before retrying.
 
 ${CATALOG_PROMPT}
 
 ## Output Routing
 - For analytics, data, KPIs, charts, and tables: ALWAYS use the \`\`\`spec JSONL format above.
+- This includes search_comments results — render them as a spec Table, not as markdown.
 
 ## Analytics Context
 - Wrap the overall response in a Stack (direction: vertical).
 - For KPIs: use a Grid of Cards. Each Card contains a Heading (h3) for the metric name and Text (lead variant) for the value. Add a Badge for trend (default=up, destructive=down, outline=neutral). Use Grid (columns: 3, gap: sm) — NEVER stack KPI cards vertically.
-- For tabular data: use Table (columns: string[], rows: string[][]). Format all cell values as pre-formatted strings.
+- For tabular data: use Table (columns: string[], rows: string[][]). Inline ALL row data as pre-formatted strings — do NOT use repeat/$item with Table (it breaks Zod validation). Convert numbers to strings yourself.
 - For time-series trends: use LineChart or AreaChart (AreaChart for volume emphasis, LineChart for cleaner comparison).
 - For categorical comparisons: use BarChart. Set horizontal=true when category labels are long.
 - For proportions/shares: use PieChart (set donut=true for a cleaner look) or RadialChart.
@@ -147,10 +133,14 @@ ${CATALOG_PROMPT}
 - Format numbers compactly (1.2M).
 - NEVER use emoji in your responses. Use plain text only — no emoji characters anywhere in headings, lists, or body text.
 
+## Response Style
+- Do NOT output text before or between tool calls. Call tools silently with no narration.
+- Only speak AFTER all data is gathered — then present your full analysis in one response.
+- If a tool returns empty results, an error, or no data — say so honestly. NEVER fabricate, invent, or hallucinate data that was not returned by the tool. If search_comments returns 0 results, tell the user no matching comments were found and suggest refining the search.
+
 ## Tool Call Efficiency
 - You have a LIMITED budget of tool call steps. Be efficient — combine data needs into as few SQL queries as possible.
-- Do NOT narrate each tool call ("Let me now check...", "Now let me get..."). Just call the tools silently, then present your full analysis once all data is gathered.
-- Aim to gather all data in 1-3 tool calls, then spend the remaining budget on your analysis response.
+- Aim to gather all data in 2-4 tool calls (including describe_tables), then spend the remaining budget on your analysis response.
 - If you need multiple metrics, write a single SQL query with multiple aggregations rather than separate queries for each metric.`;
 
 export async function POST(req: Request) {
@@ -328,7 +318,9 @@ export async function POST(req: Request) {
     const allTools: Record<string, Tool> = {
       describe_tables: tool({
         description:
-          "Returns the full database schema with detailed column types and relationships. Use this to discover exact column names and types before writing queries.",
+          "Returns the full database schema with column types, relationships, query formulas, and best practices. " +
+          "MUST be called as your first step before any query_data call. " +
+          "The result includes exact column names, types, join patterns, and recommended query strategies.",
         inputSchema: z.object({}),
         execute: async () => {
           return getAnalyticsSchema(userId, selectedAccountIds);
@@ -337,6 +329,7 @@ export async function POST(req: Request) {
 
       query_data: tool({
         description:
+          "You must call describe_tables first to know the exact column names and types. " +
           "Execute a read-only PostgreSQL SELECT query against the analytics database. Data is automatically scoped to the current user's TikTok accounts — no account filters needed. Only SELECT queries are allowed. WITH (CTE) queries are supported. Max 500 rows returned.",
         inputSchema: z.object({
           sql: z.string().describe("A PostgreSQL SELECT query"),
@@ -362,16 +355,29 @@ export async function POST(req: Request) {
           "Semantic search across comments to find examples matching a topic or theme. " +
           "Use for finding specific comments (e.g., 'negative feedback about form'). " +
           "Returns top 30 relevant comments with metadata. " +
+          "Use the sentiment filter to narrow results to a specific sentiment (supportive/neutral/unsupportive). " +
           "For aggregate stats, use query_data with GROUP BY sentiment instead.",
         inputSchema: z.object({
           query: z.string().describe("Natural language description of comments to find"),
+          sentiment: z.enum(["supportive", "neutral", "unsupportive"]).optional()
+            .describe("Filter results to this sentiment classification"),
           limit: z.number().optional().describe("Max results (default 30, max 50)"),
         }),
-        execute: async ({ query, limit }) => {
-          return await searchComments(userId, query, {
-            limit: Math.min(limit ?? 30, 50),
-            selectedAccountIds,
-          });
+        execute: async ({ query, sentiment, limit }) => {
+          try {
+            return await searchComments(userId, query, {
+              limit: Math.min(limit ?? 30, 50),
+              sentiment,
+              selectedAccountIds,
+            });
+          } catch (err) {
+            return {
+              error: err instanceof Error ? err.message : "Comment search failed",
+              results: [],
+              count: 0,
+              query: query ?? "",
+            };
+          }
         },
       }),
 
@@ -442,21 +448,22 @@ export async function POST(req: Request) {
         return null;
       },
       onFinish: async ({ totalUsage }) => {
-        // Close MCP clients (with timeout so a stuck client doesn't block)
-        await Promise.allSettled(
+        // Fire-and-forget: MCP client cleanup + usage tracking.
+        // These must NOT be awaited — onFinish runs inside the stream's
+        // flush() handler, so blocking here keeps the HTTP response open
+        // and freezes the client UI until the calls complete/timeout.
+        Promise.allSettled(
           mcpClients.map((client) =>
             Promise.race([
               client.close(),
               new Promise((resolve) => setTimeout(resolve, 3_000)),
             ])
           )
-        );
+        ).catch(() => {});
 
         const totalTokens = totalUsage.totalTokens ?? 0;
         if (totalTokens > 0) {
-          // Await Polar ingestion so the meter is more likely to be updated
-          // by the time the client starts polling for the new balance.
-          await Promise.all([
+          Promise.all([
             ingestAiTokenEvent(userId, totalTokens, {
               inputTokens: totalUsage.inputTokens ?? 0,
               outputTokens: totalUsage.outputTokens ?? 0,
@@ -468,8 +475,10 @@ export async function POST(req: Request) {
               amount: -totalTokens,
               type: "ai_chat",
               description: `Chat: ${totalUsage.inputTokens ?? 0} in + ${totalUsage.outputTokens ?? 0} out = ${totalTokens} tokens`,
-            }),
-          ]);
+            }).catch((err) =>
+              console.error("Credit transaction insert failed:", err)
+            ),
+          ]).catch(() => {});
         }
       },
       tools: allTools,
@@ -480,7 +489,13 @@ export async function POST(req: Request) {
         writer.merge(
           pipeJsonRender(
             result
-              .toUIMessageStream()
+              .toUIMessageStream({
+                messageMetadata: ({ part }) => {
+                  if (part.type === "finish") {
+                    return { totalUsage: part.totalUsage };
+                  }
+                },
+              })
               .pipeThrough(createSpecRepairTransform())
           )
         );
