@@ -1,5 +1,11 @@
-import { pgTable, text, integer, timestamp, serial, uniqueIndex, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, serial, uniqueIndex, boolean, index, real, customType } from "drizzle-orm/pg-core";
 import { posts } from "./posts";
+
+const vector256 = customType<{ data: number[]; driverValue: string }>({
+  dataType() { return "vector(256)"; },
+  toDriver(value: number[]) { return `[${value.join(",")}]`; },
+  fromDriver(value: unknown) { return JSON.parse(value as string) as number[]; },
+});
 
 export const comments = pgTable("comments", {
   id: serial("id").primaryKey(),
@@ -17,6 +23,13 @@ export const comments = pgTable("comments", {
   authorFollowerCount: integer("author_follower_count"),
   postedAt: timestamp("posted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  // Pre-computed sentiment & embedding columns
+  sentiment: text("sentiment"),                    // 'supportive' | 'neutral' | 'unsupportive'
+  sentimentCategory: text("sentiment_category"),   // 'praise' | 'question' | 'sarcasm' | 'spam' | etc.
+  sentimentScore: real("sentiment_score"),          // 0.0–1.0 confidence
+  textEmbedding: vector256("text_embedding"),       // 256d vector for semantic search
 }, (table) => [
   uniqueIndex("comments_post_tiktok_id_idx").on(table.postId, table.tiktokId),
+  index("comments_sentiment_idx").on(table.sentiment),
+  index("comments_sentiment_category_idx").on(table.sentimentCategory),
 ]);

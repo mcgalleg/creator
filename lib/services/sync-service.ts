@@ -896,6 +896,72 @@ async function processPostResults(
 }
 
 /**
+ * Enrich new comments with sentiment classification + vector embeddings.
+ * Processes comments where sentiment IS NULL in batches of 200.
+ */
+async function enrichNewComments(postIds: number[]): Promise<void> {
+  if (postIds.length === 0) return;
+
+  const { classifyComments } = await import("@/lib/services/classification-service");
+  const { generateEmbeddings } = await import("@/lib/services/embedding-service");
+
+  // Find comments that haven't been classified yet
+  const unclassified = await db.execute(sql`
+    SELECT id, text FROM comments
+    WHERE post_id IN ${sql`(${sql.join(postIds.map(id => sql`${id}`), sql`, `)})`}
+      AND sentiment IS NULL
+      AND text IS NOT NULL
+      AND text != ''
+    ORDER BY id
+  `) as unknown as { id: number; text: string }[];
+
+  const rows = Array.isArray(unclassified) ? unclassified : [];
+  if (rows.length === 0) return;
+
+  const BATCH_SIZE = 200;
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const batch = rows.slice(i, i + BATCH_SIZE);
+
+    // Run classification and embedding generation in parallel
+    const [classifications, embeddings] = await Promise.all([
+      classifyComments(batch.map((r) => ({ id: r.id, text: r.text }))),
+      generateEmbeddings(batch.map((r) => r.text)),
+    ]);
+
+    // Build a map from classification results
+    const classMap = new Map(classifications.map((c) => [c.id, c]));
+
+    // Bulk update via UPDATE ... FROM (VALUES ...) — single round trip per batch
+    const values: string[] = [];
+    for (let j = 0; j < batch.length; j++) {
+      const comment = batch[j];
+      const cls = classMap.get(comment.id);
+      const embedding = embeddings[j];
+      if (cls && embedding) {
+        const embeddingStr = `[${embedding.join(",")}]`;
+        values.push(
+          `(${comment.id}, '${cls.sentiment}', '${cls.category}', ${cls.score}, '${embeddingStr}'::vector)`
+        );
+      }
+    }
+
+    if (values.length > 0) {
+      await db.execute(sql.raw(`
+        UPDATE comments
+        SET sentiment = v.sentiment,
+            sentiment_category = v.sentiment_category,
+            sentiment_score = v.sentiment_score,
+            text_embedding = v.text_embedding
+        FROM (VALUES ${values.join(", ")}) AS v(id, sentiment, sentiment_category, sentiment_score, text_embedding)
+        WHERE comments.id = v.id
+      `));
+    }
+
+    console.log(`[Enrichment] Processed ${Math.min(i + BATCH_SIZE, rows.length)}/${rows.length} comments`);
+  }
+}
+
+/**
  * Process comment-only sync results
  */
 async function processCommentResults(
@@ -997,6 +1063,15 @@ async function processCommentResults(
           authorFollowerCount: sql`excluded.author_follower_count`,
         },
       });
+  }
+
+  // Enrich comments with sentiment classification + embeddings
+  if (process.env.COMMENT_ENRICHMENT_ENABLED === "true") {
+    try {
+      await enrichNewComments(affectedPostIds);
+    } catch (err) {
+      console.error(`[Sync Job ${job.id}] Enrichment failed (non-fatal):`, err);
+    }
   }
 
   // Pre-warm comment author avatars while CDN URLs are fresh

@@ -23,7 +23,7 @@ import { db } from "@/lib/db";
 import { creditTransactions } from "@/lib/db/schema/credits";
 import { tiktokAccounts } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { getAnalyticsSchema, executeReadQuery } from "@/lib/mcp-app/data";
+import { getAnalyticsSchema, executeReadQuery, searchComments } from "@/lib/mcp-app/data";
 import { addCacheControlToMessages, ANTHROPIC_CACHE_CONTROL } from "@/lib/ai-tools/prompt-cache";
 import { getAnalyticsChatPrompt } from "@/lib/catalog";
 import { chatLimiter } from "@/lib/rate-limit";
@@ -120,6 +120,14 @@ tiktok_accounts, posts, comments, account_metrics_history, post_collaborators
 - posts.hashtags is text[] — use unnest(posts.hashtags) to expand
 - Join comments table via comments.post_id = posts.id
 - Nullable columns: posts.posted_at, posts.duration, posts.song_title, posts.song_artist
+
+### Comment Analysis Strategy
+- Comments have pre-computed sentiment: sentiment ('supportive'|'neutral'|'unsupportive'), sentiment_category, sentiment_score
+- For sentiment overview: GROUP BY sentiment (returns 3 rows)
+- For thematic breakdown: GROUP BY sentiment_category, sentiment
+- For specific examples: use search_comments tool with natural language query
+- NEVER SELECT all comment text — always aggregate or use search_comments
+- Pattern: first query distribution, then search_comments for illustrative examples
 
 ${CATALOG_PROMPT}
 
@@ -346,6 +354,24 @@ export async function POST(req: Request) {
               truncated: false,
             };
           }
+        },
+      }),
+
+      search_comments: tool({
+        description:
+          "Semantic search across comments to find examples matching a topic or theme. " +
+          "Use for finding specific comments (e.g., 'negative feedback about form'). " +
+          "Returns top 30 relevant comments with metadata. " +
+          "For aggregate stats, use query_data with GROUP BY sentiment instead.",
+        inputSchema: z.object({
+          query: z.string().describe("Natural language description of comments to find"),
+          limit: z.number().optional().describe("Max results (default 30, max 50)"),
+        }),
+        execute: async ({ query, limit }) => {
+          return await searchComments(userId, query, {
+            limit: Math.min(limit ?? 30, 50),
+            selectedAccountIds,
+          });
         },
       }),
 

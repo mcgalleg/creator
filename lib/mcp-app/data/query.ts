@@ -73,6 +73,9 @@ const ANALYTICS_SCHEMA = [
       reply_count: "integer — replies to this comment",
       is_author_liked: "boolean — whether the creator liked/hearted this comment",
       author_follower_count: "integer — commenter's follower count at time of sync",
+      sentiment: "text — pre-computed: 'supportive', 'neutral', 'unsupportive' (null if not yet classified)",
+      sentiment_category: "text — theme: 'praise', 'question', 'spam', 'sarcasm', 'negative_experience', 'encouragement', 'form_safety', 'feature_request', 'general'",
+      sentiment_score: "real — classification confidence 0.0–1.0",
       posted_at: "timestamp",
       created_at: "timestamp",
     },
@@ -308,8 +311,11 @@ function coerceRow(row: Record<string, unknown>): Record<string, unknown> {
 function cleanDbError(err: unknown, userQuery: string): string {
   if (!(err instanceof Error)) return "Query execution failed";
 
-  // node-postgres DatabaseError has severity, detail, hint, position, etc.
-  const dbErr = err as Error & {
+  // Drizzle wraps DB errors in DrizzleQueryError with the original as `cause`.
+  // The cause (NeonDbError) has the actual Postgres message; the wrapper's
+  // message just echoes the full SQL which is unhelpful for the AI agent.
+  const cause = (err as Error & { cause?: Error }).cause;
+  const dbErr = (cause ?? err) as Error & {
     severity?: string;
     detail?: string;
     hint?: string;
@@ -318,15 +324,7 @@ function cleanDbError(err: unknown, userQuery: string): string {
   };
 
   const parts: string[] = [];
-
-  // Primary error message — strip the query text if embedded
-  let msg = dbErr.message;
-  // Some drivers prepend the query; strip everything before the PG error keywords
-  const pgErrorIdx = msg.search(
-    /\b(ERROR|error|column|relation|syntax error|operator|function|type|permission|violates)\b/
-  );
-  if (pgErrorIdx > 0) msg = msg.substring(pgErrorIdx);
-  parts.push(msg);
+  parts.push(dbErr.message);
 
   if (dbErr.detail) parts.push(`Detail: ${dbErr.detail}`);
   if (dbErr.hint) parts.push(`Hint: ${dbErr.hint}`);

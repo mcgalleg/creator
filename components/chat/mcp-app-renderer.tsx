@@ -180,6 +180,9 @@ export function McpAppRenderer({
       return resp.json();
     };
 
+    // Set bridgeRef before connect() so onsandboxready can check identity
+    bridgeRef.current = bridge;
+
     // Start connecting immediately. Handlers set via setters are registered
     // in Protocol's handler map, so they work regardless of connect() timing.
     // onsandboxready awaits this to ensure the transport is ready.
@@ -284,6 +287,12 @@ export function McpAppRenderer({
       console.log('[McpAppRenderer] Sandbox proxy ready, waiting for connect...');
       try {
         await connectPromise;
+        // Guard against React Strict Mode: cleanup may have closed the bridge
+        // between connectPromise resolving and this callback running.
+        if (bridgeRef.current !== bridge) {
+          console.log('[McpAppRenderer] Bridge replaced during connect — skipping');
+          return;
+        }
         const resp = await fetch(currentMetadataUrl);
         if (!resp.ok) {
           console.error('[McpAppRenderer] Metadata fetch failed:', resp.status);
@@ -298,7 +307,11 @@ export function McpAppRenderer({
           permissions: metadata.permissions,
         });
       } catch (err) {
-        console.error('[McpAppRenderer] Failed to fetch metadata:', err);
+        if ((err as Error).message === 'Not connected') {
+          console.log('[McpAppRenderer] Bridge disconnected before sandbox ready — will retry on remount');
+        } else {
+          console.error('[McpAppRenderer] Failed to fetch metadata:', err);
+        }
       }
     };
 
@@ -385,8 +398,6 @@ export function McpAppRenderer({
       console.log('[McpAppRenderer] iframe loaded');
     };
     iframe.addEventListener('load', onIframeLoad);
-
-    bridgeRef.current = bridge;
 
     // Cleanup: graceful teardown then close
     return () => {
