@@ -26,7 +26,6 @@ async function purgeAll() {
       post_collaborators,
       account_metrics_history,
       credit_transactions,
-      dashboard_layouts,
       sync_jobs,
       posts,
       drawings,

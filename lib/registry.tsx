@@ -21,6 +21,7 @@ import {
   YAxis,
   PolarGrid,
   PolarAngleAxis,
+  Cell,
 } from "recharts";
 import {
   ChartContainer,
@@ -74,6 +75,7 @@ type SeriesItem = {
 
 /** Build ChartConfig for series-based charts (Area/Bar/Line/Radar). */
 function buildSeriesConfig(series: SeriesItem[]): ChartConfig {
+  if (!Array.isArray(series)) return {};
   const config: ChartConfig = {};
   series.forEach((s, i) => {
     config[s.dataKey] = {
@@ -90,6 +92,7 @@ function buildCategoricalChart(
   nameKey: string,
 ): { config: ChartConfig; coloredData: Record<string, unknown>[] } {
   const config: ChartConfig = {};
+  if (!Array.isArray(data)) return { config: {}, coloredData: [] };
   const coloredData = data.map((row, i) => {
     const name = String(row[nameKey] ?? `item-${i}`);
     config[name] = {
@@ -224,7 +227,12 @@ export const { registry } = defineRegistry(catalog, {
                 fill={`var(--color-${s.dataKey})`}
                 radius={4}
                 stackId={stacked ? "stack" : (s.stackId ?? undefined)}
-              />
+              >
+                {/* Single-series categorical: color each bar differently */}
+                {series.length === 1 && Array.isArray(data) && data.map((_, i) => (
+                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                ))}
+              </Bar>
             ))}
           </RBarChart>
         </ChartContainer>
@@ -277,7 +285,7 @@ export const { registry } = defineRegistry(catalog, {
       };
       const { config, coloredData } = buildCategoricalChart(data, nameKey);
       return (
-        <ChartContainer config={config}>
+        <ChartContainer config={config} className="mx-auto aspect-square" style={{ minHeight: 250, maxHeight: 350 }}>
           <RPieChart accessibilityLayer>
             {tooltip !== false && (
               <ChartTooltip content={<ChartTooltipContent nameKey={nameKey} hideLabel />} />
@@ -338,7 +346,7 @@ export const { registry } = defineRegistry(catalog, {
       };
       const { config, coloredData } = buildCategoricalChart(data, nameKey);
       return (
-        <ChartContainer config={config}>
+        <ChartContainer config={config} className="mx-auto aspect-square" style={{ minHeight: 250, maxHeight: 350 }}>
           <RRadialBarChart
             data={coloredData}
             innerRadius="30%"

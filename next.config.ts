@@ -1,8 +1,10 @@
+import createMDX from "@next/mdx";
 import type { NextConfig } from "next";
 
 const sandboxOrigin = process.env.NEXT_PUBLIC_MCP_SANDBOX_ORIGIN || "";
 
 const nextConfig: NextConfig = {
+  pageExtensions: ["ts", "tsx", "md", "mdx"],
   allowedDevOrigins: ["*.ngrok-free.dev"],
   images: {
     localPatterns: [
@@ -41,4 +43,6 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const withMDX = createMDX({});
+
+export default withMDX(nextConfig);

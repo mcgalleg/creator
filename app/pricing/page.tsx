@@ -323,10 +323,6 @@ export default function PricingPage() {
                             <span>AI Analytics Assistant</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                            <span>Export Reports</span>
-                          </div>
-                          <div className="flex items-center gap-2">
                             <Plug className="h-4 w-4 text-primary flex-shrink-0" />
                             <span>MCP server access included</span>
                           </div>

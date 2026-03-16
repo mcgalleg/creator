@@ -24,28 +24,28 @@ export function Footer() {
               <h4 className="text-sm font-semibold">Product</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <Link
+                  <a
                     href="/#ai-copilot"
                     className="hover:text-foreground transition-colors"
                   >
                     AI Copilot
-                  </Link>
+                  </a>
                 </li>
                 <li>
-                  <Link
+                  <a
                     href="/#pricing"
                     className="hover:text-foreground transition-colors"
                   >
                     Pricing
-                  </Link>
+                  </a>
                 </li>
                 <li>
-                  <Link
+                  <a
                     href="/#canvas"
                     className="hover:text-foreground transition-colors"
                   >
                     Canvas
-                  </Link>
+                  </a>
                 </li>
               </ul>
             </div>
@@ -56,18 +56,26 @@ export function Footer() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
                   <Link
-                    href="/#faq"
-                    className="hover:text-foreground transition-colors"
-                  >
-                    FAQ
-                  </Link>
-                </li>
-                <li>
-                  <Link
                     href="/docs"
                     className="hover:text-foreground transition-colors"
                   >
                     Documentation
+                  </Link>
+                </li>
+                <li>
+                  <a
+                    href="/#faq"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    FAQ
+                  </a>
+                </li>
+                <li>
+                  <Link
+                    href="/support"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Contact Support
                   </Link>
                 </li>
               </ul>

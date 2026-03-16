@@ -7,7 +7,6 @@ import {
   Users,
   RefreshCw,
   Palette,
-  Download,
   Sparkles,
   Plug,
   Send,
@@ -242,11 +241,6 @@ const MORE_FEATURES = [
     desc: "Full, incremental, or quick sync on your schedule",
   },
   {
-    icon: Download,
-    title: "Export Reports",
-    desc: "Download canvas and reports as PDF or CSV",
-  },
-  {
     icon: Sparkles,
     title: "Streaming UI",
     desc: "Watch charts and insights render in real time",
@@ -305,8 +299,8 @@ export function FeatureBento() {
         {/* Sticky scroll cards */}
         <div className="w-full">
           {/* Card 1: AI Chat Copilot */}
+          <div id="ai-copilot" className="scroll-mt-20" />
           <div
-            id="ai-copilot"
             className="grid grid-cols-1 md:grid-cols-2 items-center gap-6 md:gap-10 p-8 md:p-12 rounded-3xl mb-10 sticky z-[1] scroll-mt-20 min-h-[500px]"
             style={{ top: STICKY_TOP, backgroundColor: "var(--card-1)" }}
           >
@@ -328,8 +322,8 @@ export function FeatureBento() {
           </div>
 
           {/* Card 2: Canvas Workspace */}
+          <div id="canvas" className="scroll-mt-20" />
           <div
-            id="canvas"
             className="grid grid-cols-1 md:grid-cols-2 items-center gap-6 md:gap-10 p-8 md:p-12 rounded-3xl mb-10 sticky z-[2] scroll-mt-20 min-h-[500px]"
             style={{ top: STICKY_TOP, backgroundColor: "var(--card-2)" }}
           >
@@ -351,8 +345,8 @@ export function FeatureBento() {
           </div>
 
           {/* Card 3: MCP Apps */}
+          <div id="mcp" className="scroll-mt-20" />
           <div
-            id="mcp"
             className="grid grid-cols-1 md:grid-cols-2 items-center gap-6 md:gap-10 p-8 md:p-12 rounded-3xl mb-10 sticky z-[3] scroll-mt-20 min-h-[500px]"
             style={{ top: STICKY_TOP, backgroundColor: "var(--card-3)" }}
           >

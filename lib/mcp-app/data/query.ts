@@ -128,6 +128,7 @@ export async function getAnalyticsSchema(userId: string, selectedAccountIds?: nu
       "Engagement rate: (posts.likes + posts.comments + posts.shares)::numeric / NULLIF(posts.plays, 0) * 100 — use ::numeric to prevent integer division truncation. " +
       "The hashtags column is text[] — use unnest(posts.hashtags) to expand for per-hashtag analysis. " +
       "posted_at, duration, song_title, and song_artist may be NULL — use appropriate NULL handling. " +
+      "Rounding: use value::numeric(10,1) for 1 decimal place — do NOT use ROUND(value, N) as it fails on non-numeric types. " +
       "Join comments to posts via comments.post_id = posts.id. " +
       "Join post_collaborators via post_collaborators.post_id = posts.id. " +
       "Use account_metrics_history for follower/following count snapshots over time. " +
@@ -147,6 +148,7 @@ export async function getAnalyticsSchema(userId: string, selectedAccountIds?: nu
       "account_metrics_history contains periodic snapshots — use recorded_at for time-series analysis of follower growth",
       "Comments have pre-computed sentiment fields: sentiment, sentiment_category, sentiment_score",
       "NEVER SELECT all comment text — always aggregate with GROUP BY or use search_comments",
+      "Rounding: use value::numeric(10,1) — do NOT use ROUND(value, N) as it fails on non-numeric types",
       "If a query fails with a column error, re-check the schema above before retrying",
       "Maximum 500 rows returned per query — for time-series use DATE_TRUNC('week') or DATE_TRUNC('month'), not 'day', to avoid truncation",
     ],

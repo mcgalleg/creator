@@ -168,7 +168,33 @@ export const catalog = defineCatalog(schema, {
 });
 
 export function getAnalyticsChatPrompt(): string {
-  return catalog.prompt({ mode: "chat" });
+  let prompt = catalog.prompt({
+    mode: "chat",
+    system: "", // Role defined in the wrapping system prompt
+    customRules: [
+      "For ALL analytics, data, KPIs, charts, tables, and search results: use the ```spec JSONL format — never markdown tables.",
+      "Wrap the overall response in a Stack (direction: vertical).",
+      "For KPIs: use a Grid (columns: 3, gap: sm) of Cards. Each Card has a Heading (h3) for the metric name, Text (lead) for the value, and a Badge for trend. NEVER stack KPI cards vertically.",
+      "For tabular data: use Table (columns: string[], rows: string[][]). Inline ALL row data as pre-formatted strings. Do NOT use repeat/$item with Table.",
+      "For time-series: LineChart or AreaChart. For categorical: BarChart (horizontal=true for long labels). For proportions: PieChart (donut=true) or RadialChart. For multi-dimensional: RadarChart.",
+      "Wrap charts in a Card with a title Heading. Max ~20 data points. Format numbers compactly (1.2M).",
+      "NEVER use emoji in headings, text, or body content — plain text only.",
+    ],
+  });
+
+  // The catalog's chat mode tells the model to "respond conversationally"
+  // before ALL outputs, which causes narration between tool calls. Scope
+  // these instructions to the final response only.
+  prompt = prompt.replace(
+    "You respond conversationally. When generating UI, first write a brief explanation (1-3 sentences), then output JSONL patch lines wrapped in a ```spec code fence.",
+    "When your final response includes UI, write a brief analysis first, then output JSONL patch lines wrapped in a ```spec code fence. When calling tools, output NO text — call tools silently.",
+  );
+  prompt = prompt.replace(
+    "2. Write a brief conversational response before any JSONL output",
+    "2. Write your conversational response ONLY in the final step after all tool results are received — NEVER output text in a step that calls tools",
+  );
+
+  return prompt;
 }
 
 export type Catalog = typeof catalog;

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Blocks } from 'lucide-react';
+import { Blocks, Settings } from 'lucide-react';
+import Link from 'next/link';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { useHasFeatureOptional } from '@/contexts/feature-context';
@@ -128,6 +129,15 @@ export function ConnectorPopover({ enabledConnectors, onToggle }: ConnectorPopov
               />
             ))
           )}
+        </div>
+        <div className="border-t mt-1 pt-1">
+          <Link
+            href="/workspace/connectors"
+            className="flex items-center gap-2 rounded-md p-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            Manage connectors
+          </Link>
         </div>
       </PopoverContent>
     </Popover>

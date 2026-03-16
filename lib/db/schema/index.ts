@@ -8,7 +8,6 @@ export * from "./metrics";
 export * from "./credits";
 export * from "./sync-jobs";
 export * from "./drawings";
-export * from "./dashboard-layouts";
 export * from "./feature-flags";
 export * from "./connectors";
 

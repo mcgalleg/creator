@@ -1,0 +1,46 @@
+export const metadata = {
+  title: "Managing Accounts",
+};
+
+# Managing Accounts
+
+Astriq lets you connect and manage multiple TikTok accounts depending on your subscription tier.
+
+## Account Limits by Tier
+
+| Tier | Max Accounts |
+|------|-------------|
+| Free | 1 |
+| Creator | 5 |
+| Pro | 15 |
+| Agency | 50 |
+| MCP Apps | 10 |
+
+## Connecting an Account
+
+1. Navigate to **Workspace > Accounts** from the workspace header
+2. Click **Connect TikTok Account**
+3. Authorize Astriq to access the TikTok account's data
+4. The initial sync will begin automatically
+
+## Syncing Data
+
+Astriq syncs your TikTok data to keep your analytics up to date. Each sync consumes [sync credits](/docs/sync-credits).
+
+- **Automatic syncs** run periodically to keep data fresh
+- **Manual syncs** can be triggered from the Accounts page for any connected account
+- **Sync status** is displayed on each account card
+
+## Disconnecting an Account
+
+To disconnect a TikTok account:
+
+1. Go to **Workspace > Accounts**
+2. Click on the account you want to disconnect
+3. Select **Disconnect**
+
+Disconnecting removes the account from Astriq and stops future syncs. Previously synced data is retained until you delete your Astriq account or it expires per the [data retention policy](/privacy#data-storage--retention).
+
+## Switching Between Accounts
+
+When asking the AI Copilot questions, you can specify which account to query. If you have multiple accounts connected, the copilot can analyze data across all of them or focus on a specific one.

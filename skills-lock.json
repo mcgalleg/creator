@@ -16,6 +16,11 @@
       "sourceType": "github",
       "computedHash": "cb8b1a6963b16a6a0fb32fe60e3e75750b6fa72b76e42bb2a639fd6f0df944c9"
     },
+    "json-render": {
+      "source": "vercel-labs/vercel-plugin",
+      "sourceType": "github",
+      "computedHash": "373b358937b1ada8e3b9d1d5567a7d8c45c26b475fa5949720302d8f9572b74a"
+    },
     "json-render-react": {
       "source": "vercel-labs/json-render",
       "sourceType": "github",

@@ -1,17 +1,15 @@
 # Astriq — AI-Powered TikTok Analytics
 
-Astriq is an AI-powered TikTok analytics platform that lets content creators understand their performance through natural language queries, customizable dashboards, and a freeform canvas workspace.
+Astriq is an AI-powered TikTok analytics platform that lets content creators understand their performance through natural language queries, AI-generated visualizations, and a freeform canvas workspace.
 
 ## Features
 
 - **AI Chat Copilot** — Ask questions about your TikTok data in plain English; Claude generates interactive charts, metrics, and insights
 - **Canvas Workspace** — Freeform Excalidraw workspace for sketching notes, shapes, and visual strategy planning
-- **Dynamic Dashboard** — 20+ customizable widgets with drag-and-drop responsive grid layout
 - **Multi-Account Support** — Connect and analyze multiple TikTok accounts (1–50 depending on tier)
 - **Smart Comment Sync** — Sync by selection, top performers, date range, or budget
 - **MCP Server** — Connect Claude Desktop, ChatGPT, or Claude Code as external AI clients
 - **17 Color Themes** — Full theming with light/dark mode support
-- **Data Export** — Download canvas and dashboards as PDF or CSV
 - **Keyboard Shortcuts** — Command palette (`Cmd+K`) and customizable shortcuts
 
 ## Tech Stack
@@ -192,7 +190,7 @@ creator/
 │   ├── analytics/             # Chart & visualization components
 │   ├── backgrounds/           # Animated backgrounds (PixelBlast)
 │   ├── chat/                  # Chat interface
-│   ├── dashboard/             # Dashboard shell, widgets, navigation
+│   ├── dashboard/             # Dashboard shell, navigation
 │   │   └── accounts/          # Account management UI
 │   ├── excalidraw/            # Canvas drawing components
 │   ├── landing/               # Landing page sections
@@ -234,7 +232,7 @@ creator/
 2. **Account Connection** — User enters TikTok username; Apify validates and scrapes profile
 3. **Data Sync** — Background jobs fetch posts/comments; sync credits deducted on completion
 4. **Analytics Chat** — User asks questions; Claude queries data and generates visualizations
-5. **Dashboard** — Customizable widgets with persistent responsive layouts
+5. **Dashboard** — Account management, data overview, and settings
 
 ### Subscription & Billing
 
@@ -258,7 +256,6 @@ Polar handles all subscription and payment processing:
 | `sync_jobs` | Background sync job tracking |
 | `credit_transactions` | Audit log for all credit changes |
 | `drawings` | Excalidraw canvas state |
-| `dashboard_layouts` | Custom widget layouts per breakpoint |
 | `feature_flags` | System-wide feature configuration |
 | `user_feature_overrides` | Per-user feature access overrides |
 
@@ -300,7 +297,6 @@ This allows external AI clients (Claude Desktop, ChatGPT, Claude Code) to query 
 | GET | `/api/dashboard/comments` | Recent comments |
 | GET | `/api/dashboard/comments/top-commenters` | Most active commenters |
 | GET | `/api/dashboard/duration-performance` | Duration vs engagement |
-| GET/PUT | `/api/dashboard/layouts` | Dashboard layout management |
 
 ### Other APIs
 
@@ -323,18 +319,6 @@ This allows external AI clients (Claude Desktop, ChatGPT, Claude Code) to query 
 | POST | `/api/auth/webhook` | Clerk user creation |
 | POST | `/api/webhooks/polar` | Polar subscription & order events |
 | POST | `/api/webhooks/apify` | Apify sync completion |
-
-## Widget Library
-
-The dashboard includes 20+ customizable widgets:
-
-**KPI Widgets** — Followers, Total Plays, Engagement Rate, Total Likes, Total Saves, Total Shares, Average Views, Content Velocity, Overview Metrics
-
-**Chart Widgets** — Engagement Trend, Engagement Breakdown, Posting Frequency, Best Posting Times, Growth Chart, Duration vs Performance
-
-**Content Widgets** — Top Performing Videos, Recent Posts, Viral Posts, Underperforming Content
-
-**Comment Widgets** — Recent Comments, Top Commenters, Comment Sentiment, Comment Activity
 
 ## Comment Sync Options
 

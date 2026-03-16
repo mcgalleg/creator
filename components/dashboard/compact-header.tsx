@@ -1,7 +1,7 @@
 'use client';
 
 import { UserButton } from '@clerk/nextjs';
-import { Coins, LayoutDashboard, Loader2, Settings, Sparkles, Plug, BookOpen, Menu, Blocks } from 'lucide-react';
+import { CircleHelp, Coins, LayoutDashboard, Loader2, Settings, Sparkles, Plug, Menu } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
@@ -98,13 +98,6 @@ export function CompactHeader({ subscriptionTier = "free" }: CompactHeaderProps)
         {/* Desktop nav buttons - hidden on mobile, shown in sheet instead */}
         <div className="hidden md:flex items-center gap-2">
           <Button variant="ghost" size="icon-sm" asChild className="min-h-[32px] min-w-[32px]">
-            <Link href="/docs">
-              <BookOpen className="h-4 w-4" />
-              <span className="sr-only">Documentation</span>
-            </Link>
-          </Button>
-
-          <Button variant="ghost" size="icon-sm" asChild className="min-h-[32px] min-w-[32px]">
             <Link href={workspaceHref}>
               {isMcp ? (
                 <Plug className="h-4 w-4" />
@@ -116,16 +109,16 @@ export function CompactHeader({ subscriptionTier = "free" }: CompactHeaderProps)
           </Button>
 
           <Button variant="ghost" size="icon-sm" asChild className="min-h-[32px] min-w-[32px]">
-            <Link href="/workspace/connectors">
-              <Blocks className="h-4 w-4" />
-              <span className="sr-only">Connectors</span>
+            <Link href="/workspace/settings">
+              <Settings className="h-4 w-4" />
+              <span className="sr-only">Settings</span>
             </Link>
           </Button>
 
           <Button variant="ghost" size="icon-sm" asChild className="min-h-[32px] min-w-[32px]">
-            <Link href="/workspace/settings">
-              <Settings className="h-4 w-4" />
-              <span className="sr-only">Settings</span>
+            <Link href="/docs" target="_blank">
+              <CircleHelp className="h-4 w-4" />
+              <span className="sr-only">Help & Docs</span>
             </Link>
           </Button>
         </div>
@@ -150,28 +143,21 @@ export function CompactHeader({ subscriptionTier = "free" }: CompactHeaderProps)
                 {isMcp ? "MCP Hub" : "Workspace"}
               </Link>
               <Link
-                href="/docs"
-                onClick={() => setSheetOpen(false)}
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
-              >
-                <BookOpen className="h-4 w-4" />
-                Documentation
-              </Link>
-              <Link
-                href="/workspace/connectors"
-                onClick={() => setSheetOpen(false)}
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
-              >
-                <Blocks className="h-4 w-4" />
-                Connectors
-              </Link>
-              <Link
                 href="/workspace/settings"
                 onClick={() => setSheetOpen(false)}
                 className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
               >
                 <Settings className="h-4 w-4" />
                 Settings
+              </Link>
+              <Link
+                href="/docs"
+                target="_blank"
+                onClick={() => setSheetOpen(false)}
+                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
+              >
+                <CircleHelp className="h-4 w-4" />
+                Help & Docs
               </Link>
             </nav>
             <div className="mt-6 px-3">

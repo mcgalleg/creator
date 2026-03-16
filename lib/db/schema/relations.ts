@@ -7,7 +7,6 @@ import { accountMetricsHistory } from "./metrics";
 import { creditTransactions } from "./credits";
 import { syncJobs } from "./sync-jobs";
 import { drawings } from "./drawings";
-import { dashboardLayouts } from "./dashboard-layouts";
 import { userFeatureOverrides } from "./feature-flags";
 import { connectors, userConnectors } from "./connectors";
 
@@ -17,7 +16,6 @@ export const usersRelations = relations(users, ({ many }) => ({
   creditTransactions: many(creditTransactions),
   syncJobs: many(syncJobs),
   drawings: many(drawings),
-  dashboardLayouts: many(dashboardLayouts),
   featureOverrides: many(userFeatureOverrides),
   userConnectors: many(userConnectors),
 }));
@@ -82,14 +80,6 @@ export const syncJobsRelations = relations(syncJobs, ({ one }) => ({
 export const drawingsRelations = relations(drawings, ({ one }) => ({
   user: one(users, {
     fields: [drawings.userId],
-    references: [users.id],
-  }),
-}));
-
-// Dashboard layouts relations
-export const dashboardLayoutsRelations = relations(dashboardLayouts, ({ one }) => ({
-  user: one(users, {
-    fields: [dashboardLayouts.userId],
     references: [users.id],
   }),
 }));

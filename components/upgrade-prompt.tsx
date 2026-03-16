@@ -21,8 +21,8 @@ const FEATURE_INFO = {
     icon: Palette,
     benefits: [
       'Pin visualizations from chat',
-      'Drag and drop layout',
-      'Save custom dashboards',
+      'Freeform drawing and notes',
+      'Save your workspace',
     ],
   },
   analytics_assistant: {
