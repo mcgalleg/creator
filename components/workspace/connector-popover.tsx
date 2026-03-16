@@ -54,7 +54,7 @@ function ConnectorRow({
       className="flex items-center gap-3 rounded-md p-2 hover:bg-muted/50 cursor-pointer transition-colors"
     >
       {connector.iconUrl ? (
-        <Image src={connector.iconUrl} alt="" width={16} height={16} className="h-4 w-4 shrink-0" unoptimized />
+        <Image src={connector.iconUrl} alt={connector.name} width={16} height={16} className="h-4 w-4 shrink-0" unoptimized />
       ) : (
         <Blocks className="h-4 w-4 shrink-0 text-muted-foreground" />
       )}

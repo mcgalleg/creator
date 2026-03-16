@@ -65,8 +65,9 @@ export function Hero() {
           Stop Guessing. Start Growing.
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-          Ask Astriq anything about your content, audience, or growth — and
-          get actionable answers instantly.
+          AI-powered TikTok analytics that turns your content data into
+          actionable growth insights. Ask anything about your videos, audience,
+          or engagement.
         </p>
         <HeroPrompt />
       </div>

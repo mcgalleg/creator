@@ -29,7 +29,7 @@ export function ConnectorCard({ connector, enabled, onToggle }: ConnectorCardPro
         <div className="flex items-start gap-3">
           <div className="shrink-0 h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
             {connector.iconUrl ? (
-              <Image src={connector.iconUrl} alt="" width={24} height={24} className="h-6 w-6" unoptimized />
+              <Image src={connector.iconUrl} alt={connector.name} width={24} height={24} className="h-6 w-6" unoptimized />
             ) : (
               <Blocks className="h-5 w-5 text-muted-foreground" />
             )}
