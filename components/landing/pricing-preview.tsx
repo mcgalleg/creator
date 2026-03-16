@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check, Bot, RefreshCw, Plug, Coins, Zap } from "lucide-react";
-import { SignUpButton, SignedOut } from "@clerk/nextjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -321,11 +320,9 @@ export function PricingPreview() {
         </p>
 
         <div className="text-center mt-8 space-y-4">
-          <SignedOut>
-            <SignUpButton mode="modal">
-              <Button size="lg">Get Started Free</Button>
-            </SignUpButton>
-          </SignedOut>
+          <Button asChild size="lg">
+            <Link href="/workspace">Get Started Free</Link>
+          </Button>
           <div>
             <Link
               href="/pricing"

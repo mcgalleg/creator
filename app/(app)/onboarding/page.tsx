@@ -21,17 +21,18 @@ export default async function OnboardingPage({
 
   if (!isPreview) {
     // Check if onboarding is already complete
-    const accounts = await db
-      .select({ id: tiktokAccounts.id })
-      .from(tiktokAccounts)
-      .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")))
-      .limit(1);
-
-    const userRecord = await db
-      .select({ onboardingCompletedAt: users.onboardingCompletedAt })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
+    const [accounts, userRecord] = await Promise.all([
+      db
+        .select({ id: tiktokAccounts.id })
+        .from(tiktokAccounts)
+        .where(and(eq(tiktokAccounts.userId, userId), eq(tiktokAccounts.status, "active")))
+        .limit(1),
+      db
+        .select({ onboardingCompletedAt: users.onboardingCompletedAt })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1),
+    ]);
 
     const onboardingCompletedAt = userRecord[0]?.onboardingCompletedAt ?? null;
 

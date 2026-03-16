@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
-import { shadcn } from "@clerk/themes";
 import { Geist, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AccentColorProvider } from "@/contexts/accent-color-context";
@@ -31,31 +29,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider appearance={{ theme: shadcn }}>
-      <html lang="en" data-accent="blue" suppressHydrationWarning>
-        <head>
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `(function(){try{var a=localStorage.getItem('accent-color');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}})()`,
-            }}
-          />
-        </head>
-        <body
-          className={`${geistSans.variable} ${jetbrainsMono.variable} antialiased`}
+    <html lang="en" data-accent="blue" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var a=localStorage.getItem('accent-color');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}})()`,
+          }}
+        />
+      </head>
+      <body
+        className={`${geistSans.variable} ${jetbrainsMono.variable} antialiased`}
+      >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
         >
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <AccentColorProvider>
-              {children}
-              <Toaster />
-            </AccentColorProvider>
-          </ThemeProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+          <AccentColorProvider>
+            {children}
+            <Toaster />
+          </AccentColorProvider>
+        </ThemeProvider>
+      </body>
+    </html>
   );
 }

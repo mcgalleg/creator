@@ -26,13 +26,14 @@ export default async function WorkspaceRootLayout({
     redirect("/sign-in");
   }
 
-  // Ensure user exists in the database (auto-provisions from Clerk if missing)
+  // Ensure user exists in the database (auto-provisions from Clerk if missing).
+  // Must complete before data queries since they depend on the user record.
   if (userId) {
     await ensureUserExists(userId);
   }
 
-  // Fetch user's TikTok accounts, onboarding status, and subscription tier in parallel
-  const [rawAccounts, userRecord] = await Promise.all([
+  // Fetch accounts, user record, and feature access in parallel
+  const [rawAccounts, userRecord, canvasAccess, chatAccess] = await Promise.all([
     userId
       ? db
           .select({
@@ -54,6 +55,8 @@ export default async function WorkspaceRootLayout({
           .where(eq(users.id, userId))
           .limit(1)
       : Promise.resolve([]),
+    userId ? hasFeature(FEATURES.CANVAS) : Promise.resolve(false),
+    userId ? hasFeature(FEATURES.ANALYTICS_ASSISTANT) : Promise.resolve(false),
   ]);
   const accounts = rawAccounts.map((a) => ({
     ...a,
@@ -79,22 +82,10 @@ export default async function WorkspaceRootLayout({
     }
   }
 
-  // Resolve feature access server-side via Clerk has() (DB fallback in bypass mode)
-  let features: Record<string, boolean> = {
-    canvas: false,
-    analytics_assistant: false,
+  const features: Record<string, boolean> = {
+    canvas: canvasAccess,
+    analytics_assistant: chatAccess,
   };
-
-  if (userId) {
-    const [canvasAccess, chatAccess] = await Promise.all([
-      hasFeature(FEATURES.CANVAS),
-      hasFeature(FEATURES.ANALYTICS_ASSISTANT),
-    ]);
-    features = {
-      canvas: canvasAccess,
-      analytics_assistant: chatAccess,
-    };
-  }
 
   return (
     <FeatureAccessProvider features={features}>

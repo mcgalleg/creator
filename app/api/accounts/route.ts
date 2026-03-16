@@ -105,12 +105,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if account already exists for this user
-    const existingAccounts = await db
-      .select()
-      .from(tiktokAccounts)
-      .where(eq(tiktokAccounts.userId, userId))
-      .limit(100);
+    // Check existing accounts and subscription tier in parallel
+    const [existingAccounts, tier] = await Promise.all([
+      db
+        .select()
+        .from(tiktokAccounts)
+        .where(eq(tiktokAccounts.userId, userId))
+        .limit(100),
+      getUserTier(userId),
+    ]);
 
     const alreadyConnected = existingAccounts.find(
       (acc) => acc.username.toLowerCase() === cleanUsername && acc.status === "active"
@@ -130,7 +133,6 @@ export async function POST(request: NextRequest) {
 
     // Enforce account limit based on subscription tier (count only active accounts)
     const activeAccounts = existingAccounts.filter((acc) => acc.status === "active");
-    const tier = await getUserTier(userId);
     const accountLimit = TIER_ACCOUNT_LIMITS[tier];
     if (activeAccounts.length >= accountLimit) {
       return NextResponse.json(

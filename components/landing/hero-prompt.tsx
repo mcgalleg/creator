@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { SignUpButton, useUser } from "@clerk/nextjs";
 import { ArrowUp } from "lucide-react";
 
 const PROMPTS = [
@@ -27,7 +26,6 @@ const SUGGESTION_CHIPS = [
 ];
 
 export function HeroPrompt() {
-  const { isSignedIn } = useUser();
   const router = useRouter();
   const [displayText, setDisplayText] = useState("");
   const [isAnimating, setIsAnimating] = useState(true);
@@ -105,16 +103,13 @@ export function HeroPrompt() {
   }
 
   function handleSubmit() {
-    if (isSignedIn) {
-      const q = userText.trim();
-      router.push(q ? `/workspace?q=${encodeURIComponent(q)}` : "/workspace");
-    }
+    const q = userText.trim();
+    router.push(q ? `/workspace?q=${encodeURIComponent(q)}` : "/workspace");
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (!isSignedIn) return;
       handleSubmit();
     }
   }
@@ -158,7 +153,7 @@ export function HeroPrompt() {
       <div className="absolute bottom-3 right-3">
         <button
           type="button"
-          onClick={isSignedIn ? handleSubmit : undefined}
+          onClick={handleSubmit}
           className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-105 active:scale-95"
         >
           <ArrowUp className="size-4" />
@@ -169,13 +164,7 @@ export function HeroPrompt() {
 
   return (
     <div className="mt-10">
-      {isSignedIn ? (
-        inputCard
-      ) : (
-        <SignUpButton mode="modal">
-          {inputCard}
-        </SignUpButton>
-      )}
+      {inputCard}
 
       {/* Suggestion chips */}
       <p className="mt-6 text-xs font-medium uppercase tracking-wider text-muted-foreground/60">

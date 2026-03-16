@@ -13,7 +13,13 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { CanvasInteractiveMockup } from "./canvas-interactive-mockup";
+import dynamic from "next/dynamic";
+
+const CanvasInteractiveMockup = dynamic(
+  () =>
+    import("./canvas-interactive-mockup").then((m) => m.CanvasInteractiveMockup),
+  { ssr: false }
+);
 import { AnimateOnScroll } from "./animate-on-scroll";
 
 function ChatMockup() {

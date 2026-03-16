@@ -81,14 +81,6 @@ export async function GET(request: NextRequest) {
 
     const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
 
-    // Get total count for pagination
-    const [totalResult] = await db
-      .select({ count: count() })
-      .from(posts)
-      .where(whereClause);
-
-    const total = totalResult?.count ?? 0;
-
     // Determine sort direction
     const dirFn = sortDirParam === "asc" ? asc : desc;
 
@@ -117,28 +109,36 @@ export async function GET(request: NextRequest) {
       orderClause = desc(posts.postedAt);
     }
 
-    // Get posts with pagination
-    const recentPosts = await db
-      .select({
-        id: posts.id,
-        tiktokId: posts.tiktokId,
-        description: posts.description,
-        thumbnailUrl: posts.thumbnailUrl,
-        likes: posts.likes,
-        comments: posts.comments,
-        shares: posts.shares,
-        plays: posts.plays,
-        saves: posts.saves,
-        postedAt: posts.postedAt,
-        commentsSyncedAt: posts.commentsSyncedAt,
-        syncedCommentCount: posts.syncedCommentCount,
-        updatedAt: posts.updatedAt,
-      })
-      .from(posts)
-      .where(whereClause)
-      .orderBy(orderClause)
-      .limit(limit)
-      .offset(offset);
+    // Run count and data queries in parallel
+    const [[totalResult], recentPosts] = await Promise.all([
+      db
+        .select({ count: count() })
+        .from(posts)
+        .where(whereClause),
+      db
+        .select({
+          id: posts.id,
+          tiktokId: posts.tiktokId,
+          description: posts.description,
+          thumbnailUrl: posts.thumbnailUrl,
+          likes: posts.likes,
+          comments: posts.comments,
+          shares: posts.shares,
+          plays: posts.plays,
+          saves: posts.saves,
+          postedAt: posts.postedAt,
+          commentsSyncedAt: posts.commentsSyncedAt,
+          syncedCommentCount: posts.syncedCommentCount,
+          updatedAt: posts.updatedAt,
+        })
+        .from(posts)
+        .where(whereClause)
+        .orderBy(orderClause)
+        .limit(limit)
+        .offset(offset),
+    ]);
+
+    const total = totalResult?.count ?? 0;
 
     // Calculate engagement rate for each post
     // Engagement rate = (likes + comments + shares + saves) / plays * 100

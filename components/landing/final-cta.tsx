@@ -5,7 +5,6 @@ import {
   PenTool,
   MessageSquare,
 } from "lucide-react";
-import { SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AnimateOnScroll } from "@/components/landing/animate-on-scroll";
@@ -32,16 +31,9 @@ export function FinalCta() {
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
-                <SignedOut>
-                  <SignUpButton mode="modal">
-                    <Button size="lg">Get Started Free</Button>
-                  </SignUpButton>
-                </SignedOut>
-                <SignedIn>
-                  <Button asChild size="lg">
-                    <Link href="/workspace">Go to Workspace</Link>
-                  </Button>
-                </SignedIn>
+                <Button asChild size="lg">
+                  <Link href="/workspace">Get Started Free</Link>
+                </Button>
                 <Button asChild variant="outline" size="lg">
                   <Link href="/workspace">Explore Workspace</Link>
                 </Button>

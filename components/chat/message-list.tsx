@@ -10,11 +10,13 @@ import { MarkdownRenderer } from './markdown-renderer';
 import { McpAppRenderer } from './mcp-app-renderer';
 import useSWR from 'swr';
 
-const connectorFetcher = (url: string) => fetch(url).then((r) => r.json());
 import { useArtifactCopy } from '@/hooks/use-artifact-copy';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Copy, Check, Download, Image } from 'lucide-react';
+
+const connectorFetcher = (url: string) => fetch(url).then((r) => r.json());
+const EMPTY_STATE = {};
 
 interface MessageListProps {
   messages: UIMessage[];
@@ -154,7 +156,7 @@ function MessageBubble({
             <JSONUIProvider
               key={message.id}
               registry={registry}
-              initialState={spec.state ?? {}}
+              initialState={spec.state ?? EMPTY_STATE}
             >
               <Renderer spec={spec} registry={registry} loading={isStreaming} />
             </JSONUIProvider>

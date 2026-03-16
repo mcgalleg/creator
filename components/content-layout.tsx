@@ -1,4 +1,4 @@
-import { Nav } from "@/components/landing/nav";
+import { LandingNav } from "@/components/landing/landing-nav";
 import { Footer } from "@/components/landing/footer";
 import { Badge } from "@/components/ui/badge";
 import type { LucideIcon } from "lucide-react";
@@ -14,7 +14,7 @@ interface ContentLayoutProps {
 export function ContentLayout({ children, badge }: ContentLayoutProps) {
   return (
     <div className="flex min-h-screen flex-col bg-background font-sans">
-      <Nav />
+      <LandingNav />
       <main className="flex-1">
         <div className="container mx-auto max-w-4xl px-4 py-16">
           <div className="space-y-4 [&>hr+h2]:mt-0">

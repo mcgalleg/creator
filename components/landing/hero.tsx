@@ -1,8 +1,15 @@
 "use client";
 
-import { PixelBlast } from "@/components/ui/pixel-blast";
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { HeroPrompt } from "@/components/landing/hero-prompt";
 import { useAccentColor, type AccentColor } from "@/contexts/accent-color-context";
+
+const PixelBlast = dynamic(
+  () =>
+    import("@/components/ui/pixel-blast").then((m) => m.PixelBlast),
+  { ssr: false }
+);
 
 const ACCENT_HEX: Record<AccentColor, string> = {
   amber: "#f59e0b",
@@ -27,20 +34,31 @@ const ACCENT_HEX: Record<AccentColor, string> = {
 export function Hero() {
   const { accentColor } = useAccentColor();
   const pixelColor = ACCENT_HEX[accentColor];
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    setIsDesktop(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   return (
     <section className="relative overflow-hidden py-24 md:py-32">
       <div className="absolute inset-0">
-        <PixelBlast
-          variant="square"
-          speed={0.3}
-          color={pixelColor}
-          pixelSize={3}
-          patternScale={2}
-          patternDensity={1}
-          edgeFade={0.5}
-          enableRipples
-        />
+        {isDesktop && (
+          <PixelBlast
+            variant="square"
+            speed={0.3}
+            color={pixelColor}
+            pixelSize={3}
+            patternScale={2}
+            patternDensity={1}
+            edgeFade={0.5}
+            enableRipples
+          />
+        )}
       </div>
       <div className="container relative mx-auto max-w-4xl px-4 text-center">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
