@@ -35,10 +35,10 @@ export const POLAR_AI_TOKEN_PRODUCTS: Record<string, string> = {
 
 // Monthly AI token allocations per tier
 export const TIER_AI_TOKENS = {
-  free: 100_000,
-  basic: 1_000_000,
-  pro: 3_000_000,
-  agency: 10_000_000,
+  free: 250_000,
+  basic: 3_000_000,
+  pro: 10_000_000,
+  agency: 30_000_000,
   mcp: 0,
 } as const satisfies Record<SubscriptionTier, number>;
 

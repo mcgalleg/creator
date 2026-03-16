@@ -61,14 +61,14 @@ async function main() {
 
   const freeAiBenefit = await polar.benefits.create({
     type: "meter_credit",
-    description: "Free tier: 50K AI tokens/month",
+    description: "Free tier: 250K AI tokens/month",
     properties: {
       meterId: AI_METER_ID,
-      units: 50_000,
+      units: 250_000,
       rollover: false,
     },
   });
-  console.log(`  Created Free AI benefit: ${freeAiBenefit.id} (50K tokens/mo)`);
+  console.log(`  Created Free AI benefit: ${freeAiBenefit.id} (250K tokens/mo)`);
 
   // Step 3: Attach benefits to the Free product
   console.log("Attaching benefits to Free product...");
@@ -94,7 +94,7 @@ async function main() {
     (b) => b.type === "meter_credit"
   );
 
-  // Update Creator meter benefits (250 sync, 1M AI tokens)
+  // Update Creator meter benefits (250 sync, 3M AI tokens)
   for (const benefit of creatorMeterBenefits) {
     if (benefit.type === "meter_credit") {
       const props = benefit.properties as { meterId: string };
@@ -113,16 +113,16 @@ async function main() {
           id: benefit.id,
           requestBody: {
             type: "meter_credit",
-            description: "Creator tier: 1M AI tokens/month",
-            properties: { meterId: AI_METER_ID, units: 1_000_000, rollover: false },
+            description: "Creator tier: 3M AI tokens/month",
+            properties: { meterId: AI_METER_ID, units: 3_000_000, rollover: false },
           },
         });
-        console.log(`  Updated Creator AI benefit: ${benefit.id} (1M tokens/mo)`);
+        console.log(`  Updated Creator AI benefit: ${benefit.id} (3M tokens/mo)`);
       }
     }
   }
 
-  // Step 5: Update Pro product meter benefits (750 sync, 3M AI tokens)
+  // Step 5: Update Pro product meter benefits (750 sync, 10M AI tokens)
   console.log("Updating Pro product meter benefits...");
   const proProduct = await polar.products.get({ id: PRO_PRODUCT_ID });
   const proMeterBenefits = proProduct.benefits.filter(
@@ -147,11 +147,11 @@ async function main() {
           id: benefit.id,
           requestBody: {
             type: "meter_credit",
-            description: "Pro tier: 3M AI tokens/month",
-            properties: { meterId: AI_METER_ID, units: 3_000_000, rollover: false },
+            description: "Pro tier: 10M AI tokens/month",
+            properties: { meterId: AI_METER_ID, units: 10_000_000, rollover: false },
           },
         });
-        console.log(`  Updated Pro AI benefit: ${benefit.id} (3M tokens/mo)`);
+        console.log(`  Updated Pro AI benefit: ${benefit.id} (10M tokens/mo)`);
       }
     }
   }
