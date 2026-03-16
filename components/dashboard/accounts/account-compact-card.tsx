@@ -240,36 +240,45 @@ export function AccountCompactCard({
           </div>
         </div>
 
-        {/* Active sync banners */}
-        {hasActiveJobs &&
-          activeJobs.map((job) => (
-            <div
-              key={job.id}
-              className="flex items-center gap-2 rounded-md bg-primary/5 border border-primary/10 px-3 py-1.5 mt-3"
-            >
-              <Loader2 className="size-3 animate-spin text-primary shrink-0" />
-              <span className="text-xs text-primary">
-                {getActiveJobDescription(job)}
-              </span>
+        {/* Active sync banner */}
+        {hasActiveJobs && (
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 mt-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-primary mb-1">
+              <Loader2 className="size-4 animate-spin shrink-0" />
+              Import in progress
             </div>
-          ))}
+            <div className="space-y-1">
+              {activeJobs.map((job) => (
+                <p key={job.id} className="text-xs text-primary/80">
+                  {getActiveJobDescription(job)}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Error banner */}
         {lastFailedJob && (
-          <div className="flex items-start gap-2 rounded-md bg-destructive/5 border border-destructive/10 px-3 py-1.5 mt-3">
-            <AlertTriangle className="size-3 text-destructive shrink-0 mt-0.5" />
-            <span className="text-xs text-destructive flex-1 truncate">
-              Sync failed: {lastFailedJob.error || "Unknown error"}
-            </span>
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3 mt-3">
+            <AlertTriangle className="size-4 text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-destructive">
+                Import failed
+              </p>
+              <p className="text-xs text-destructive/80 mt-0.5 truncate">
+                {lastFailedJob.error || "An unknown error occurred during sync"}
+              </p>
+            </div>
             <button
               type="button"
-              className="shrink-0 text-destructive hover:text-destructive/80"
               onClick={(e) => {
                 e.stopPropagation();
                 dismissError(lastFailedJob.id);
               }}
+              className="shrink-0 rounded-md p-1 text-destructive hover:bg-destructive/10 transition-colors"
+              aria-label="Dismiss error"
             >
-              <X className="size-3" />
+              <X className="size-3.5" />
             </button>
           </div>
         )}

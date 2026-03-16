@@ -139,7 +139,7 @@ export const { registry } = defineRegistry(catalog, {
     // -----------------------------------------------------------------------
 
     AreaChart: ({ props }) => {
-      const { data, xKey, series, stacked, tooltip, legend } = props as {
+      const { data: rawData, xKey, series: rawSeries, stacked, tooltip, legend } = props as {
         data: Record<string, unknown>[];
         xKey: string;
         series: SeriesItem[];
@@ -147,6 +147,8 @@ export const { registry } = defineRegistry(catalog, {
         tooltip?: boolean | null;
         legend?: boolean | null;
       };
+      const data = Array.isArray(rawData) ? rawData : [];
+      const series = Array.isArray(rawSeries) ? rawSeries : [];
       const config = buildSeriesConfig(series);
       return (
         <ChartContainer config={config}>
@@ -175,7 +177,7 @@ export const { registry } = defineRegistry(catalog, {
     },
 
     BarChart: ({ props }) => {
-      const { data, xKey, series, stacked, horizontal, tooltip, legend } = props as {
+      const { data: rawData, xKey, series: rawSeries, stacked, horizontal, tooltip, legend } = props as {
         data: Record<string, unknown>[];
         xKey: string;
         series: SeriesItem[];
@@ -184,9 +186,11 @@ export const { registry } = defineRegistry(catalog, {
         tooltip?: boolean | null;
         legend?: boolean | null;
       };
+      const data = Array.isArray(rawData) ? rawData : [];
+      const series = Array.isArray(rawSeries) ? rawSeries : [];
       const config = buildSeriesConfig(series);
       // Horizontal bar charts need enough height for each bar row
-      const minH = horizontal && Array.isArray(data)
+      const minH = horizontal && data.length > 0
         ? `${Math.max(200, data.length * 40)}px`
         : undefined;
       return (
@@ -229,7 +233,7 @@ export const { registry } = defineRegistry(catalog, {
                 stackId={stacked ? "stack" : (s.stackId ?? undefined)}
               >
                 {/* Single-series categorical: color each bar differently */}
-                {series.length === 1 && Array.isArray(data) && data.map((_, i) => (
+                {series.length === 1 && data.length > 0 && data.map((_, i) => (
                   <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                 ))}
               </Bar>
@@ -240,7 +244,7 @@ export const { registry } = defineRegistry(catalog, {
     },
 
     LineChart: ({ props }) => {
-      const { data, xKey, series, dots, tooltip, legend } = props as {
+      const { data: rawData, xKey, series: rawSeries, dots, tooltip, legend } = props as {
         data: Record<string, unknown>[];
         xKey: string;
         series: SeriesItem[];
@@ -248,6 +252,8 @@ export const { registry } = defineRegistry(catalog, {
         tooltip?: boolean | null;
         legend?: boolean | null;
       };
+      const data = Array.isArray(rawData) ? rawData : [];
+      const series = Array.isArray(rawSeries) ? rawSeries : [];
       const config = buildSeriesConfig(series);
       return (
         <ChartContainer config={config}>
@@ -275,7 +281,7 @@ export const { registry } = defineRegistry(catalog, {
     },
 
     PieChart: ({ props }) => {
-      const { data, nameKey, valueKey, donut, tooltip, legend } = props as {
+      const { data: rawData, nameKey, valueKey, donut, tooltip, legend } = props as {
         data: Record<string, unknown>[];
         nameKey: string;
         valueKey: string;
@@ -283,6 +289,7 @@ export const { registry } = defineRegistry(catalog, {
         tooltip?: boolean | null;
         legend?: boolean | null;
       };
+      const data = Array.isArray(rawData) ? rawData : [];
       const { config, coloredData } = buildCategoricalChart(data, nameKey);
       return (
         <ChartContainer config={config} className="mx-auto aspect-square" style={{ minHeight: 250, maxHeight: 350 }}>
@@ -305,13 +312,15 @@ export const { registry } = defineRegistry(catalog, {
     },
 
     RadarChart: ({ props }) => {
-      const { data, subjectKey, series, tooltip, legend } = props as {
+      const { data: rawData, subjectKey, series: rawSeries, tooltip, legend } = props as {
         data: Record<string, unknown>[];
         subjectKey: string;
         series: SeriesItem[];
         tooltip?: boolean | null;
         legend?: boolean | null;
       };
+      const data = Array.isArray(rawData) ? rawData : [];
+      const series = Array.isArray(rawSeries) ? rawSeries : [];
       const config = buildSeriesConfig(series);
       return (
         <ChartContainer config={config}>
@@ -337,13 +346,14 @@ export const { registry } = defineRegistry(catalog, {
     },
 
     RadialChart: ({ props }) => {
-      const { data, nameKey, valueKey, tooltip, legend } = props as {
+      const { data: rawData, nameKey, valueKey, tooltip, legend } = props as {
         data: Record<string, unknown>[];
         nameKey: string;
         valueKey: string;
         tooltip?: boolean | null;
         legend?: boolean | null;
       };
+      const data = Array.isArray(rawData) ? rawData : [];
       const { config, coloredData } = buildCategoricalChart(data, nameKey);
       return (
         <ChartContainer config={config} className="mx-auto aspect-square" style={{ minHeight: 250, maxHeight: 350 }}>

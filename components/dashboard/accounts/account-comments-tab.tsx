@@ -20,6 +20,7 @@ import { formatNumber } from "./shared-utils";
 import { InlinePostSelector } from "./inline-post-selector";
 import { CREDIT_RATES, calculateCommentCredits } from "@/lib/credits";
 import type { SyncJob } from "@/hooks/use-accounts";
+import { getActiveJobDescription } from "./shared-utils";
 
 type SyncMode = "selection" | "top_performers" | "date_range";
 
@@ -154,14 +155,18 @@ export function AccountCommentsTab({
     <div className="space-y-4 py-2">
       {/* Active Sync Banner */}
       {hasActiveCommentSync && (
-        <div className="rounded-lg border border-blue-500/50 bg-blue-500/10 p-3 space-y-1">
-          <div className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400">
-            <Loader2 className="size-4 animate-spin" />
-            Comment sync in progress
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-primary mb-1">
+            <Loader2 className="size-4 animate-spin shrink-0" />
+            Import in progress
           </div>
-          <p className="text-xs text-muted-foreground">
-            It may take several minutes to complete.
-          </p>
+          <div className="space-y-1">
+            {activeCommentJobs?.map((job) => (
+              <p key={job.id} className="text-xs text-primary/80">
+                {getActiveJobDescription(job)}
+              </p>
+            ))}
+          </div>
         </div>
       )}
 

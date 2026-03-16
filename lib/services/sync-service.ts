@@ -1144,11 +1144,12 @@ async function finalizeAndComplete(
     `Synced ${counts.postsCount} posts, ${counts.commentsCount} comments for job ${job.id}`
   );
 
-  // Mark job complete
+  // Mark job complete (clear any stale error from stuck detection race)
   await db
     .update(syncJobs)
     .set({
       status: "completed",
+      error: null,
       postsCount: counts.postsCount,
       commentsCount: counts.commentsCount,
       newPostsCount: counts.newPostsCount,
@@ -1275,7 +1276,9 @@ export async function getSyncJobStatus(jobId: number): Promise<{
  */
 async function cleanupStuckJobsForAccount(accountId: number, userId: string): Promise<void> {
   // Grace period: only consider jobs stuck if completedAt was set more than
-  // 60 seconds ago, to avoid racing with webhook/polling processors.
+  // 5 minutes ago. Processing large comment datasets (1000+ items) can take
+  // several minutes for DB upserts, so 60s was too aggressive and caused a
+  // race where stuck detection refunded credits mid-processing.
   const stuckJobs = await db
     .select()
     .from(syncJobs)
@@ -1285,7 +1288,7 @@ async function cleanupStuckJobsForAccount(accountId: number, userId: string): Pr
         eq(syncJobs.userId, userId),
         inArray(syncJobs.status, ["pending", "running"]),
         sql`${syncJobs.completedAt} IS NOT NULL`,
-        sql`${syncJobs.completedAt} < NOW() - INTERVAL '60 seconds'`
+        sql`${syncJobs.completedAt} < NOW() - INTERVAL '5 minutes'`
       )
     );
 

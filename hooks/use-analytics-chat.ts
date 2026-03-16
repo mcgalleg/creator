@@ -3,7 +3,7 @@
 import { useChat, type UIMessage } from '@ai-sdk/react';
 import { DefaultChatTransport, isToolUIPart } from 'ai';
 import { useMemo, useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
-import { useCredits, deductAiTokens } from '@/hooks/use-credits';
+import { useCredits } from '@/hooks/use-credits';
 
 /**
  * Options for configuring the useAnalyticsChat hook.
@@ -79,18 +79,9 @@ export function useAnalyticsChat(options?: UseAnalyticsChatOptions) {
     regenerate,
   } = useChat({
     transport,
-    onFinish: ({ message }) => {
-      // Optimistically deduct tokens from the cached balance so the
-      // header chip updates immediately, without waiting for Polar's
-      // eventually-consistent meter to catch up.
-      const totalTokens = (
-        message.metadata as { totalUsage?: { totalTokens?: number } } | undefined
-      )?.totalUsage?.totalTokens;
-      if (totalTokens && totalTokens > 0) {
-        deductAiTokens(totalTokens);
-      }
-
-      // Background revalidation to reconcile with Polar's real balance.
+    onFinish: () => {
+      // Revalidate credits from Polar after the response completes.
+      // Polar's meter is eventually consistent so we poll twice.
       pollTimersRef.current.forEach(clearTimeout);
       pollTimersRef.current = [3_000, 10_000].map((delay) =>
         setTimeout(() => refreshCredits(), delay)
