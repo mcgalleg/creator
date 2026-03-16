@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AccentColorProvider } from "@/contexts/accent-color-context";
@@ -15,11 +16,10 @@ const geistSans = Geist({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "Astriq",
+  title: { default: "Astriq", template: "%s | Astriq" },
   description: "AI-powered analytics dashboard for content creators",
 };
 
@@ -31,11 +31,9 @@ export default function RootLayout({
   return (
     <html lang="en" data-accent="blue" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var a=localStorage.getItem('accent-color');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}})()`,
-          }}
-        />
+        <Script id="accent-color-init" strategy="beforeInteractive">
+          {`(function(){try{var a=localStorage.getItem('accent-color');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}})()`}
+        </Script>
       </head>
       <body
         className={`${geistSans.variable} ${jetbrainsMono.variable} antialiased`}

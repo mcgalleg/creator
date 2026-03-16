@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Blocks, Settings } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
@@ -53,8 +54,7 @@ function ConnectorRow({
       className="flex items-center gap-3 rounded-md p-2 hover:bg-muted/50 cursor-pointer transition-colors"
     >
       {connector.iconUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={connector.iconUrl} alt="" className="h-4 w-4 shrink-0" />
+        <Image src={connector.iconUrl} alt="" width={16} height={16} className="h-4 w-4 shrink-0" unoptimized />
       ) : (
         <Blocks className="h-4 w-4 shrink-0 text-muted-foreground" />
       )}

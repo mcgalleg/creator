@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AlertCircle, Sparkles, ArrowRight, X, Plus } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { useAnalyticsChat } from '@/hooks/use-analytics-chat';
@@ -220,8 +221,7 @@ export function WorkspaceChat({ accounts: serverAccounts, goals }: WorkspaceChat
               className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-sm"
             >
               {acct.avatarUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={acct.avatarUrl} alt={acct.username} className="h-4.5 w-4.5 rounded-full" />
+                <Image src={acct.avatarUrl} alt={acct.username} width={18} height={18} className="h-4.5 w-4.5 rounded-full" unoptimized />
               )}
               <span className="truncate max-w-[120px]">@{acct.username}</span>
               {!isSingleAccount && (
@@ -254,8 +254,7 @@ export function WorkspaceChat({ accounts: serverAccounts, goals }: WorkspaceChat
                   <DropdownMenuItem key={account.id} onSelect={() => addAccount(account.id)}>
                     <div className="flex items-center gap-2">
                       {account.avatarUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={account.avatarUrl} alt={account.username} className="h-4 w-4 rounded-full" />
+                        <Image src={account.avatarUrl} alt={account.username} width={16} height={16} className="h-4 w-4 rounded-full" unoptimized />
                       )}
                       <span>@{account.username}</span>
                     </div>

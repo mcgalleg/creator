@@ -1,6 +1,7 @@
 'use client';
 
 import { Blocks } from 'lucide-react';
+import Image from 'next/image';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,8 +29,7 @@ export function ConnectorCard({ connector, enabled, onToggle }: ConnectorCardPro
         <div className="flex items-start gap-3">
           <div className="shrink-0 h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
             {connector.iconUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={connector.iconUrl} alt="" className="h-6 w-6" />
+              <Image src={connector.iconUrl} alt="" width={24} height={24} className="h-6 w-6" unoptimized />
             ) : (
               <Blocks className="h-5 w-5 text-muted-foreground" />
             )}
