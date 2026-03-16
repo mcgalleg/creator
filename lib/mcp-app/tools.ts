@@ -3,6 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getCurrentUserId } from "./auth";
 import { getAnalyticsSchema, executeReadQuery } from "./data";
+import { searchComments } from "./data/search";
 
 const RESOURCE_URI = "ui://creator/analytics.html";
 
@@ -50,4 +51,35 @@ export function registerAllTools(server: McpServer) {
       };
     }
   });
+
+  server.tool(
+    "search_comments",
+    "Semantic search across comments to find examples matching a topic or theme. " +
+      "Uses AI embeddings to find semantically similar comments, not just keyword matches. " +
+      "Results are scoped to the current user's connected accounts.",
+    {
+      query: z.string().describe("Natural language description of comments to find"),
+      sentiment: z.enum(["supportive", "neutral", "unsupportive"]).optional()
+        .describe("Filter by sentiment category"),
+      limit: z.number().optional().describe("Max results (default 30, max 50)"),
+    },
+    async (args, { authInfo }) => {
+      const userId = await getCurrentUserId(authInfo);
+      try {
+        const result = await searchComments(userId, args.query, {
+          limit: Math.min(args.limit ?? 30, 50),
+          sentiment: args.sentiment,
+        });
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(result) }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: "text" as const, text: `Search error: ${message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
 }
