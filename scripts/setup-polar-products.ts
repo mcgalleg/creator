@@ -50,14 +50,14 @@ async function main() {
 
   const freeSyncBenefit = await polar.benefits.create({
     type: "meter_credit",
-    description: "Free tier: 20 sync credits/month",
+    description: "Free tier: 100 sync credits/month",
     properties: {
       meterId: SYNC_METER_ID,
-      units: 20,
+      units: 100,
       rollover: false,
     },
   });
-  console.log(`  Created Free sync benefit: ${freeSyncBenefit.id} (20 credits/mo)`);
+  console.log(`  Created Free sync benefit: ${freeSyncBenefit.id} (100 credits/mo)`);
 
   const freeAiBenefit = await polar.benefits.create({
     type: "meter_credit",
@@ -94,7 +94,7 @@ async function main() {
     (b) => b.type === "meter_credit"
   );
 
-  // Update Creator meter benefits (250 sync, 3M AI tokens)
+  // Update Creator meter benefits (600 sync, 3M AI tokens)
   for (const benefit of creatorMeterBenefits) {
     if (benefit.type === "meter_credit") {
       const props = benefit.properties as { meterId: string };
@@ -103,11 +103,11 @@ async function main() {
           id: benefit.id,
           requestBody: {
             type: "meter_credit",
-            description: "Creator tier: 250 sync credits/month",
-            properties: { meterId: SYNC_METER_ID, units: 250, rollover: false },
+            description: "Creator tier: 600 sync credits/month",
+            properties: { meterId: SYNC_METER_ID, units: 600, rollover: false },
           },
         });
-        console.log(`  Updated Creator sync benefit: ${benefit.id} (250 credits/mo)`);
+        console.log(`  Updated Creator sync benefit: ${benefit.id} (600 credits/mo)`);
       } else if (props.meterId === AI_METER_ID) {
         await polar.benefits.update({
           id: benefit.id,

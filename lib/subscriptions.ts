@@ -44,8 +44,8 @@ export const TIER_AI_TOKENS = {
 
 // Monthly sync credit allocations per tier
 export const TIER_SYNC_CREDITS = {
-  free: 50,
-  basic: 500,
+  free: 100,
+  basic: 600,
   pro: 1_500,
   agency: 4_000,
   mcp: 0,
