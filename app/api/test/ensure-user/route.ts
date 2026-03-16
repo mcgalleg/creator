@@ -7,11 +7,13 @@ export async function POST(request: NextRequest) {
   const blocked = testRouteGuard();
   if (blocked) return blocked;
 
-  const { userId, email, name } = await request.json();
+  const { userId, email, name, skipOnboarding } = await request.json();
 
   if (!userId || !email) {
     return NextResponse.json({ error: "userId and email required" }, { status: 400 });
   }
+
+  const onboardingCompletedAt = skipOnboarding ? null : new Date();
 
   await db
     .insert(users)
@@ -19,11 +21,11 @@ export async function POST(request: NextRequest) {
       id: userId,
       email,
       name: name ?? "Test User",
-      onboardingCompletedAt: new Date(),
+      onboardingCompletedAt,
     })
     .onConflictDoUpdate({
       target: users.id,
-      set: { name: name ?? "Test User", updatedAt: new Date() },
+      set: { name: name ?? "Test User", onboardingCompletedAt, updatedAt: new Date() },
     });
 
   return NextResponse.json({ success: true, userId });

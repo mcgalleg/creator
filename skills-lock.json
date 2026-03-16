@@ -36,6 +36,11 @@
       "sourceType": "github",
       "computedHash": "b09982175f109a3b6392bdda43bca48061dfe8ff2655ed3206b811fafb0028a7"
     },
+    "next-best-practices": {
+      "source": "vercel-labs/next-skills",
+      "sourceType": "github",
+      "computedHash": "515ba75178bd44875812d9a560bdf14651f86709f89cf1d4f209638e879807f3"
+    },
     "remotion-ads": {
       "source": "maartenlouis/remotion-ads",
       "sourceType": "github",
