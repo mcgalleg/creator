@@ -361,14 +361,12 @@ export default function PricingPage() {
                       <>
                         <SignedIn>
                           <Button
-                            asChild
                             className="w-full"
                             variant={highlighted && !currentTier ? "default" : "outline"}
+                            onClick={() => { window.location.href = getCheckoutUrl(getTierProductId(tier)); }}
                           >
-                            <a href={getCheckoutUrl(getTierProductId(tier))}>
-                              {isMcp ? "Get Started" : "Subscribe"}
-                              <ArrowRight className="ml-2 h-4 w-4" />
-                            </a>
+                            {isMcp ? "Get Started" : "Subscribe"}
+                            <ArrowRight className="ml-2 h-4 w-4" />
                           </Button>
                         </SignedIn>
                         <SignedOut>
@@ -456,14 +454,12 @@ export default function PricingPage() {
                   <CardFooter>
                     <SignedIn>
                       <Button
-                        asChild
                         className="w-full"
                         variant={isBestValue ? "default" : "outline"}
+                        onClick={() => { window.location.href = getCheckoutUrl(productId); }}
                       >
-                        <a href={getCheckoutUrl(productId)}>
-                          Buy Credits
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </a>
+                        Buy Credits
+                        <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </SignedIn>
                     <SignedOut>
@@ -542,14 +538,12 @@ export default function PricingPage() {
                   <CardFooter>
                     <SignedIn>
                       <Button
-                        asChild
                         className="w-full"
                         variant={isBestValue ? "default" : "outline"}
+                        onClick={() => { window.location.href = getCheckoutUrl(productId); }}
                       >
-                        <a href={getCheckoutUrl(productId)}>
-                          Buy Tokens
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </a>
+                        Buy Tokens
+                        <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </SignedIn>
                     <SignedOut>
