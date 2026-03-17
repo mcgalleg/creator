@@ -26,9 +26,9 @@ export function Nav() {
       }`}
     >
       <div className="flex h-16 items-center justify-between px-3 md:px-4">
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <AstriqLogo variant="combo" size="lg" />
-        </div>
+        </Link>
         <nav className="flex items-center gap-4">
           <a
             href="#features"

@@ -36,13 +36,18 @@ export async function ensureUserExists(userId: string): Promise<boolean> {
     const email = clerkUser.emailAddresses?.[0]?.emailAddress ?? "";
     const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || null;
 
-    // Create user with 0 balance (credits come from Polar)
+    // Create user with 0 balance (credits come from Polar).
+    // If the email already exists under a stale Clerk ID (e.g., dev env reset),
+    // update the row to use the current Clerk ID.
     await db.insert(users).values({
       id: userId,
       email,
       name,
       imageUrl: clerkUser.imageUrl ?? null,
       creditBalance: 0,
+    }).onConflictDoUpdate({
+      target: users.email,
+      set: { id: userId, name, imageUrl: clerkUser.imageUrl ?? null, updatedAt: new Date() },
     });
 
     // Create Polar customer and subscribe to free product

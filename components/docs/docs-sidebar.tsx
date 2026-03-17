@@ -58,7 +58,7 @@ const NAV_SECTIONS = [
   {
     label: "Billing",
     items: [
-      { title: "Plans & Pricing", href: "/docs/pricing", icon: CreditCard },
+      { title: "Plans & Pricing", href: "/pricing", icon: CreditCard },
       { title: "Credit Packs", href: "/docs/credits", icon: Coins },
     ],
   },

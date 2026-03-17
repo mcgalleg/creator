@@ -129,7 +129,7 @@ export function SubscriptionManager() {
             <CardDescription className="mt-1">
               {tierInfo.description}
               {" "}
-              <Link href="/docs/pricing" className="text-primary hover:underline text-xs">
+              <Link href="/pricing" className="text-primary hover:underline text-xs">
                 Learn more
               </Link>
             </CardDescription>
