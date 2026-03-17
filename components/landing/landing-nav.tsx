@@ -31,7 +31,7 @@ export function LandingNav() {
         <Link href="/" className="flex items-center gap-2">
           <AstriqLogo variant="combo" size="lg" />
         </Link>
-        <nav className="flex items-center gap-4">
+        <nav className="flex items-center gap-2 sm:gap-4">
           <a
             href="#features"
             className="hidden text-sm text-muted-foreground hover:text-foreground transition-colors sm:inline-block"
@@ -56,7 +56,9 @@ export function LandingNav() {
           >
             Docs
           </Link>
-          {mounted && <AccentColorPicker />}
+          <div className="hidden sm:flex">
+            {mounted && <AccentColorPicker />}
+          </div>
           {mounted && hasSession ? (
             <Link href="/workspace" onClick={() => trackCtaClicked("Go to Workspace", "nav")}>
               <Button size="sm">

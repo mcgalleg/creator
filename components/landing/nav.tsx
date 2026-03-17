@@ -29,7 +29,7 @@ export function Nav() {
         <Link href="/" className="flex items-center gap-2">
           <AstriqLogo variant="combo" size="lg" />
         </Link>
-        <nav className="flex items-center gap-4">
+        <nav className="flex items-center gap-2 sm:gap-4">
           <a
             href="#features"
             className="hidden text-sm text-muted-foreground hover:text-foreground transition-colors sm:inline-block"
@@ -56,7 +56,9 @@ export function Nav() {
           </Link>
           {mounted && (
             <>
-              <AccentColorPicker />
+              <div className="hidden sm:flex">
+                <AccentColorPicker />
+              </div>
               <SignedOut>
                 <SignInButton mode="modal">
                   <Button variant="ghost" size="sm">
