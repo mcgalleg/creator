@@ -295,13 +295,13 @@ export function CanvasShowcaseInteractiveMockup() {
 
       {/* Window chrome */}
       <div className="flex items-center gap-2 border-b px-4 py-2.5">
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5" aria-hidden="true">
           <div className="size-2.5 rounded-full bg-red-400/60" />
           <div className="size-2.5 rounded-full bg-yellow-400/60" />
           <div className="size-2.5 rounded-full bg-green-400/60" />
         </div>
         <div className="text-xs text-muted-foreground ml-2">Canvas</div>
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-1" aria-hidden="true">
           {["□", "○", "—", "A", "✎"].map((t) => (
             <div
               key={t}
@@ -322,6 +322,8 @@ export function CanvasShowcaseInteractiveMockup() {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
+        role="img"
+        aria-label="Interactive canvas workspace with draggable content strategy nodes"
       >
         {/* Dot grid */}
         {dots.map((d, i) => (

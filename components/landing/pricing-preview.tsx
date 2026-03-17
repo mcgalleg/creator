@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check, Bot, RefreshCw, Plug, Coins, Zap } from "lucide-react";
+import { trackPricingTabViewed, trackPricingBillingToggled, trackCtaClicked } from "@/lib/analytics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -86,7 +87,7 @@ export function PricingPreview() {
         <div className="flex justify-center mb-6">
           <div className="inline-flex items-center rounded-full border bg-muted p-1 gap-1">
             <button
-              onClick={() => setActiveTab("plans")}
+              onClick={() => { setActiveTab("plans"); trackPricingTabViewed("plans"); }}
               className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
                 activeTab === "plans"
                   ? "bg-background text-foreground shadow-sm"
@@ -96,7 +97,7 @@ export function PricingPreview() {
               Subscription Plans
             </button>
             <button
-              onClick={() => setActiveTab("credits")}
+              onClick={() => { setActiveTab("credits"); trackPricingTabViewed("credits"); }}
               className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
                 activeTab === "credits"
                   ? "bg-background text-foreground shadow-sm"
@@ -113,7 +114,7 @@ export function PricingPreview() {
           <div className="flex items-center justify-center gap-3 mb-10">
             <div className="inline-flex items-center rounded-full border bg-muted p-1 gap-1">
               <button
-                onClick={() => setBilling("monthly")}
+                onClick={() => { setBilling("monthly"); trackPricingBillingToggled("monthly"); }}
                 className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
                   billing === "monthly"
                     ? "bg-background text-foreground shadow-sm"
@@ -123,7 +124,7 @@ export function PricingPreview() {
                 Monthly
               </button>
               <button
-                onClick={() => setBilling("annual")}
+                onClick={() => { setBilling("annual"); trackPricingBillingToggled("annual"); }}
                 className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
                   billing === "annual"
                     ? "bg-background text-foreground shadow-sm"
@@ -236,7 +237,7 @@ export function PricingPreview() {
                         variant={highlighted ? "default" : "outline"}
                         className="w-full"
                       >
-                        <Link href="/pricing">{isFree ? "Get Started" : isMcp ? "Get Started" : "See Full Details"}</Link>
+                        <Link href="/pricing" onClick={() => trackCtaClicked(isFree ? "Get Started" : isMcp ? "Get Started" : "See Full Details", `pricing_${tier}`)}>{isFree ? "Get Started" : isMcp ? "Get Started" : "See Full Details"}</Link>
                       </Button>
                     </CardFooter>
                   </Card>
@@ -301,7 +302,7 @@ export function PricingPreview() {
                           variant={isBestValue ? "default" : "outline"}
                           className="w-full"
                         >
-                          <Link href="/pricing">Buy Credits</Link>
+                          <Link href="/pricing" onClick={() => trackCtaClicked("Buy Credits", `pricing_credit_pack_${pack.id}`)}>Buy Credits</Link>
                         </Button>
                       </CardFooter>
                     </Card>
@@ -320,7 +321,7 @@ export function PricingPreview() {
         </p>
 
         <div className="text-center mt-8 space-y-4">
-          <Button asChild size="lg">
+          <Button asChild size="lg" onClick={() => trackCtaClicked("Get Started Free", "pricing_bottom")}>
             <Link href="/workspace">Get Started Free</Link>
           </Button>
           <div>

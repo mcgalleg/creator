@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AccentColorPicker } from "@/components/accent-color-picker";
 import { AstriqLogo } from "@/components/astriq-logo";
+import { trackCtaClicked } from "@/lib/analytics";
 
 export function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -54,12 +55,12 @@ export function LandingNav() {
             Docs
           </Link>
           {mounted && <AccentColorPicker />}
-          <Link href="/workspace">
+          <Link href="/workspace" onClick={() => trackCtaClicked("Sign In", "nav")}>
             <Button variant="ghost" size="sm">
               Sign In
             </Button>
           </Link>
-          <Link href="/workspace">
+          <Link href="/workspace" onClick={() => trackCtaClicked("Get Started", "nav")}>
             <Button size="sm">Get Started</Button>
           </Link>
         </nav>

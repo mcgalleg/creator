@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AccentColorProvider } from "@/contexts/accent-color-context";
 import { OrganizationJsonLd } from "@/components/organization-jsonld";
 import { Toaster } from "@/components/ui/sonner";
+import { GA_MEASUREMENT_ID } from "@/lib/analytics";
 import "./globals.css";
 
 // Primary sans-serif font
@@ -56,6 +57,13 @@ export default function RootLayout({
       <head>
         <Script id="accent-color-init" strategy="beforeInteractive">
           {`(function(){try{var a=localStorage.getItem('accent-color');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}})()`}
+        </Script>
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_MEASUREMENT_ID}');`}
         </Script>
       </head>
       <body

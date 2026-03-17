@@ -300,6 +300,8 @@ export function CanvasInteractiveMockup() {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
+        role="img"
+        aria-label="Interactive canvas with draggable content strategy mind map"
       >
         {/* Dot grid background */}
         {dots.map((d, i) => (

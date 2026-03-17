@@ -43,7 +43,7 @@ function ChatMockup() {
         </div>
         <span className="text-[11px] font-medium">AI Copilot</span>
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true" />
           <span className="text-[9px] text-muted-foreground">Online</span>
         </div>
       </div>
@@ -89,7 +89,7 @@ function ChatMockup() {
                   +24%
                 </span>
               </div>
-              <svg viewBox="0 0 220 55" className="w-full" style={{ height: 48 }}>
+              <svg viewBox="0 0 220 55" className="w-full" style={{ height: 48 }} role="img" aria-label="Daily engagement chart showing views increasing throughout the week">
                 <defs>
                   <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
                     <stop
@@ -444,7 +444,7 @@ export function FeatureBento() {
                 </div>
                 <div>
                   <div className="text-sm font-medium">17 Themes</div>
-                  <div className="mt-1.5 flex flex-wrap gap-1">
+                  <div className="mt-1.5 flex flex-wrap gap-1" aria-hidden="true">
                     {THEME_COLORS.map((color) => (
                       <div
                         key={color}

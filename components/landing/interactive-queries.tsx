@@ -61,6 +61,8 @@ function HeatmapVisualization() {
               className="aspect-[2/1] rounded-md bg-primary transition-colors"
               style={{ opacity: intensity * 0.85 + 0.1 }}
               title={`${day} ${timeSlots[ti]}: ${Math.round(intensity * 100)}% engagement`}
+              aria-label={`${day} ${timeSlots[ti]}: ${Math.round(intensity * 100)}% engagement`}
+              role="gridcell"
             />
           ))}
         </div>
@@ -112,7 +114,7 @@ function AreaChartVisualization() {
 
   return (
     <div className="w-full">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ height: "auto", maxHeight: 220 }} preserveAspectRatio="xMidYMid meet">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ height: "auto", maxHeight: 220 }} preserveAspectRatio="xMidYMid meet" role="img" aria-label="Area chart showing engagement trends over the week with an upward trend">
         <defs>
           <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
@@ -256,7 +258,7 @@ function SentimentDonutVisualization() {
     <div className="flex flex-col sm:flex-row items-center gap-6 w-full">
       {/* Donut */}
       <div className="relative shrink-0">
-        <svg viewBox="0 0 120 120" className="w-40 h-40 sm:w-48 sm:h-48">
+        <svg viewBox="0 0 120 120" className="w-40 h-40 sm:w-48 sm:h-48" role="img" aria-label="Donut chart showing comment sentiment: 72% positive, 20% neutral, 8% negative">
           {segments.map((s, i) => (
             <circle
               key={i}
@@ -350,8 +352,8 @@ function TopVideosVisualization() {
           <div
             className={`aspect-video bg-gradient-to-br ${v.color} flex items-center justify-center relative`}
           >
-            <div className="size-10 rounded-full bg-background/80 flex items-center justify-center">
-              <div className="w-0 h-0 border-l-[8px] border-l-foreground border-y-[6px] border-y-transparent ml-0.5" />
+            <div className="size-10 rounded-full bg-background/80 flex items-center justify-center" role="img" aria-label="Video thumbnail">
+              <div className="w-0 h-0 border-l-[8px] border-l-foreground border-y-[6px] border-y-transparent ml-0.5" aria-hidden="true" />
             </div>
             <div className="absolute top-2 left-2 text-[10px] font-bold bg-background/70 rounded px-1.5 py-0.5">
               #{i + 1}
@@ -436,9 +438,11 @@ function PostingFrequencyVisualization() {
                       height: `${(d.posts / maxPosts) * 100}%`,
                       alignSelf: "flex-end",
                     }}
+                    role="img"
+                    aria-label={`${d.label}: ${d.posts} posts`}
                   >
                     {/* Value tooltip on hover */}
-                    <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true">
                       {d.posts}
                     </div>
                   </div>
@@ -620,7 +624,7 @@ export function SampleQuestions() {
                 <Sparkles className="size-3.5 text-primary" />
               </div>
               <span className="text-sm font-medium">AI Copilot</span>
-              <span className="size-2 rounded-full bg-emerald-500 ml-1" />
+              <span className="size-2 rounded-full bg-emerald-500 ml-1" aria-hidden="true" />
             </div>
 
             {/* Messages */}

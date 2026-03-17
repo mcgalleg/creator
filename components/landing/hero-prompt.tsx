@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUp } from "lucide-react";
+import { trackHeroPromptSubmitted, trackHeroChipClicked } from "@/lib/analytics";
 
 const PROMPTS = [
   "What's my best time to post on Tuesdays?",
@@ -104,6 +105,7 @@ export function HeroPrompt() {
 
   function handleSubmit() {
     const q = userText.trim();
+    trackHeroPromptSubmitted(q.length);
     router.push(q ? `/workspace?q=${encodeURIComponent(q)}` : "/workspace");
   }
 
@@ -114,7 +116,8 @@ export function HeroPrompt() {
     }
   }
 
-  function handleChipClick(prompt: string) {
+  function handleChipClick(prompt: string, label: string) {
+    trackHeroChipClicked(label);
     stopAnimation();
     setIsFocused(true);
     setUserText(prompt);
@@ -154,6 +157,7 @@ export function HeroPrompt() {
         <button
           type="button"
           onClick={handleSubmit}
+          aria-label="Send message"
           className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-105 active:scale-95"
         >
           <ArrowUp className="size-4" />
@@ -175,7 +179,7 @@ export function HeroPrompt() {
           <button
             key={chip.label}
             type="button"
-            onClick={() => handleChipClick(chip.prompt)}
+            onClick={() => handleChipClick(chip.prompt, chip.label)}
             className="rounded-full border bg-background/60 px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
           >
             {chip.label}

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   Sparkles,
@@ -8,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AnimateOnScroll } from "@/components/landing/animate-on-scroll";
+import { trackCtaClicked } from "@/lib/analytics";
 
 export function FinalCta() {
   return (
@@ -31,10 +34,10 @@ export function FinalCta() {
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
-                <Button asChild size="lg">
+                <Button asChild size="lg" onClick={() => trackCtaClicked("Get Started Free", "final_cta")}>
                   <Link href="/workspace">Get Started Free</Link>
                 </Button>
-                <Button asChild variant="outline" size="lg">
+                <Button asChild variant="outline" size="lg" onClick={() => trackCtaClicked("Explore Workspace", "final_cta")}>
                   <Link href="/workspace">Explore Workspace</Link>
                 </Button>
               </div>
