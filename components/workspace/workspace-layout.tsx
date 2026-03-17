@@ -19,7 +19,7 @@ export function WorkspaceLayout({ accounts, goals, children }: WorkspaceLayoutPr
   const isMainWorkspace = pathname === '/workspace';
 
   if (!isMainWorkspace) {
-    return <div className="h-full overflow-auto p-6">{children}</div>;
+    return <div className="h-full overflow-x-hidden overflow-y-auto p-3 md:p-6">{children}</div>;
   }
 
   return <WorkspaceChat accounts={accounts} goals={goals} />;

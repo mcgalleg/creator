@@ -145,7 +145,7 @@ export default function AccountsPage() {
   const isDisconnecting = selectedAccountId != null && disconnecting[selectedAccountId];
 
   return (
-    <div className="container max-w-4xl py-8">
+    <div className="w-full max-w-4xl mx-auto py-4 md:py-8">
       {/* Header */}
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
