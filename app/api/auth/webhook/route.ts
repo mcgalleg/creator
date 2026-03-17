@@ -77,23 +77,28 @@ export async function POST(req: Request) {
     // Upsert user: if email exists, update the Clerk ID (user re-registered)
     // This handles both duplicate webhooks and re-registered users
     // Credits now come from Polar, so creditBalance starts at 0
-    await db.insert(users)
-      .values({
-        id,
-        email,
-        name,
-        imageUrl: image_url ?? null,
-        creditBalance: 0,
-      })
-      .onConflictDoUpdate({
-        target: users.email,
-        set: {
-          id, // Update to new Clerk ID if user re-registered
+    try {
+      await db.insert(users)
+        .values({
+          id,
+          email,
           name,
           imageUrl: image_url ?? null,
-          updatedAt: new Date(),
-        },
-      });
+          creditBalance: 0,
+        })
+        .onConflictDoUpdate({
+          target: users.email,
+          set: {
+            id, // Update to new Clerk ID if user re-registered
+            name,
+            imageUrl: image_url ?? null,
+            updatedAt: new Date(),
+          },
+        });
+    } catch (dbErr) {
+      console.error(`Failed to upsert user ${id} (email: ${email}):`, dbErr);
+      return new Response(`DB error: ${dbErr instanceof Error ? dbErr.message : String(dbErr)}`, { status: 500 });
+    }
 
     // Create Polar customer with Clerk ID as externalId
     try {
@@ -111,6 +116,7 @@ export async function POST(req: Request) {
           externalCustomerId: id,
         });
       }
+      console.log(`Created Polar customer and free subscription for ${id}`);
     } catch (polarErr) {
       // Log but don't fail the webhook — user is created in DB regardless
       console.error(`Failed to create Polar customer for ${id}:`, polarErr);
