@@ -10,9 +10,11 @@ import { trackCtaClicked } from "@/lib/analytics";
 export function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    setHasSession(document.cookie.includes("__session"));
     const onScroll = () => setScrolled(window.scrollY > 0);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -26,9 +28,9 @@ export function LandingNav() {
       }`}
     >
       <div className="flex h-16 items-center justify-between px-3 md:px-4">
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <AstriqLogo variant="combo" size="lg" />
-        </div>
+        </Link>
         <nav className="flex items-center gap-4">
           <a
             href="#features"
@@ -55,14 +57,22 @@ export function LandingNav() {
             Docs
           </Link>
           {mounted && <AccentColorPicker />}
-          <Link href="/workspace" onClick={() => trackCtaClicked("Sign In", "nav")}>
-            <Button variant="ghost" size="sm">
-              Sign In
-            </Button>
-          </Link>
-          <Link href="/workspace" onClick={() => trackCtaClicked("Get Started", "nav")}>
-            <Button size="sm">Get Started</Button>
-          </Link>
+          {mounted && hasSession ? (
+            <Link href="/workspace" onClick={() => trackCtaClicked("Go to Workspace", "nav")}>
+              <Button size="sm">Go to Workspace</Button>
+            </Link>
+          ) : (
+            <>
+              <Link href="/workspace" onClick={() => trackCtaClicked("Sign In", "nav")}>
+                <Button variant="ghost" size="sm">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/workspace" onClick={() => trackCtaClicked("Get Started", "nav")}>
+                <Button size="sm">Get Started</Button>
+              </Link>
+            </>
+          )}
         </nav>
       </div>
     </header>
