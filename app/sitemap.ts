@@ -42,6 +42,26 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
       changeFrequency: "monthly",
     },
+    {
+      url: `${BASE_URL}/features/engagement-analytics`,
+      priority: 0.8,
+      changeFrequency: "monthly",
+    },
+    {
+      url: `${BASE_URL}/features/audience-insights`,
+      priority: 0.8,
+      changeFrequency: "monthly",
+    },
+    {
+      url: `${BASE_URL}/features/video-analytics`,
+      priority: 0.8,
+      changeFrequency: "monthly",
+    },
+    {
+      url: `${BASE_URL}/features/content-strategy`,
+      priority: 0.8,
+      changeFrequency: "monthly",
+    },
     { url: `${BASE_URL}/privacy`, priority: 0.3, changeFrequency: "yearly" },
     { url: `${BASE_URL}/terms`, priority: 0.3, changeFrequency: "yearly" },
     { url: `${BASE_URL}/support`, priority: 0.5, changeFrequency: "monthly" },

@@ -13,6 +13,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 
 const CanvasInteractiveMockup = dynamic(
@@ -235,31 +236,37 @@ const MORE_FEATURES = [
     icon: MessageCircle,
     title: "Comment Analysis",
     desc: "AI-powered sentiment analysis across all your comments",
+    href: "/features/engagement-analytics",
   },
   {
     icon: Users,
     title: "Multi-Account",
     desc: "Manage up to 50 TikTok accounts in one place",
+    href: "/features/audience-insights",
   },
   {
     icon: RefreshCw,
     title: "Smart Sync",
     desc: "Full, incremental, or quick sync on your schedule",
+    href: "/features/video-analytics",
   },
   {
     icon: Sparkles,
     title: "Streaming UI",
     desc: "Watch charts and insights render in real time",
+    href: undefined,
   },
   {
     icon: Users,
     title: "Account Comparison",
     desc: "Compare performance across multiple TikTok accounts side by side",
+    href: "/features/audience-insights",
   },
   {
     icon: TrendingUp,
     title: "Best Time to Post",
     desc: "AI-driven insights on the optimal days and times to publish for maximum reach",
+    href: "/features/content-strategy",
   },
 ];
 
@@ -321,6 +328,9 @@ export function FeatureBento() {
                 Ask questions about your data in plain English and get instant
                 visual answers with charts, metrics, and actionable insights.
               </p>
+              <Link href="/features/engagement-analytics" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+                Learn more <span aria-hidden="true">&rarr;</span>
+              </Link>
             </div>
             <div>
               <ChatMockup />
@@ -344,6 +354,9 @@ export function FeatureBento() {
                 Drag notes, shapes, and insights onto a freeform canvas for
                 visual exploration. Think and create at your own pace.
               </p>
+              <Link href="/features/content-strategy" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+                Learn more <span aria-hidden="true">&rarr;</span>
+              </Link>
             </div>
             <div>
               <CanvasInteractiveMockup />
@@ -434,6 +447,11 @@ export function FeatureBento() {
                     <div className="text-xs text-muted-foreground leading-relaxed">
                       {f.desc}
                     </div>
+                    {f.href && (
+                      <Link href={f.href} className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline mt-1">
+                        Learn more <span aria-hidden="true">&rarr;</span>
+                      </Link>
+                    )}
                   </div>
                 </div>
               ))}

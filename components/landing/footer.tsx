@@ -24,12 +24,36 @@ export function Footer() {
               <h4 className="text-sm font-semibold">Product</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <a
-                    href="/#ai-copilot"
+                  <Link
+                    href="/features/engagement-analytics"
                     className="hover:text-foreground transition-colors"
                   >
-                    AI Copilot
-                  </a>
+                    Engagement Analytics
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/features/audience-insights"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Audience Insights
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/features/video-analytics"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Video Analytics
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/features/content-strategy"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Content Strategy
+                  </Link>
                 </li>
                 <li>
                   <a
@@ -37,14 +61,6 @@ export function Footer() {
                     className="hover:text-foreground transition-colors"
                   >
                     Pricing
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/#canvas"
-                    className="hover:text-foreground transition-colors"
-                  >
-                    Canvas
                   </a>
                 </li>
               </ul>
