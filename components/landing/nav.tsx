@@ -54,22 +54,26 @@ export function Nav() {
           >
             Docs
           </Link>
-          {mounted && <AccentColorPicker />}
-          <SignedOut>
-            <SignInButton mode="modal">
-              <Button variant="ghost" size="sm">
-                Sign In
-              </Button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <Button size="sm">Get Started</Button>
-            </SignUpButton>
-          </SignedOut>
-          <SignedIn>
-            <Link href="/workspace">
-              <Button size="sm">Go to Workspace</Button>
-            </Link>
-          </SignedIn>
+          {mounted && (
+            <>
+              <AccentColorPicker />
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <Button variant="ghost" size="sm">
+                    Sign In
+                  </Button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <Button size="sm">Get Started</Button>
+                </SignUpButton>
+              </SignedOut>
+              <SignedIn>
+                <Link href="/workspace">
+                  <Button size="sm">Go to Workspace</Button>
+                </Link>
+              </SignedIn>
+            </>
+          )}
         </nav>
       </div>
     </header>
