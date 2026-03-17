@@ -158,16 +158,17 @@ export default function PricingPage() {
       {/* Navigation */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-16 items-center justify-between px-3 md:px-4">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <AstriqLogo variant="combo" size="lg" />
-          </div>
+          </Link>
           <nav className="flex items-center gap-4">
             <ThemeToggle />
             <SignedIn>
               <Link href="/workspace">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Workspace
+                  <span className="sm:hidden">Back</span>
+                  <span className="hidden sm:inline">Back to Workspace</span>
                 </Button>
               </Link>
             </SignedIn>
@@ -569,9 +570,9 @@ export default function PricingPage() {
       <footer className="border-t py-12">
         <div className="container mx-auto max-w-6xl px-4">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2">
               <AstriqLogo variant="combo" size="sm" />
-            </div>
+            </Link>
             <p className="text-sm text-muted-foreground">
               Built with AI. Designed for creators.
             </p>

@@ -59,7 +59,10 @@ export function LandingNav() {
           {mounted && <AccentColorPicker />}
           {mounted && hasSession ? (
             <Link href="/workspace" onClick={() => trackCtaClicked("Go to Workspace", "nav")}>
-              <Button size="sm">Go to Workspace</Button>
+              <Button size="sm">
+                <span className="sm:hidden">Workspace</span>
+                <span className="hidden sm:inline">Go to Workspace</span>
+              </Button>
             </Link>
           ) : (
             <>
@@ -69,7 +72,10 @@ export function LandingNav() {
                 </Button>
               </Link>
               <Link href="/workspace" onClick={() => trackCtaClicked("Get Started", "nav")}>
-                <Button size="sm">Get Started</Button>
+                <Button size="sm">
+                  <span className="sm:hidden">Start</span>
+                  <span className="hidden sm:inline">Get Started</span>
+                </Button>
               </Link>
             </>
           )}

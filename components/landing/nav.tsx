@@ -69,7 +69,10 @@ export function Nav() {
               </SignedOut>
               <SignedIn>
                 <Link href="/workspace">
-                  <Button size="sm">Go to Workspace</Button>
+                  <Button size="sm">
+                    <span className="sm:hidden">Workspace</span>
+                    <span className="hidden sm:inline">Go to Workspace</span>
+                  </Button>
                 </Link>
               </SignedIn>
             </>
