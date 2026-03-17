@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     template: "%s | Astriq",
   },
   description:
-    "AI-powered TikTok analytics dashboard for content creators. Get actionable insights on your videos, audience, and engagement.",
+    "Astriq is a free AI-powered TikTok analytics platform. Track video performance, engagement metrics, and audience insights with an AI copilot.",
   openGraph: {
     type: "website",
     siteName: "Astriq",

@@ -24,12 +24,14 @@ const PricingPreview = dynamic(() =>
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Astriq — AI-Powered TikTok Analytics for Creators",
+    absolute: "TikTok Analytics Tool — AI-Powered Insights for Creators | Astriq",
   },
+  description:
+    "Free AI-powered TikTok analytics tool for creators. Track engagement, analyze audience insights, and get data-driven content strategy recommendations.",
   openGraph: {
-    title: "Astriq — AI-Powered TikTok Analytics for Creators",
+    title: "TikTok Analytics Tool — AI-Powered Insights for Creators | Astriq",
     description:
-      "Turn your TikTok data into actionable growth insights with AI-powered analytics. Free to start.",
+      "Free AI-powered TikTok analytics tool for creators. Track engagement, analyze audience insights, and get data-driven content strategy recommendations.",
   },
 };
 

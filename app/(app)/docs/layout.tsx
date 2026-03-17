@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Nav } from "@/components/landing/nav";
 import { Footer } from "@/components/landing/footer";
+import { DocsBreadcrumbJsonLd } from "@/components/docs-breadcrumb-jsonld";
 import { BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Metadata } from "next";
@@ -31,6 +32,7 @@ export default function DocsLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-background font-sans">
+      <DocsBreadcrumbJsonLd />
       <Nav />
       <div className="container mx-auto flex max-w-6xl flex-1 gap-8 px-4 py-16">
         {/* Sidebar */}
