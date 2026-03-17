@@ -24,6 +24,7 @@ import {
   TIER_ANNUAL_PRICE_CENTS,
   DATA_PURGE_DAYS,
   CREDIT_PACKS,
+  AI_TOKEN_PACKS,
   type SubscriptionTier,
 } from "@/lib/subscriptions";
 
@@ -45,7 +46,7 @@ const TIERS: { tier: SubscriptionTier; highlighted?: boolean }[] = [
   { tier: "mcp" },
 ];
 
-type Tab = "plans" | "credits";
+type Tab = "plans" | "credits" | "tokens";
 
 // Find the pack with the lowest per-credit rate for the "Best Value" badge
 const bestValuePackId = CREDIT_PACKS.reduce((best, pack) => {
@@ -53,6 +54,13 @@ const bestValuePackId = CREDIT_PACKS.reduce((best, pack) => {
   const currentRate = pack.priceInCents / pack.credits;
   return currentRate < bestRate ? pack : best;
 }, CREDIT_PACKS[0]).id;
+
+// Find the AI token pack with the lowest per-token rate
+const bestValueTokenPackId = AI_TOKEN_PACKS.reduce((best, pack) => {
+  const bestRate = best.priceInCents / best.tokens;
+  const currentRate = pack.priceInCents / pack.tokens;
+  return currentRate < bestRate ? pack : best;
+}, AI_TOKEN_PACKS[0]).id;
 
 export function PricingPreview() {
   const [activeTab, setActiveTab] = useState<Tab>("plans");
@@ -105,6 +113,16 @@ export function PricingPreview() {
               }`}
             >
               Sync Credit Packs
+            </button>
+            <button
+              onClick={() => { setActiveTab("tokens"); trackPricingTabViewed("tokens"); }}
+              className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
+                activeTab === "tokens"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              AI Token Packs
             </button>
           </div>
         </div>
@@ -303,6 +321,75 @@ export function PricingPreview() {
                           className="w-full"
                         >
                           <Link href="/pricing" onClick={() => trackCtaClicked("Buy Credits", `pricing_credit_pack_${pack.id}`)}>Buy Credits</Link>
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </AnimateOnScroll>
+                );
+              })}
+            </div>
+            <p className="text-center text-sm text-muted-foreground mt-6">
+              Works with all plans including MCP Apps
+            </p>
+          </>
+        )}
+
+        {/* AI Token Packs */}
+        {activeTab === "tokens" && (
+          <>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 max-w-5xl mx-auto">
+              {AI_TOKEN_PACKS.map((pack, idx) => {
+                const perThousand = (pack.priceInCents / (pack.tokens / 1000)) * 100;
+                const isBestValue = pack.id === bestValueTokenPackId;
+                return (
+                  <AnimateOnScroll key={pack.id} delay={idx * 100}>
+                    <Card
+                      className={`relative h-full ${
+                        isBestValue ? "border-primary shadow-md" : ""
+                      }`}
+                    >
+                      {isBestValue && (
+                        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
+                          Best Value
+                        </Badge>
+                      )}
+                      <CardHeader>
+                        <CardTitle className="text-lg">{pack.name}</CardTitle>
+                        <CardDescription>
+                          {formatTokens(pack.tokens)} AI tokens
+                        </CardDescription>
+                        <div className="mt-2">
+                          <span className="text-3xl font-bold">
+                            ${(pack.priceInCents / 100).toFixed(2)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          ${(perThousand / 100).toFixed(3)}/1K tokens
+                        </p>
+                      </CardHeader>
+                      <CardContent className="flex-1">
+                        <ul className="space-y-3 text-sm">
+                          <li className="flex items-center gap-2">
+                            <Bot className="size-4 text-primary shrink-0" />
+                            {formatTokens(pack.tokens)} AI tokens
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Zap className="size-4 text-primary shrink-0" />
+                            One-time purchase
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="size-4 text-primary shrink-0" />
+                            Tokens never expire
+                          </li>
+                        </ul>
+                      </CardContent>
+                      <CardFooter>
+                        <Button
+                          asChild
+                          variant={isBestValue ? "default" : "outline"}
+                          className="w-full"
+                        >
+                          <Link href="/pricing" onClick={() => trackCtaClicked("Buy Tokens", `pricing_token_pack_${pack.id}`)}>Buy Tokens</Link>
                         </Button>
                       </CardFooter>
                     </Card>
