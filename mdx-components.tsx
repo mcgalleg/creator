@@ -65,6 +65,26 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
         {children}
       </code>
     ),
+    table: ({ children }) => (
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full text-sm">{children}</table>
+      </div>
+    ),
+    thead: ({ children }) => (
+      <thead className="border-b bg-muted/50">{children}</thead>
+    ),
+    tbody: ({ children }) => <tbody>{children}</tbody>,
+    tr: ({ children }) => (
+      <tr className="border-b last:border-b-0">{children}</tr>
+    ),
+    th: ({ children }) => (
+      <th className="px-4 py-2.5 text-left font-medium text-foreground">
+        {children}
+      </th>
+    ),
+    td: ({ children }) => (
+      <td className="px-4 py-2.5 text-muted-foreground">{children}</td>
+    ),
     ...components,
   };
 }

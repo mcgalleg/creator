@@ -31,19 +31,19 @@ export function Nav() {
         </Link>
         <nav className="flex items-center gap-2 sm:gap-4">
           <a
-            href="#features"
+            href="/#features"
             className="hidden text-sm text-muted-foreground hover:text-foreground transition-colors sm:inline-block"
           >
             Features
           </a>
           <a
-            href="#pricing"
+            href="/#pricing"
             className="hidden text-sm text-muted-foreground hover:text-foreground transition-colors sm:inline-block"
           >
             Pricing
           </a>
           <a
-            href="#faq"
+            href="/#faq"
             className="hidden text-sm text-muted-foreground hover:text-foreground transition-colors sm:inline-block"
           >
             FAQ
